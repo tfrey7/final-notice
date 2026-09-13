@@ -62,9 +62,23 @@ export class TitleScene extends Phaser.Scene {
     for (const [x, y] of textPixels(PROMPT)) {
       this.prompt.fillStyle(P.seafoam).fillRect(px + x, py + y, 1, 1);
     }
+
+    // PRESS START: Enter, Space, Z or X on the keyboard, or any face or start button on a pad.
+    this.started = false;
+    this.input.keyboard.on('keydown', (e) => {
+      if (['Enter', ' ', 'z', 'Z', 'x', 'X'].includes(e.key)) this.start();
+    });
+  }
+
+  start() {
+    if (this.started) return;
+    this.started = true;
+    this.scene.start('lobby');
   }
 
   update(time) {
     this.prompt.setVisible(blinkVisible(time));
+    const pad = this.input.gamepad && this.input.gamepad.total ? this.input.gamepad.getPad(0) : null;
+    if (pad && [0, 1, 2, 3, 9].some((i) => pad.buttons[i] && pad.buttons[i].pressed)) this.start();
   }
 }

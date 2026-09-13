@@ -6,7 +6,19 @@ one beat-'em-up stage, then one ranged-magic escape.
 
 **Play it:** https://tfrey7.github.io/final-notice/
 
-Today it is a title screen. It is built in small pieces, each one visible on the live page.
+Today it is a title screen and the first lobby, where a stand-in Ward walks, jumps and punches. It is
+built in small pieces, each one visible on the live page.
+
+## Controls
+
+| | Keyboard | Gamepad |
+| --- | --- | --- |
+| Start | Enter, Space, Z or X | any face button or Start |
+| Move | arrows or WASD | d-pad or left stick |
+| Jump | X, K or Space | A |
+| Punch (press again to chain three) | Z or J | X or B |
+
+`?lobby` skips the title; `?lobby&demo` plays a short loop by itself.
 
 ## Run it locally
 
