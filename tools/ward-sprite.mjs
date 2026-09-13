@@ -53,9 +53,9 @@ const HEAD = [
   '.kgffffgfffk',
   '.kgfffffxffk',
   '.kgffffffgfk',
-  '.kgfffffkkk.',
-  '.kgffffmmk..',
-  '..kgffffffk.',
+  '.kgffffffgk.',
+  '.kgfffffkk..',
+  '..kgfffggfk.',
   '...kgfffffk.',
   '....kkkkkk..',
 ];
@@ -294,16 +294,16 @@ export const ANIMATIONS = {
     poses: [
       at(STANCE, { body: [-1, 4], hip: [-1, 3], footB: [11, 59], footF: [27, 59], handF: [25, 34], handB: [22, 22] }),
       at(STANCE, { body: [2, 1], hip: [1, 1], footF: [28, 59], handF: [31, 16], handB: [21, 25] }),
-      at(STANCE, { body: [3, -2], hip: [2, -2], footB: [14, 57], footF: [28, 59], handF: [33, 3], bendF: -1, handB: [20, 26] }),
-      at(STANCE, { body: [2, -1], hip: [1, -1], footB: [13, 59], footF: [28, 59], handF: [31, 8], bendF: -1, handB: [21, 25] }),
+      at(STANCE, { body: [3, -2], hip: [2, -2], footB: [14, 57], footF: [28, 59], handF: [32, 11], bendF: 1, handB: [20, 26] }),
+      at(STANCE, { body: [2, -1], hip: [1, -1], footB: [13, 59], footF: [28, 59], handF: [31, 14], bendF: 1, handB: [21, 25] }),
     ],
   },
   hit: {
     fps: 10,
     repeat: 0,
     poses: [
-      at(STANCE, { hurt: true, body: [-3, 1], hip: [-1, 1], head: [-1, 1], handB: [9, 16], handF: [22, 29], footF: [25, 59] }),
-      at(STANCE, { hurt: true, body: [-4, 2], hip: [-2, 2], head: [-1, 1], handB: [8, 18], handF: [20, 30], footF: [24, 59], footB: [11, 59] }),
+      at(STANCE, { hurt: true, body: [-3, 1], hip: [-1, 1], head: [-1, 1], handB: [9, 36], bendB: -1, handF: [22, 29], footF: [25, 59] }),
+      at(STANCE, { hurt: true, body: [-4, 2], hip: [-2, 2], head: [-1, 1], handB: [8, 37], bendB: -1, handF: [20, 30], footF: [24, 59], footB: [11, 59] }),
       at(STANCE, { hurt: true, body: [-2, 1], hip: [-1, 1], handB: [18, 23], handF: [25, 27] }),
     ],
   },
