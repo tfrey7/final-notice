@@ -1,0 +1,31 @@
+# No build step and no dependencies on purpose; these are guards, not needs.
+node_modules/
+package-lock.json
+dist/
+build/
+
+# Caches, logs and scratch
+.cache/
+*.log
+tmp/
+*.tmp
+
+# Downloaded or generated assets that are not yet source
+downloads/
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# The fleet's worker launcher and CI runner write these into a checkout
+.state/
+.ci/
+
+# Editor / OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

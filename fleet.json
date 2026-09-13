@@ -1,0 +1,7 @@
+{
+  "repo": "final-notice",
+  "suite": "node --test",
+  "build": null,
+  "protect": [".state/", ".ci/"],
+  "restart": null
+}
