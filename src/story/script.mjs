@@ -56,6 +56,40 @@ export const REMARKS = {
   vellumOffice: { ward: "This wasn't on the floor plan.", mercer: 'Somebody found the budget.' },
 };
 
+// The story beats played DURING a floor (src/stage1/beats.mjs): two or three lines with portraits,
+// over the fight, never pausing it. `picture` is the portrait beside the box.
+export const FLOOR_TALK = {
+  serviceFloor: [
+    { picture: 'auditor', speaker: 'auditor', ward: 'Nobody has left their desk.', mercer: "They're all still working." },
+    { picture: 'bellwether-phone', speaker: 'bellwether', line: 'They cannot. Their contracts outlived them.' },
+  ],
+  waitingDoor: [
+    { picture: 'auditor', speaker: 'auditor', ward: 'His office is through the waiting room.', mercer: 'Last door. Good.' },
+    { picture: 'wall-speaker', speaker: 'speaker', line: 'Mr Vellum will see you now.' },
+  ],
+  backrooms: [
+    { picture: 'break-room', speaker: 'auditor', ward: 'The carpet is wet.', mercer: 'Something down here leaks.' },
+    { picture: 'bellwether-phone', speaker: 'bellwether', line: 'Keep going down. The originals are below the water table.' },
+  ],
+  backrooms2: [
+    { picture: 'break-room', speaker: 'auditor', ward: 'This is the same room.', mercer: 'We have been here. Twice.' },
+  ],
+  chapel: [
+    { picture: 'auditor', speaker: 'auditor', ward: 'They built a chapel into the accounts floor.', mercer: 'Who do they pray to up here?' },
+    { picture: 'wall-speaker', speaker: 'speaker', line: 'To the shareholder. Kneel or be filed.' },
+  ],
+  chapel2: [
+    { picture: 'auditor', speaker: 'auditor', ward: 'The altar is a desk.', mercer: 'Of course it is.' },
+  ],
+};
+
+// One floor talk as the chosen auditor hears it.
+export const talkFor = (id, auditor) => (FLOOR_TALK[id] ?? []).map((beat) => ({
+  picture: beat.picture,
+  speaker: SPEAKERS[beat.speaker === 'auditor' ? auditor : beat.speaker],
+  line: lineFor(beat, auditor),
+}));
+
 export const PROMPTS = ['PUNCH', 'STEP', 'THROW', 'CAST', 'AIM', 'GO'];
 
 export const SELECT = {

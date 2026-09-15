@@ -40,13 +40,21 @@ import { MENU_SOUNDS, newVoices, soundFrame, speakVoices, startMusic, voiceState
 import { BODY_H, drawFinisher, drawMarks, drawThings } from './sprites.mjs';
 import { drawBrawlHud } from './huddraw.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
+import { STAGE1_BEATS, armBeats, forceBeat, stepBeats } from '../../stage1/beats.mjs';
+import { drawBeat } from './beatdraw.mjs';
 import { routeLights } from '../../stage1/combo.mjs';
 import { readSettings } from '../memo.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const BACKGROUNDS = [RECEPTION, CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
 const OFFICE_BG = CLAIMS2.areas[2];
-const STAGE1_DEF = { number: 1, table: SNES_STAGE1, checkpoints: CHECKPOINTS.stage1, backgrounds: BACKGROUNDS, weapons: true };
+// Stage 1's own furniture, weapons and beat map: the rhythm of a beat every two or three packs
+// (src/stage1/beats.mjs) runs as this floor's step hook, as Stages 3 and 5 run theirs.
+const armStage1 = (world) => armBeats(
+  armWorld(world, stageSmash(world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale)),
+  STAGE1_BEATS,
+);
+const STAGE1_DEF = { number: 1, table: SNES_STAGE1, checkpoints: CHECKPOINTS.stage1, backgrounds: BACKGROUNDS, weapons: true, arm: armStage1, step: stepBeats };
 
 export class SnesStage1Scene extends Phaser.Scene {
   constructor(key = 'stage1', def = STAGE1_DEF) {
@@ -88,6 +96,8 @@ export class SnesStage1Scene extends Phaser.Scene {
       else if (this.def.weapons) armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
     }
     this.world.cooldown = freeInjunction();
+    // ?beat=<id> fires one beat straight away, for a look at it (src/stage1/beats.mjs).
+    if (params.has('beat')) forceBeat(this.world, params.get('beat'));
 
     await Promise.all([loadArt('ward').catch(() => null), ...(this.office ? [officeArt()] : [])]);
     this.ward = artOr(this, 'ward');
@@ -248,6 +258,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     drawMarks(this, cam + shake.x);
     drawFinisher(this);
     drawBrawlHud(this, time);
+    if (!this.office) drawBeat(this.fill, w, this.who, cam, this.game.loop.frame);
   }
 }
 

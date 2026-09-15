@@ -7,11 +7,14 @@ import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { VIEW_W } from '../src/stage1/staff.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
 import { SNES_AREAS, SNES_STAGE1, foeCount } from '../src/snes/stage1/waves.mjs';
+import { STAGE1_BEATS } from '../src/stage1/beats.mjs';
 
 const walkRight = { held: new Set(['right']), pressed: new Set(), dash: null };
 
 test('the SNES stage runs about thirty foes over the same four areas; the NES keeps its own', () => {
-  const count = foeCount(SNES_AREAS);
+  // Two of the stage's packs come from its beats now (the lift ambush and the copy-room miniboss),
+  // so the thirty are the wave table's plus theirs.
+  const count = foeCount(SNES_AREAS) + STAGE1_BEATS.flatMap((b) => b.foes ?? []).length;
   assert.ok(count >= 28 && count <= 34, `${count} foes`);
   assert.equal(foeCount(AREAS), 14);
   assert.deepEqual(SNES_AREAS.map((a) => [a.id, a.screens]), AREAS.map((a) => [a.id, a.screens]));

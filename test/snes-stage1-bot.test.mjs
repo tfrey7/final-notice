@@ -12,6 +12,7 @@ import { SNES_STAGE1 } from '../src/snes/stage1/waves.mjs';
 import { CLEAR, OFFICE, clearDone, clearLines } from '../src/snes/stage1/boss.mjs';
 import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../src/stage1/weapons.mjs';
+import { STAGE1_BEATS, armBeats, stepBeats } from '../src/stage1/beats.mjs';
 
 const OPEN = ['recover', 'hurt', 'idle', 'walk', 'knockdown', 'guard'];
 
@@ -20,7 +21,10 @@ function build(flow, tune) {
   const world = flow.checkpoint === OFFICE
     ? enterOffice(newFloor(flow.auditor, tune), tune)
     : newStage(newFloor(flow.auditor, tune), tune, areaFor(flow.checkpoint), SNES_STAGE1);
-  if (flow.checkpoint !== OFFICE) armWorld(world, stageSmash(world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
+  if (flow.checkpoint !== OFFICE) {
+    armWorld(world, stageSmash(world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
+    armBeats(world, STAGE1_BEATS);
+  }
   world.cooldown = freeInjunction();
   return world;
 }
@@ -101,17 +105,18 @@ function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
   let flow = jumpTo('stage1');
   flow = { ...flow, auditor: who };
   let world = build(flow, tune);
-  const log = { frames: 0, lives: 0, continues: 0, locks: 0, waves: 0, heals: 0, checkpoints: [], office: 0, cleared: false };
+  const log = { frames: 0, lives: 0, continues: 0, locks: 0, waves: 0, heals: 0, checkpoints: [], office: 0, cleared: false, beats: [] };
   for (let i = 0; i < cap && !log.cleared; i++) {
     stepFloor(world, pad(brain(i, world, tune, log)), tune);
     const hurt = player(world).hp < PIPS;
-    if (flow.checkpoint !== OFFICE) stepAreas(world, tune);
+    if (flow.checkpoint !== OFFICE) { stepAreas(world, tune); stepBeats(world, tune); }
     log.frames = i + 1;
     const events = world.events;
     world.events = [];
     for (const e of events) {
       if (e === 'lock') log.locks++;
       if (e === 'wave') log.waves++;
+      if (e.startsWith('beat:')) log.beats.push({ at: i, id: e.split(':')[2], kind: e.split(':')[1] });
       // A box walked over at full health heals nothing, so only a hurt pickup counts.
       if (e === 'heal' && hurt) log.heals++;
       if (e.startsWith('checkpoint:')) { flow = next(flow, { type: 'checkpoint', id: e.slice(11) }); log.checkpoints.push(e.slice(11)); }
@@ -139,8 +144,14 @@ for (const who of ['ward', 'mercer']) {
     const log = playthrough(who);
     const minutes = (log.frames / 3600).toFixed(1);
     console.log(`${who}: ${log.cleared ? 'cleared' : 'not cleared'} in ${minutes} min (${log.frames} frames), office at ${(log.office / 3600).toFixed(1)} min, ${log.locks} locks, ${log.waves} waves, ${log.heals} heals, ${log.lives} lives lost, ${log.continues} continues`);
+    for (const b of log.beats) console.log(`  ${(b.at / 3600).toFixed(1)} min  ${b.kind.padEnd(5)} ${b.id}`);
     assert.ok(log.cleared, `stuck after ${log.frames} frames: ${JSON.stringify(log.end)}`);
-    assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 5, 'a clean run takes minutes, not seconds; a human takes longer');
+    // Every beat in the map is met on the way through, and no two of a kind land together.
+    assert.deepEqual(log.beats.map((b) => b.id), STAGE1_BEATS.map((b) => b.id));
+    assert.ok(log.beats.every((b, n) => n === 0 || b.kind !== log.beats[n - 1].kind), 'two beats of a kind in a row');
+    // Seven minutes, not five, since the beats went in (item 2336): the stage carries two more packs
+    // and the room-changing beats between them, which is Final Fight's own Slum-stage length.
+    assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 7, 'a clean run takes minutes, not seconds; a human takes longer');
     // Ward's block still takes chip and opens a foe for less time than a parry, so he may need both boxes.
     const boxes = AUDITORS[who].guard === 'block' ? 2 : 1;
     assert.ok(log.heals <= boxes, `the bot needs at most ${boxes} of the two first-aid boxes, took ${log.heals}`);

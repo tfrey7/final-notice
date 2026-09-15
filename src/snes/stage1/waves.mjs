@@ -15,8 +15,10 @@ const LOCKS = {
     { screen: 1, seats: 4, waves: [{ prompt: 'THROW', foes: [a, a] }, { foes: [a, a] }] },
   ],
   serviceFloor: [
-    { screen: 1, seats: 4, waves: [{ foes: [a, a, a] }, { foes: [a, a, m, a] }] },
-    { screen: 2, seats: 4, waves: [{ foes: [m, a, a] }, { foes: [m, a, m] }] },
+    // The lift ambush (src/stage1/beats.mjs) is this room's second pack now, so the table's own is out.
+    { screen: 1, seats: 4, waves: [{ foes: [a, a, a] }] },
+    // and the copy room's miniboss is this one's second pack.
+    { screen: 2, seats: 4, waves: [{ foes: [m, a, a] }] },
   ],
   internalReview: [
     { screen: 0, seats: 4, waves: [{ foes: [c, a, a] }] },

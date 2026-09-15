@@ -131,8 +131,17 @@ export function stepAreas(world, tune) {
       spawnStaff(world, waves[run.wave].foes, tune);
       events.push('wave');
     } else {
-      Object.assign(run, { locked: false, prompt: null, lock: run.lock + 1, go: GO_FRAMES });
-      events.push('go');
+      // A beat may put one more pack in before the lock releases: an ambush through a door or a
+      // lift, or a miniboss alone in the room (beats.mjs).
+      const extra = world.extraWave?.(world, run.lock);
+      if (extra) {
+        run.prompt = null;
+        spawnStaff(world, extra.foes, tune);
+        events.push('wave');
+      } else {
+        Object.assign(run, { locked: false, prompt: null, lock: run.lock + 1, go: GO_FRAMES });
+        events.push('go');
+      }
     }
   }
 
