@@ -1,7 +1,6 @@
 // The story-scene cue (item 2196): the title theme's melody, slowed to about 75 bpm and kept soft
 // under dialogue. The title's form without A', so the hook opens the intro, A and the return. Grand
 // piano carries the hook; strings and then the sax sing the answers an octave down; no drums until B.
-// The earlier from-scratch cue is scene-v1.mjs.
 //
 // v1 lead | v2 strings counter-line | v3 pad on the third, left | v4 pad on the seventh, right | v5
 // choir on the fifth | v6 synth bass | v7 soft kick and snare | v8 hats

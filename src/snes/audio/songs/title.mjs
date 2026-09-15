@@ -2,7 +2,6 @@
 // (docs/THEME.md) on grand piano, brass kept an octave down and a soft top, no timpani, toms or crash.
 // Two bars of piano alone, then the string arpeggios and the beat build in, so the groove is whole by
 // the first A (Tim: the first take "takes way too long in the song to get there").
-// The earlier arrangement is title-v2.mjs.
 //
 // v1 lead: piano, then sax and strings an octave down, brass an octave down in the return | v2 piano
 // broken chords in the intro and bridge, string arpeggios, a string harmony in the return | v3-v4 warm

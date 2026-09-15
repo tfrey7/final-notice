@@ -40,9 +40,9 @@
     <ul id="songs"></ul>
     <h2>Effects</h2>
     <ul id="effects"></ul>
-    <div id="bank" hidden>
-      <h2>Instruments</h2>
-      <ul id="instruments"></ul>
+    <div id="voice-box" hidden>
+      <h2>Voices</h2>
+      <ul id="voices"></ul>
     </div>
     <h2 id="chip">2A03 + VRC6 + DPCM</h2>
     <div class="meters" id="meters"></div>
@@ -60,7 +60,7 @@
       document.title += ' (SNES)';
     }
 
-    const CUES = snes ? ['title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v2', 'stage1-v1', 'stage2', 'archive-climb', 'boss', 'vellum', 'vellum-pinch', 'disposal', 'disposal-v1', 'seal', 'seal-v1', 'ending', 'test', 'bank', 'bank-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'] : ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
+    const NES_CUES = ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
       'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup',
       'stageStart-v1', 'stageClear-v1', 'lifeLost-v1', 'gameOver-v1', 'continue-v1', 'pickup-v1'];
     const label = (name) => name.replace(/-(v\d)$/, ' ($1)');
@@ -70,25 +70,31 @@
     const items = [];
     let sel = 0;
 
-    function add(list, name, play) {
+    function add(list, name, play, text = label(name)) {
       const li = document.createElement('li');
-      li.textContent = label(name);
+      li.textContent = text;
       li.addEventListener('click', () => { sel = items.findIndex((i) => i.li === li); render(); play(); });
       list.append(li);
       items.push({ li, play, name });
     }
 
-    const found = await Promise.all(CUES.map(async (name) => [name, await hasSong(name)]));
-    for (const [name, ok] of found) if (ok) add(songsEl, name, () => playSong(name));
-    const songCount = items.length;
-    for (const name of Object.keys(SFX)) add(effectsEl, name, () => sfx(name));
-    for (const name of Object.keys(SFX_V1)) add(effectsEl, `${name}-v1`, () => sfx(`${name}-v1`));
+    // The SNES lists only what the game plays now (src/snes/audio/soundtest.mjs).
+    const { SOUND_TEST } = snes ? await import('./src/snes/audio/soundtest.mjs') : {};
     if (snes) {
-      const { INSTRUMENTS, INSTRUMENTS_V1, playInstrument } = await import('./src/snes/audio/player.mjs');
-      document.getElementById('bank').hidden = false;
-      const instEl = document.getElementById('instruments');
-      for (const [key, { label, group }] of Object.entries(INSTRUMENTS)) add(instEl, `${group}: ${label}`, () => playInstrument(key));
-      for (const [key, { label, group }] of Object.entries(INSTRUMENTS_V1)) add(instEl, `${group}: ${label}-v1`, () => playInstrument(key, true));
+      for (const [name, text] of SOUND_TEST.music) add(songsEl, name, () => playSong(name), text);
+    } else {
+      const found = await Promise.all(NES_CUES.map(async (name) => [name, await hasSong(name)]));
+      for (const [name, ok] of found) if (ok) add(songsEl, name, () => playSong(name));
+    }
+    const songCount = items.length;
+    if (snes) {
+      for (const [name, text] of SOUND_TEST.effects) add(effectsEl, name, () => sfx(name), text);
+      document.getElementById('voice-box').hidden = false;
+      const voicesEl = document.getElementById('voices');
+      for (const [name, text] of SOUND_TEST.voices) add(voicesEl, name, () => sfx(name), text);
+    } else {
+      for (const name of Object.keys(SFX)) add(effectsEl, name, () => sfx(name));
+      for (const name of Object.keys(SFX_V1)) add(effectsEl, `${name}-v1`, () => sfx(`${name}-v1`));
     }
 
     const meters = document.getElementById('meters');
