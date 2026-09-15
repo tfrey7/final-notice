@@ -1,9 +1,9 @@
 // Bar builders for the from-scratch Stage 2 chase sketches (item 2026).
 
 import { noteToMidi } from '../../../audio/apu.mjs';
-import { fold, nameOf } from '../../../audio/songs/kit.mjs';
+import { fold, nameOf, transpose } from '../../../audio/songs/kit.mjs';
 
-const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10] };
+const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
 
 // 'Bb', 'Dm' or 'B7': the bass root between C2 and B2 and the chord's tones.
 export function triad(symbol) {
@@ -19,6 +19,13 @@ export function voice(pattern, { root, tones }, inst, octave = 0) {
 }
 
 export const rest = (rows) => Array(rows).fill('.').join(' ');
+
+// One section of a song as bars: its chords and lead, moved `shift` semitones for a key change.
+export const section = (part, chords, leads, shift = 0) =>
+  chords.map((symbol, bar) => {
+    const { root, tones } = triad(symbol);
+    return { part, bar, c: { root: root + shift, tones }, lead: transpose(leads[bar], shift), shift };
+  });
 
 // Short codes for the hats: c closed, o open.
 export const hats = (pattern) => pattern.split(' ').map((t) => ({ c: 'C4:chat', o: 'C4:ohat' })[t] ?? t).join(' ');
