@@ -71,9 +71,8 @@ export function typed(lines, shown) {
 
 export const pageLength = (lines) => lines.reduce((n, l) => n + l.length, 0);
 
-// Every window's fill, set by the paper stock setting (src/snes/memo.mjs); carbon blue by default.
-let windowColours = [rgb15(4, 6, 20), rgb15(0, 1, 6)];
-export const setWindowColours = (top, bottom) => { windowColours = [top, bottom]; };
+// Every window's fill: the house carbon blue, top to bottom.
+const windowColours = [rgb15(4, 6, 20), rgb15(0, 1, 6)];
 
 // One rgb15 colour per scanline, top colour to bottom colour, each channel stepped evenly.
 export function windowGradient(lines, top = windowColours[0], bottom = windowColours[1]) {

@@ -1,7 +1,6 @@
 // The title's memo slip (docs/SNES-HUD-MENUS.md section 5, "Title flow"): NEW AUDIT, CONTINUE when a
-// save exists, SETTINGS. Settings borrow Final Fantasy VI's window colour as "paper stock", plus text
-// speed and stereo or mono, kept in localStorage. Pure logic; src/snes/memoart.mjs draws it.
-import { rgb15 as c } from './color.mjs';
+// save exists, SETTINGS. Settings are text speed, stereo or mono and the combo guide, kept in
+// localStorage. Pure logic; src/snes/memoart.mjs draws it.
 import { confirmed } from './scenes/front.mjs';
 import { SOUND_TEST } from './audio/soundtest.mjs';
 
@@ -9,35 +8,17 @@ export const SETTINGS_KEY = 'final-notice.settings';
 export const SAVE_KEY = 'final-notice.save';
 export const SLIDE_FRAMES = 14;
 
-export const PAPER_STOCKS = ['manila', 'carbon blue', 'pink copy'];
 export const TEXT_SPEEDS = ['slow', 'normal', 'fast'];
 export const SOUNDS = ['stereo', 'mono'];
 export const SETTING_ROWS = [
-  { key: 'paper', label: 'PAPER STOCK', values: PAPER_STOCKS },
   { key: 'text', label: 'TEXT SPEED', values: TEXT_SPEEDS },
   { key: 'sound', label: 'SOUND', values: SOUNDS },
   { key: 'guide', label: 'COMBO GUIDE', values: ['on', 'off'] },
 ];
-export const DEFAULTS = { paper: 'carbon blue', text: 'normal', sound: 'stereo', guide: 'on' };
+export const DEFAULTS = { text: 'normal', sound: 'stereo', guide: 'on' };
 
 // Frames per typed letter at each text speed.
 export const LETTER_FRAMES = { slow: 4, normal: 2, fast: 1 };
-
-// Each stock's paper (light, for the memo itself) and window (dark, behind white text box lettering).
-export const STOCK = {
-  manila: {
-    top: c(30, 28, 20), bottom: c(18, 13, 6), light: c(31, 31, 28), dark: c(11, 7, 3), outline: c(4, 2, 1),
-    rule: c(15, 11, 5), band: [c(22, 16, 8), c(10, 6, 2)], carbon: c(4, 9, 26), window: [c(14, 10, 4), c(3, 2, 0)],
-  },
-  'carbon blue': {
-    top: c(25, 28, 31), bottom: c(9, 12, 22), light: c(31, 31, 31), dark: c(4, 5, 14), outline: c(1, 1, 5),
-    rule: c(7, 9, 19), band: [c(12, 15, 26), c(4, 6, 15)], carbon: c(10, 4, 24), window: [c(4, 6, 20), c(0, 1, 6)],
-  },
-  'pink copy': {
-    top: c(31, 27, 28), bottom: c(21, 11, 15), light: c(31, 31, 31), dark: c(12, 4, 7), outline: c(5, 1, 3),
-    rule: c(18, 8, 12), band: [c(24, 12, 17), c(12, 4, 8)], carbon: c(4, 12, 24), window: [c(18, 5, 10), c(5, 1, 3)],
-  },
-};
 
 const pick = (v, list, fallback) => (list.includes(v) ? v : fallback);
 

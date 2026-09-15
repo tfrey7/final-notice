@@ -75,12 +75,10 @@ test('SETTINGS opens, cycles each value both ways and returns to the SETTINGS ro
   m = slid(m);
   m = memoStep(m, pad('right'));
   assert.equal(m.event, 'change');
-  assert.equal(m.settings.paper, 'pink copy');
+  assert.equal(m.settings.text, 'fast');
   m = memoStep(m, pad('right'));
-  assert.equal(m.settings.paper, 'manila');
+  assert.equal(m.settings.text, 'slow');
   m = memoStep(m, pad('left'));
-  assert.equal(m.settings.paper, 'pink copy');
-  m = memoStep(memoStep(m, pad('down')), pad('a'));
   assert.equal(m.settings.text, 'fast');
   m = memoStep(memoStep(m, pad('down')), pad('left'));
   assert.equal(m.settings.sound, 'mono');
@@ -96,15 +94,17 @@ test('SETTINGS opens, cycles each value both ways and returns to the SETTINGS ro
 test('settings survive a round trip through storage and junk falls back to the defaults', () => {
   const s = store();
   assert.deepEqual(readSettings(s), DEFAULTS);
-  writeSettings(s, { paper: 'manila', text: 'slow', sound: 'mono', guide: 'off' });
-  assert.deepEqual(readSettings(s), { paper: 'manila', text: 'slow', sound: 'mono', guide: 'off' });
-  s.setItem(SETTINGS_KEY, '{"paper":"vellum","text":"fast"');
+  writeSettings(s, { text: 'slow', sound: 'mono', guide: 'off' });
+  assert.deepEqual(readSettings(s), { text: 'slow', sound: 'mono', guide: 'off' });
+  s.setItem(SETTINGS_KEY, '{"paper":"pink copy","text":"fast"');
   assert.deepEqual(readSettings(s), DEFAULTS);
-  s.setItem(SETTINGS_KEY, '{"paper":"vellum","text":"fast"}');
+  // A save written before the paper stock row went: the dead key is dropped, the rest still loads.
+  s.setItem(SETTINGS_KEY, '{"paper":"pink copy","text":"fast"}');
   assert.deepEqual(readSettings(s), { ...DEFAULTS, text: 'fast' });
   const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
   assert.deepEqual(readSettings(broken), DEFAULTS);
   assert.doesNotThrow(() => writeSettings(broken, DEFAULTS));
   assert.equal(hasSave(broken), false);
-  assert.equal(SETTING_ROWS.length, 4);
+  assert.equal(SETTING_ROWS.length, 3);
+  assert.ok(!SETTING_ROWS.some((r) => r.key === 'paper'), 'the paper stock colour picker is gone');
 });

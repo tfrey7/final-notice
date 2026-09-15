@@ -11,9 +11,9 @@ import { logo, logoPalette, logoReading } from '../bg/ui.mjs';
 import { INTRO_FRAMES } from '../lights.mjs';
 import { pastDue } from '../clock.mjs';
 import { paintArt } from '../titlepaint.mjs';
-import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs';
+import { BG3_PALETTE, measure, drawString } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx, stopSong } from '../audio/player.mjs';
-import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
+import { SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
 import { drawPrompt as drawButtons, measurePrompt } from '../prompt.mjs';
 import { PROMPT_AT, fadeLevel, newTitle, promptLevel, titleTick } from '../titlestate.mjs';
@@ -39,7 +39,6 @@ const MEMO_PAGES = ['memo', 'settings', 'sound', 'labs'];
 const storage = () => { try { return localStorage; } catch { return null; } };
 
 export function applySettings(settings) {
-  setWindowColours(...STOCK[settings.paper].window);
   setMono(settings.sound === 'mono');
 }
 
