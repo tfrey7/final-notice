@@ -6,6 +6,7 @@ import { artOr as nesArt } from './nes/art.mjs';
 import * as snesScreen from './snes/screen.mjs';
 import { hex } from './snes/color.mjs';
 import { artOr as snesArt } from './snes/art.mjs';
+import { FRAME_CYCLES } from './nes/slowdown.mjs';
 
 export const PROFILES = {
   nes: {
@@ -17,6 +18,7 @@ export const PROFILES = {
     colour: nes,
     bakeArt: nesArt,
     crtLook: 'nes',
+    slowdownBudget: FRAME_CYCLES,
   },
   snes: {
     name: 'snes',
@@ -27,6 +29,9 @@ export const PROFILES = {
     colour: hex,
     bakeArt: snesArt,
     crtLook: 'snes',
+    // In the same cost units as the NES: a SlowROM 65816 moving 56-64 px fighters slows once three foes
+    // and a few props share the floor, as Final Fight did; a tuning estimate, unverified.
+    slowdownBudget: 20000,
   },
 };
 

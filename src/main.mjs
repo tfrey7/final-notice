@@ -16,6 +16,7 @@ import { SnesTitleScene } from './snes/scenes/title.mjs';
 import { SnesSelectScene } from './snes/scenes/select.mjs';
 import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
+import { SnesEndingScene } from './snes/scenes/ending.mjs';
 import { SnesStage1Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 
@@ -30,7 +31,7 @@ const SCENES = {
   stage1: snes ? new SnesStage1Scene() : new Stage1Scene(),
   stage2: snes ? new SnesStage2Scene() : new EscapeScene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
-  ending: new EndingScene(),
+  ending: snes ? new SnesEndingScene() : new EndingScene(),
 };
 for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = snes ? new SnesCinemaScene(key) : new CinemaScene(key);
 

@@ -16,6 +16,8 @@ import { pollPad } from '../../input.mjs';
 import { cheapen, fastOn } from '../../fast.mjs';
 import { AUDITORS as WHO, jumpTo, next, showFlow } from '../../flow.mjs';
 import { mountTunePanel } from '../../tune.mjs';
+import { PROFILES } from '../../platform.mjs';
+import { createSlowdown, slowdownTick } from '../../nes/slowdown.mjs';
 import { HITS_PER_SEGMENT } from '../../injunction.mjs';
 import { TILE, solidAt } from '../../stage2/physics.mjs';
 import { carry, swapHand } from '../../stage2/pickups.mjs';
@@ -51,6 +53,7 @@ export class SnesStage2Scene extends Phaser.Scene {
   async create() {
     this.ready = false;
     this.paused = false;
+    this.slowdown = createSlowdown();
     this.fast = fastOn();
     const params = new URLSearchParams(location.search);
     let flow = this.registry.get('flow');
@@ -114,6 +117,14 @@ export class SnesStage2Scene extends Phaser.Scene {
     const pad = pollPad(this.game.loop.frame);
     let { run } = this;
     if (this.fast) cheapen([...run.foes, ...(run.bosses ?? []), run.boss, run.boss?.seal, ...(run.boss?.bindings ?? [])].filter(Boolean));
+    const count = (list) => list?.length ?? 0;
+    const others = count(run.pickups) + count(run.glyphs) + count(run.locks);
+    const work = {
+      objects: 1 + run.foes.length + count(run.bosses) + count(run.casts) + others + count(run.boss?.bindings) + count(run.boss?.shots),
+      collisions: count(run.casts) * (run.foes.length + count(run.locks) + count(run.targets) + count(run.boss?.bindings)) + run.foes.length + others,
+      sprites: this.layer.stats?.count ?? 0,
+    };
+    if (!slowdownTick(this.slowdown, work, PROFILES.snes.slowdownBudget)) { this.draw(this.registry.get('flow')); return; }
     if (run.boss) {
       stepArena(run, pad);
     } else {

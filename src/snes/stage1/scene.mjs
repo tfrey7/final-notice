@@ -21,6 +21,8 @@ import { STAGE, areaFor, newStage, stepAreas } from '../../stage1/areas.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { mountTunePanel, registerTuning } from '../../tune.mjs';
 import { fastOn, cheapen } from '../../fast.mjs';
+import { PROFILES } from '../../platform.mjs';
+import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
@@ -70,6 +72,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.base = registerTuning(`snes-brawl-${this.who}`, tuneFor(this.who), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
     this.fin = null;
+    this.slowdown = createSlowdown();
     if (this.office) {
       this.world = enterOffice(newFloor(this.who, this.tune), this.tune);
       poseOffice(this.world, params.get('pose'));
@@ -117,6 +120,9 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.draw(time);
       return;
     }
+    const props = w.props.filter((o) => o.state !== 'gone').length;
+    const work = { objects: w.fighters.length + props, collisions: pairs(w.fighters.length) + w.fighters.length * props, sprites: this.layer.stats?.count ?? 0 };
+    if (!slowdownTick(this.slowdown, work, PROFILES.snes.slowdownBudget)) { this.draw(time); return; }
     const boss = this.office && vellum(w);
     const p = w.fighters.find((f) => f.team === 'player');
     const bossHp = boss?.hp;
