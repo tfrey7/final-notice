@@ -135,7 +135,8 @@ one recorded sample an instrument, cut by `tools/snes-bank.mjs` from a SoundFont
 - **A light treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top. It
   was halved (item 2156) after the judge heard "a bright haze across the top"; the new orchestral
   and drum samples take none, keeping the era's soft top.
-- **58.8 KB for twenty-three instruments**, inside the 64 KB of sound RAM.
+- **63.6 KB for twenty-three instruments**, inside the 64 KB of sound RAM. Item 2219 spent the room
+  on longer piano and e-piano loops and brighter bass, toms and crash, and cut the orchestra hit short.
 - The synthesised bank stays on the sound test as "(v1)": the instruments, the bank walk `bank (v1)`,
   and the first arrangements `title (v1)` and `stage1 (v1)`. The jingles and effects moved to the new
   bank in place.
@@ -145,7 +146,7 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 
 | Instrument | Key | Source preset / sample | Stored at |
 | --- | --- | --- | --- |
-| Rhodes electric piano | `epiano` | Rhodes EP / Rhodes C5(L) | 15959 Hz |
+| Rhodes electric piano | `epiano` | Rhodes EP / Rhodes C5(L) | 15993 Hz |
 | warm pad | `pad` | Warm Pad / Alien Strings(L) | 11989 Hz |
 | string section | `strings` | Strings / Strings C#5L | 13991 Hz |
 | choir | `choir` | Ahh Choir / Ahh Choir C5(L) | 14014 Hz |
@@ -160,14 +161,14 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 | closed hat | `chat` | Standard kit / Hi-Hat Closed(L) | 22000 Hz |
 | open hat | `ohat` | Standard kit / Hi-Hat Half-Open(L) | 16000 Hz |
 | clap | `clap` | Standard kit / Clap(L) | 16000 Hz |
-| orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 16000 Hz |
-| grand piano | `piano` | Yamaha Grand Piano / P200 Piano D5(L) | 14096 Hz |
-| slow string pad | `slowstr` | Slow Strings / Strings C#5L | 11007 Hz |
-| fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 8080 Hz |
+| orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 12000 Hz |
+| grand piano | `piano` | Yamaha Grand Piano / P200 Piano D5(L) | 14032 Hz |
+| slow string pad | `slowstr` | Slow Strings / Strings C#5L | 12503 Hz |
+| fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 11033 Hz |
 | timpani | `timpani` | Timpani / Timpani 3(L) | 10976 Hz |
-| low tom | `ltom` | Power kit / Tom Floor(L) | 11000 Hz |
-| high tom | `htom` | Power kit / Tom Low(L) | 11000 Hz |
-| crash cymbal | `crash` | Standard kit / Crsh 1(L) | 11000 Hz |
+| low tom | `ltom` | Power kit / Tom Floor(L) | 14000 Hz |
+| high tom | `htom` | Power kit / Tom Low(L) | 14000 Hz |
+| crash cymbal | `crash` | Standard kit / Crsh 1(L) | 14000 Hz |
 
 **Licence, every sample:** FluidR3_GM, MIT licence, Copyright (c) 2000-2002, 2008 Frank Wen
 (the licence text is the `COPYING` file at https://github.com/pianobooster/fluid-soundfont). The
@@ -204,6 +205,10 @@ and a song chooses its room (`docs/research/snes-composition.md`, sections 3-5).
   Pick the loop's period count first, round its length to 16 samples, then choose the storage rate
   that makes those equal (rate = length x f0 / periods) and resample to it; the root pitch follows as
   f0 x 32000 / rate. A crossfade into the pre-loop audio then hides the timbre seam.
+
+- **A decaying instrument needs a long attack before a long loop.** A piano cut as 0.2 s of attack
+  and a 50 ms loop repeats the attack's beating partials as a buzzing drone on every held note;
+  0.45 s of attack and a 250 ms loop (item 2219) settles into the sustain instead.
 
 - **Build a long song from a form table, not long strings.** One entry a bar (part, chord, lead,
   key shift) and a function per channel keeps 70 bars of eight channels short to write and easy to
