@@ -7,6 +7,9 @@ import { platformFor } from '../src/platform.mjs';
 import { MAX_HITS } from '../src/injunction.mjs';
 import { player } from '../src/stage1/moves.mjs';
 import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
+import { STAGE1 } from '../src/stage1/tuning.mjs';
+import { scaledTune } from '../src/snes/stage1/finisher.mjs';
+import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
 import { createRun, stepRun } from '../src/stage2/core.mjs';
 import { carry, inHand } from '../src/stage2/pickups.mjs';
 
@@ -83,6 +86,25 @@ test('SNES Y attacks and B jumps in the stages\' words; A, X, L and R are intent
   assert.deepEqual([snes([['l']]).step, snes([['r']]).step, snes([['r'], ['r']]).step], [-1, 1, 0]);
   assert.deepEqual([snes([['r'], ['r']]).aim, snes([['y']]).aim], [true, false]);
   assert.equal(snes([['right'], [], ['right']]).dash, null, 'no double-tap step');
+  assert.equal(snes([['right'], [], ['right']]).run, 'right', 'the double tap is a run');
+  assert.equal(run([['right'], [], ['right']]).run, undefined, 'the NES double tap stays a step');
+});
+
+test('Stage 1 on the SNES pad: right, release, right within 12 frames runs at the weighed runX', () => {
+  weighShared();
+  const tune = scaledTune(weighed(tuneFor('ward'), BRAWL_WEIGHT), STAGE1.scale);
+  const world = newFloor('ward', tune);
+  const frames = [['right'], ...Array(DOUBLE_TAP_FRAMES - 2).fill([]), ['right'], ['right'], ['right']];
+  const xs = [];
+  frames.reduce((pad, down, f) => {
+    const next = updatePad(pad, new Set(down), f);
+    stepFloor(world, next, tune);
+    xs.push(player(world).x);
+    return next;
+  }, createPad(PADS.snes));
+  assert.equal(player(world).state, 'run');
+  assert.ok(tune.runX > tune.walkX);
+  assert.ok(Math.abs(xs.at(-1) - xs.at(-2) - tune.runX) < 1e-9, 'moves at runX');
 });
 
 test('the NES pad keeps its double tap, A+B and Select and never answers SNES intents', () => {

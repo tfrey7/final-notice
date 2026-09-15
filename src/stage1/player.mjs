@@ -99,7 +99,7 @@ function beforeStep(world, pad, tune, events) {
     p.x += p.stepDir * STEP.speed * (1 - p.t / STEP.frames);
     if (p.t >= STEP.frames) Object.assign(p, { state: 'idle', t: 0 });
   }
-  return { held: pad.held, pressed, dash: null };
+  return { held: pad.held, pressed, dash: pad.run ?? null };
 }
 
 function moveProps(world, tune, events) {

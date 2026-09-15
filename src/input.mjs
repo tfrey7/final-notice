@@ -65,15 +65,6 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
   const pressed = new Set([...now].filter((b) => !pad.held.has(b)));
   const released = new Set([...pad.held].filter((b) => !now.has(b)));
   const history = [...pad.history, ...names.filter((b) => pressed.has(b))].slice(-HISTORY);
-  if (layout.name === 'snes') {
-    return {
-      layout, frame, held: now, pressed, released, taps: {}, history, dash: null,
-      chord: pressed.has('injunction'),
-      step: pressed.has('l') ? -1 : pressed.has('r') ? 1 : 0,
-      aim: now.has('r'),
-      swap: pressed.has('swap'),
-    };
-  }
   const taps = { ...pad.taps };
   let dash = null;
   for (const dir of ['left', 'right']) {
@@ -84,6 +75,16 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
     } else {
       taps[dir] = frame;
     }
+  }
+  // L and R are the SNES step, so its double tap is only a run.
+  if (layout.name === 'snes') {
+    return {
+      layout, frame, held: now, pressed, released, taps, history, dash: null, run: dash,
+      chord: pressed.has('injunction'),
+      step: pressed.has('l') ? -1 : pressed.has('r') ? 1 : 0,
+      aim: now.has('r'),
+      swap: pressed.has('swap'),
+    };
   }
   const chord = now.has('a') && now.has('b') && (pressed.has('a') || pressed.has('b'));
   return { layout, frame, held: now, pressed, released, chord, dash, step: 0, aim: null, swap: pressed.has('select'), taps, history };
