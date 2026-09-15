@@ -21,10 +21,12 @@
  */
 
 import { noteToMidi, midiToHz } from '../../audio/apu.mjs';
-import { DSP_HZ, VOICES, createDsp, makeSample } from './spc.mjs';
+import { DSP_HZ, VOICES, brrDecode, createDsp, makeSample } from './spc.mjs';
 import { SAMPLES as BANK, INSTRUMENTS as INSTRUMENTS_V1, demoSong } from './bank.mjs';
 import { SAMPLES as RECORDED, INSTRUMENTS } from './recorded.mjs';
 import { SFX, FX_SAMPLES, SFX_VOLUME, atVolume } from './sfx.mjs';
+import { unpack } from './recorded.mjs';
+import BARKS from './barks-brr.mjs';
 
 export { INSTRUMENTS, INSTRUMENTS_V1, SFX };
 
@@ -53,8 +55,20 @@ export const SAMPLES = (() => {
     saw: { ...makeSample(saw, 0), rootHz: DSP_HZ / 64 },
     square: { ...makeSample(square, 0), rootHz: DSP_HZ / 32 },
     kick: { ...makeSample(kick), rootHz: midiToHz(60) },
+    ...Object.fromEntries(Object.entries(BARKS).map(([id, b]) => {
+      const brr = { blocks: unpack(b.brr), loop: null };
+      return [`bark:${id}`, { brr, pcm: brrDecode(brr), loop: null, rootHz: b.rootHz }];
+    })),
   };
 })();
+
+// The partners' brawl lines play on voice 6, so a punch or a hit taking voices 7 and 8 never cuts one off.
+export const BARK_VOICE = 5;
+export const barkFrames = (id) => BARKS[id]?.frames ?? 0;
+export const barkEffect = (id) => ({
+  voice: BARK_VOICE,
+  layers: [{ delay: 0, steps: [[{ sample: `bark:${id}`, adsr: [15, 7, 7, 0], vol: 127, echo: true }, BARKS[id].midi, BARKS[id].frames]] }],
+});
 
 // A note's expression marks, each after a '/': v[delay] delayed vibrato, p[frames] portamento from
 // the voice's last note, b<+-semitones> a bend across the note, @<vol>[><vol>] its volume, ramped.
@@ -267,8 +281,8 @@ export function createSequencer(dsp = createDsp()) {
 
   // Each layer takes its voice at once, silencing the song there, and plays its first step after its delay.
   function sfx(def) {
-    const first = stealVoice(owners);
-    return def.layers.slice(0, 2).map((layer, k) => {
+    const first = def.voice ?? stealVoice(owners);
+    return def.layers.slice(0, def.voice === undefined ? 2 : 1).map((layer, k) => {
       const i = k === 0 ? first : 13 - first;
       const steps = Array(layer.delay ?? 0).fill(null);
       for (const [inst, midi, frames, to] of layer.steps) {
@@ -520,6 +534,10 @@ export function soloSong(voices) {
 
 export function sfx(name) {
   if (SFX[name] && seq) seq.sfx(atVolume(SFX[name], SFX_VOLUME[name]));
+}
+
+export function bark(id) {
+  if (BARKS[id] && seq) seq.sfx(barkEffect(id));
 }
 
 export function channelStatus() {

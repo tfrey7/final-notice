@@ -10,8 +10,9 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
 import { drainStep, drawHud, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
-import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
+import { bark, barkFrames, endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { brawlSound } from '../audio/brawl.mjs';
+import { bark as pickBark, barkKind, newBarker } from '../barks.mjs';
 import { VELLUM_PINCH, VELLUM_SONG, vellumPinch } from '../audio/cues.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
@@ -110,6 +111,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     });
 
     this.who = state.auditor;
+    this.partner = newBarker(this.who);
     weighShared();
     this.base = registerTuning(`snes-brawl-${this.who}`, weighed(tuneFor(this.who), BRAWL_WEIGHT), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
@@ -220,6 +222,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
     const sound = !target && brawlSound(w.events);
     if (sound) sfx(sound);
+    const kind = barkKind(w.events, { hurt: p.hp < playerHp, finisher: !!target });
+    const line = kind && pickBark(this.partner, kind, loopFrame, { frames: barkFrames });
+    if (line) bark(line);
     for (const e of w.events) {
       if (e === 'heal') this.receipt = postReceipt(this.receipt, time);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));

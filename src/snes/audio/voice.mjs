@@ -20,13 +20,13 @@ export const CHAIN = {
 // is recorded at speed / 2^(pitch/12) so the pace survives); drive, highHz and lowHz override CHAIN.
 export const CAST = {
   ward: {
-    name: 'Ellis Ward', notes: 'by-the-book veteran: dry, precise, measured',
-    voice: 'am_michael', speed: 0.95, pitch: 0, drive: 1.5, highHz: 150,
+    name: 'Ellis Ward', notes: 'by-the-book veteran: stiff, uptight, precise',
+    voice: 'am_michael', speed: 1.02, pitch: 1, drive: 1.1, highHz: 240,
     sample: 'Serve the company its own Final Notice.',
   },
   mercer: {
-    name: 'Frank Mercer', notes: 'rule-bending younger partner: gruff, quick, wry',
-    voice: 'am_fenrir', speed: 1.12, pitch: -1, drive: 2.8,
+    name: 'Frank Mercer', notes: 'rule-bending partner, older than he looks: gruff, dry, sarcastic',
+    voice: 'am_fenrir', speed: 0.98, pitch: -3, drive: 2,
     sample: 'For good reasons.',
   },
   vellum: {
