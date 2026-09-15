@@ -5,7 +5,7 @@
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { rgb15 as c, channels } from './color.mjs';
 import { drawString, drawWindow, measure, windowGradient } from './text.mjs';
-import { PAPER_STOCKS, SETTING_ROWS, STOCK, slideIn } from './memo.mjs';
+import { LABS, PAPER_STOCKS, SETTING_ROWS, SOUND_TABS, STOCK, slideIn } from './memo.mjs';
 
 const OUT = c(1, 1, 4);
 const RED = c(22, 3, 3);
@@ -100,22 +100,84 @@ function arrow(s, x, y, dir, col) {
   for (let i = 0; i < 4; i++) s.fill(dir > 0 ? x + i : x + 3 - i, y + i, 1, 7 - 2 * i, col);
 }
 
-const MEMO = { w: 150, h: 92 };
 const SETTINGS = { w: 236, h: 150 };
+const SOUND = { w: 256, h: 178 };
+const LAB_ROW = 24;
+const LIST_ROW = 13;
+const LIST_ROWS = 9;
+const boxFor = (m) => ({
+  memo: { w: 150, h: 50 + m.rows.length * 16 },
+  settings: SETTINGS,
+  sound: SOUND,
+  labs: { w: 220, h: 40 + LABS.length * LAB_ROW + 18 },
+})[m.page];
 
 export function drawMemo(buf, m, frame = 0) {
   const s = painter(buf);
   const st = STOCK[m.settings.paper];
-  const box = m.page === 'memo' ? MEMO : SETTINGS;
+  const box = boxFor(m);
   const x = (WIDTH - box.w) >> 1;
   const rest = HEIGHT - box.h - 8;
   const y = Math.round(HEIGHT + 8 - (HEIGHT + 8 - rest) * slideIn(m.slide));
-  if (m.page === 'memo') drawMemoPage(s, st, m, x, y, frame);
-  else drawSettingsPage(s, st, m, x, y, frame);
+  const draw = { memo: drawMemoPage, settings: drawSettingsPage, sound: drawSoundPage, labs: drawLabsPage }[m.page];
+  draw(s, st, m, x, y, frame, box);
 }
 
-function drawMemoPage(s, st, m, x, y, frame) {
-  const { w, h } = MEMO;
+// The sound test: MUSIC, EFFECTS and VOICES tabs over a numbered list that scrolls nine rows at a time.
+function drawSoundPage(s, st, m, x, y, frame, { w, h }) {
+  slip(s, st, x, y, w, h, 'SOUND TEST', 'S-SMP');
+  let tx = x + 24;
+  SOUND_TABS.forEach(({ label }, i) => {
+    const on = i === m.tab;
+    if (on) highlight(s, tx - 4, y + 21, measure(label) + 8);
+    s.text(label, tx, y + 23, on ? RED : st.dark);
+    tx += measure(label) + 20;
+  });
+  arrow(s, x + 12, y + 23, -1, RED);
+  arrow(s, x + w - 16, y + 23, 1, RED);
+  rules(s, st, x + 6, y + 35, w - 12);
+  const { cues } = SOUND_TABS[m.tab];
+  const first = Math.max(0, Math.min(cues.length - LIST_ROWS, m.row - (LIST_ROWS >> 1)));
+  cues.slice(first, first + LIST_ROWS).forEach(([name, label], k) => {
+    const i = first + k;
+    const ry = y + 41 + k * LIST_ROW;
+    const on = i === m.row;
+    if (on) highlight(s, x + 18, ry - 2, w - 36);
+    s.text(String(i + 1).padStart(2, '0'), x + 26, ry, RED);
+    s.text(label.toUpperCase(), x + 44, ry, on ? OUT : st.dark);
+    if (m.tab === 0 && name === m.playing) s.text('▶', x + w - 30, ry, RED);
+    if (on) pencil(s, x + 7, ry + 1, frame);
+  });
+  const listEnd = y + 41 + LIST_ROWS * LIST_ROW;
+  if (first > 0) arrow90(s, x + w - 14, y + 42, -1, st.dark);
+  if (first + LIST_ROWS < cues.length) arrow90(s, x + w - 14, listEnd - 8, 1, st.dark);
+  rules(s, st, x + 6, listEnd, w - 12);
+  const song = SOUND_TABS[0].cues.find(([name]) => name === m.playing);
+  s.text(`NOW: ${song ? song[1].toUpperCase() : '-'}`, x + 12, listEnd + 6, st.dark);
+  const help = 'X: STOP  B: BACK';
+  s.text(help, x + w - 12 - measure(help), y + h - 14, st.dark);
+}
+
+// The labs: each grey-box lab with a line on what it tests; choosing one boots it.
+function drawLabsPage(s, st, m, x, y, frame, { w, h }) {
+  slip(s, st, x, y, w, h, 'LABS', 'GREY BOX');
+  LABS.forEach(({ label, what }, i) => {
+    const ry = y + 26 + i * LAB_ROW;
+    const on = i === m.row;
+    if (on) highlight(s, x + 18, ry - 3, w - 36);
+    s.text(label, x + 28, ry, on ? OUT : st.dark);
+    s.text(what, x + 28, ry + 10, on ? RED : st.rule);
+    rules(s, st, x + 18, ry + 20, w - 36);
+    if (on) pencil(s, x + 8, ry + 1, frame);
+  });
+  s.text('B: BACK', x + w - 20 - measure('B: BACK'), y + h - 16, st.dark);
+}
+
+function arrow90(s, x, y, dir, col) {
+  for (let i = 0; i < 4; i++) s.fill(x + i, dir > 0 ? y + i : y + 3 - i, 7 - 2 * i, 1, col);
+}
+
+function drawMemoPage(s, st, m, x, y, frame, { w, h }) {
   slip(s, st, x, y, w, h, 'MEMO', 'RUSH');
   s.text('TO: AUDITORS', x + 10, y + 22, st.dark);
   rules(s, st, x + 6, y + 33, w - 12);

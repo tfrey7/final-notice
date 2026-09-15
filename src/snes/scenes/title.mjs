@@ -12,7 +12,7 @@ import { INTRO_FRAMES } from '../lights.mjs';
 import { pastDue } from '../clock.mjs';
 import { paintArt } from '../titlepaint.mjs';
 import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs';
-import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
+import { currentSong, playSong, setMono, sfx, stopSong } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
 import { PROMPT_AT, fadeLevel, newTitle, promptLevel, titleTick } from '../titlestate.mjs';
@@ -32,7 +32,8 @@ const PROMPT = 'PUSH START';
 const PROMPT_Y = 208;
 const PAST_DUE = logoReading('PAST DUE');
 
-const MEMO_SOUNDS = { move: 'pencil', new: 'stampOk', continue: 'stampOk', open: 'stampOk', change: 'stampOk', back: 'paperSlide', done: 'paperSlide' };
+const MEMO_SOUNDS = { move: 'pencil', tab: 'pencil', new: 'stampOk', continue: 'stampOk', open: 'stampOk', change: 'stampOk', lab: 'stampOk', back: 'paperSlide', done: 'paperSlide' };
+const MEMO_PAGES = ['memo', 'settings', 'sound', 'labs'];
 
 const storage = () => { try { return localStorage; } catch { return null; } };
 
@@ -53,7 +54,7 @@ export class SnesTitleScene extends Phaser.Scene {
     // The opening starts the title melody as its doors part; the logo zoom comes in on it without a restart.
     if (currentSong() !== SONGS.title) playSong(SONGS.title);
     const params = new URLSearchParams(location.search);
-    // &t=<frames> pins the clock for a screenshot; &memo=memo|settings opens the slip on that page;
+    // &t=<frames> pins the clock for a screenshot; &memo=memo|settings|sound|labs opens the slip on that page;
     // &attract=<frames> pins the fade into the attract loop.
     this.pinned = params.has('t') ? Number(params.get('t')) : null;
     // Skipped out of the intro: the settled title fades up with the prompt already pulsing. Run to its
@@ -71,7 +72,11 @@ export class SnesTitleScene extends Phaser.Scene {
     applySettings(this.settings);
     this.memo = null;
     if (params.has('memo')) {
-      this.memo = { ...openMemo(this.settings, hasSave(storage()), params.get('memo') === 'settings' ? 'settings' : 'memo'), slide: SLIDE_FRAMES };
+      const page = MEMO_PAGES.includes(params.get('memo')) ? params.get('memo') : 'memo';
+      this.memo = { ...openMemo(this.settings, hasSave(storage()), page), slide: SLIDE_FRAMES };
+      // &row=<n> and &tab=<n> put the cursor there, for a screenshot.
+      if (params.has('row')) this.memo.row = Number(params.get('row'));
+      if (params.has('tab')) this.memo.tab = Number(params.get('tab'));
     }
     // &pastdue opens on the after-midnight title.
     this.opened = new Date();
@@ -88,6 +93,14 @@ export class SnesTitleScene extends Phaser.Scene {
     if (MEMO_SOUNDS[event]) sfx(MEMO_SOUNDS[event]);
     if (event === 'new' || event === 'continue') this.leaving = 0;
     if (event === 'back') { this.memo = null; this.t = { ...this.t, idle: 0 }; }
+    if (event === 'play') {
+      if (this.memo.cue.kind === 'song') playSong(this.memo.cue.name);
+      else sfx(this.memo.cue.name);
+    }
+    if (event === 'stop') stopSong();
+    // Leaving the sound test puts the title theme back on.
+    if (event === 'done' && currentSong() !== SONGS.title) playSong(SONGS.title);
+    if (event === 'lab') this.leaving = 0;
     if (event === 'change') {
       this.settings = settings;
       writeSettings(storage(), settings);
@@ -122,6 +135,12 @@ export class SnesTitleScene extends Phaser.Scene {
     }
     if (f === INTRO_FRAMES && this.pinned == null) sfx('brassHit');
     const frame = paintTitle(this, f);
+    if (this.leaving != null && this.memo?.event === 'lab') {
+      location.search = this.memo.url;
+      this.leaving = null;
+      this.pinned = f;
+      return;
+    }
     if (this.leaving != null) {
       // Select opens the file drawer over this last frame.
       this.registry.set('drawer', frame.slice());
