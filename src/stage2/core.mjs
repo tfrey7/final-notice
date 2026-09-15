@@ -40,6 +40,7 @@ export function createRun(auditor = 'ward', map = TEST_MAP) {
     targets: area.targets.map((t) => ({ ...t, w: 16, h: 16, hp: 2, flash: 0, frozen: 0 })),
     locks: marks(map, 'W').map(({ x, y }) => ({ x, y, w: 16, h: 32, hp: 1, flash: 0, lock: true })),
     foes: marks(map, 'A').map(createAssociate),
+    bosses: [],
     glyphs: [],
     pickups: createPickups(map),
     carried: ['notice', null],
@@ -85,9 +86,9 @@ export function stepRun(w, pad) {
     t.frozen = Math.max(0, (t.frozen ?? 0) - 1);
   }
   w.events.push(...stepFoes(w.foes, w.glyphs, w.player, w.area));
-  w.events.push(...stepCasts(w.casts, w.area, [...w.targets, ...w.locks, ...w.foes, ...w.glyphs], { x0: w.camX, x1: w.camX + SCREEN_W }));
+  w.events.push(...stepCasts(w.casts, w.area, [...w.targets, ...w.locks, ...w.foes, ...(w.bosses ?? []), ...w.glyphs], { x0: w.camX, x1: w.camX + SCREEN_W }));
   w.events.push(...stepGlyphs(w.glyphs, w.player, w.area));
-  const landed = w.events.filter((e) => ['hit', 'break'].includes(e.type) && !e.target?.glyph && !e.target?.lock).length;
+  const landed = w.events.filter((e) => ['hit', 'break'].includes(e.type) && !e.target?.glyph && !e.target?.lock && !e.target?.seal).length;
   w.meterHits = addHits(w.meterHits, landed);
   if (w.events.some((e) => e.type === 'lifeLost')) {
     dropExtra(w);

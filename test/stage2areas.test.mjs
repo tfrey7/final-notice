@@ -68,7 +68,7 @@ test('in Retention Order the front costs a life and restarts the area at its che
 });
 
 test('a checkpoint at the start of each area, named as the flow names them', () => {
-  assert.deepEqual(AREAS.map((a) => a.id), CHECKPOINTS.stage2.slice(0, 2));
+  assert.deepEqual(AREAS.map((a) => a.id), CHECKPOINTS.stage2.slice(0, 4));
   const w = createStage('ward');
   let flow = jumpTo('stage2');
   assert.equal(flow.checkpoint, 'stage2-area1');
@@ -117,5 +117,6 @@ test("the art card's solid grids replace the terrain when they fit; otherwise th
   assert.equal(art.map[11][13], '.', 'the built-in step is gone');
   assert.equal(art.map[12][2], 'P', 'markers stay');
   assert.equal(art.map[13][29], '#', 'the art floor has no pit');
-  assert.equal(LAYOUT.map[12].length, BUILT_IN.archiveAccess[0].length + BUILT_IN.retentionOrder[0].length);
+  assert.equal(LAYOUT.map[12].length, AREAS.reduce((n, a) => n + BUILT_IN[a.name][0].length, 0));
+  assert.ok(AREAS.every((a) => BUILT_IN[a.name][0].length === a.cols));
 });

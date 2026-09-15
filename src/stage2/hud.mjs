@@ -44,5 +44,8 @@ export function drawStage2Hud(g, run, flow) {
     g.fillStyle(C.back).fillRect(x - 1, y - 1, 18, 18);
     if (name && ICONS[name]) ICONS[name](g, x, y);
   });
+  // A boss's pips opposite the auditor's while he fights.
+  const boss = run.bosses?.find((b) => !b.beaten);
+  if (boss) for (let i = 0; i < boss.hp; i++) g.fillStyle(C.gold).fillRect(166 + i * 5, SAFE + 14, 4, 6);
   if (run.paused) drawText(g, 'PAUSE', WIDTH / 2 - 20, SAFE + 8, C.text);
 }

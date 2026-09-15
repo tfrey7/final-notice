@@ -1,5 +1,6 @@
 // Stage 2's enchantments, pickups, Associates, glyphs and wax locks on screen, through artOr.
 import { nes } from '../nes/palette.mjs';
+import { WIDTH } from '../nes/screen.mjs';
 
 const MS = 1000 / 60;
 const C = { tape: nes(0x16), ink: nes(0x02), inkLit: nes(0x21), wax: nes(0x06), waxLit: nes(0x16), ledger: nes(0x37), tab: nes(0x28), glyph: nes(0x15), burst: nes(0x38), flash: nes(0x30) };
@@ -10,6 +11,7 @@ export function loadActorArt(scene, artOr) {
   return {
     spells: artOr(scene, 'spells', { w: 8, h: 8, palette: [0x16, 0x28, 0x38] }),
     associate: artOr(scene, 'associate2', { w: 16, h: 32, palette: [0x0f, 0x07, 0x27] }),
+    custodian: artOr(scene, 'custodian', { w: 16, h: 32, palette: [0x0f, 0x04, 0x24] }),
   };
 }
 
@@ -35,12 +37,23 @@ export function drawActors(run, art, fx, sprites) {
     fx.fillStyle(C.ledger).fillRect(x, k.y - 12, 12, 12);
     fx.fillStyle(TABS[k.name]).fillRect(x + 9, k.y - 11, 3, 10).fillRect(x + 2, k.y - 8, 5, 1).fillRect(x + 2, k.y - 5, 5, 1);
   }
+  // Off-screen actors send no sprites, or they would use up the 8-a-scanline budget of the ones in view.
+  const offscreen = (b) => b.x + 16 < cx || b.x - 16 > cx + WIDTH;
   for (const f of run.foes) {
-    if (f.hp <= 0 && f.down % 4 < 2) continue;
+    if ((f.hp <= 0 && f.down % 4 < 2) || offscreen(f)) continue;
     const anim = f.hp <= 0 ? 'dazed' : f.windUp ? 'cast' : f.vx ? 'walk' : 'idle';
     sprites.push(...art.associate.frame(anim, f.frozen ? 0 : t, Math.round(f.x - 8 - cx), Math.round(f.y - 32), f.facing > 0));
     if (f.flash) fx.fillStyle(C.flash).fillRect(Math.round(f.x - 6 - cx), f.y - 34, 12, 2);
     if (f.frozen) fx.fillStyle(C.tape).fillRect(Math.round(f.x - 8 - cx), f.y - 22, 16, 2).fillRect(Math.round(f.x - 8 - cx), f.y - 12, 16, 2);
+  }
+  for (const c of run.bosses ?? []) {
+    const x = Math.round(c.x - 8 - cx);
+    const anim = c.beaten ? 'dazed' : c.phase === 'lunge' ? 'lunge' : c.phase === 'tell' ? 'tell' : c.phase === 'direct' ? 'direct' : 'idle';
+    sprites.push(...art.custodian.frame(anim, t, x, Math.round(c.y - 32), c.facing > 0));
+    // The tell (NES-CLASSICS L8): he flashes white before every lunge.
+    if ((c.phase === 'tell' && run.frame % 6 < 3) || c.flash) {
+      fx.fillStyle(C.flash).fillRect(x - 2, c.y - 34, 20, 2).fillRect(x - 2, c.y - 34, 2, 34).fillRect(x + 16, c.y - 34, 2, 34);
+    }
   }
   for (const g of run.glyphs) {
     fx.fillStyle(run.frame % 8 < 4 ? C.glyph : C.burst);

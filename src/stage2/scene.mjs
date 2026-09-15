@@ -14,12 +14,13 @@ import { carry, inHand, swapHand } from './pickups.mjs';
 import { drawStage2Hud } from './hud.mjs';
 import { drawRing } from '../hud.mjs';
 import { HITS_PER_SEGMENT, ringShape } from '../injunction.mjs';
-import { createStage, layoutFrom, stepStage } from './areas.mjs';
+import { arenaLocked, createStage, layoutFrom, stepStage } from './areas.mjs';
 import { drawPrompts, drawStageParts } from './areadraw.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp', belt: 'conveyor', tell: 'alarm' };
+const AREA_ART = ['archiveAccess', 'retentionOrder', 'originalCopy', 'disposalLine'];
 const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
 
 // The art cards' Stage 2 names, as ward.mjs exports them; an auditor without them is a 16x32 stand-in.
@@ -44,7 +45,7 @@ export class EscapeScene extends Phaser.Scene {
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
 
     const archive = await loadArt('bg-archive').catch(() => null);
-    this.run = createStage(flow.auditor, layoutFrom({ archiveAccess: archive?.areas?.archiveAccess?.solid, retentionOrder: archive?.areas?.retentionOrder?.solid }), flow.checkpoint);
+    this.run = createStage(flow.auditor, layoutFrom(Object.fromEntries(AREA_ART.map((n) => [n, archive?.areas?.[n]?.solid]))), flow.checkpoint);
     // ?at=<x> starts the auditor further along the floor, for a quick look at one spot.
     if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
     // ?spell=<name> starts with that enchantment in hand.
@@ -52,7 +53,8 @@ export class EscapeScene extends Phaser.Scene {
     // ?meter=<segments> starts with that much of the injunction meter filled.
     if (params.has('meter')) this.run.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
     window.finalNoticeStage2 = this.run;
-    playSong('stage2');
+    this.song = 'stage2';
+    playSong(this.song);
 
     this.bg = this.add.graphics();
     this.layer = new SpriteLayer(this);
@@ -80,6 +82,9 @@ export class EscapeScene extends Phaser.Scene {
         this.registry.set('flow', flow);
       }
     }
+    // The boss theme while the Custodian's screen is locked, back to the stage's once the ledger is taken.
+    const song = arenaLocked(this.run) ? 'boss' : 'stage2';
+    if (song !== this.song) playSong(this.song = song);
     this.draw(flow);
   }
 
