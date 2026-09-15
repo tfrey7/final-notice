@@ -28,9 +28,12 @@ export function drawSparks(g, sparks = [], dx, tune, lift = 34) {
 const INK = { count: rgb15(31, 26, 8), hot: rgb15(31, 12, 6), word: rgb15(31, 31, 31), dim: rgb15(16, 16, 18) };
 
 // The count, right-aligned at (right, top), scaled up about its own corner by fill-size blocks.
-export function drawCombo(g, fill, combo, tune, { right, top }) {
+export function drawCombo(g, fill, combo, tune, { right, top, name = null }) {
+  const s = comboScale(combo ?? { hits: 0, pop: 99 });
+  const wordY = top + Math.round(20 * s) + 4;
+  // A finished route takes the rating word's place for a beat, so the counter names what was landed.
+  if (name) drawString(fill, name.name, right - measure(name.name), wordY, name.t % 8 < 4 ? INK.count : INK.word);
   if (!combo || combo.hits < 2) return;
-  const s = comboScale(combo);
   const text = String(combo.hits);
   const w = measure(text) * 2 * s;
   const ox = right - w - 30;
@@ -38,13 +41,15 @@ export function drawCombo(g, fill, combo, tune, { right, top }) {
   drawString(big, text, ox, top, combo.hits >= 8 ? INK.hot : INK.count);
   drawString(fill, 'HITS', right - 26, top + Math.round(10 * s), INK.word);
   const word = comboRating(combo.hits);
-  if (word) drawString(fill, word, right - measure(word), top + Math.round(20 * s) + 4, combo.pop % 6 < 3 ? INK.hot : INK.word);
+  if (!name && word) drawString(fill, word, right - measure(word), wordY, combo.pop % 6 < 3 ? INK.hot : INK.word);
   const bar = 40;
   g.fillStyle(0x18181c).fillRect(right - bar, top - 5, bar, 3);
   g.fillStyle(0xe8c050).fillRect(right - bar, top - 5, Math.round(bar * combo.t / (tune.comboDrop || 1)), 3);
 }
 
 const GOLD = 0xe8c050;
+const LIVE = 0xb0b0b8;
+const DEAD = 0x4c4c54;
 
 // The combo guide: a small branching map of the chain, no plate behind it. Pressed buttons sit on the
 // top line framed in gold, each way on hangs off it, and each route ends in a star and its name.
@@ -52,7 +57,10 @@ const GOLD = 0xe8c050;
 export function drawGuide(g, fill, guide, { x, y, device = inputDevice() }) {
   const a = Math.min(1, (2 * guide.t) / GUIDE_FADE);
   const ink = (px, py, w, h, c) => fill(px, py, w, h, c, Math.max(1, Math.round(15 * a)));
+  const dimInk = (px, py, w, h, c) => fill(px, py, w, h, c, Math.max(1, Math.round(6 * a)));
   const nodes = guideTree(guide.routes);
+  // One route left standing is the route the auditor is on: its whole line burns gold.
+  const only = guide.routes.filter((r) => r.live).length === 1;
   const keyW = (k) => capWidth(k, device);
   const widths = [];
   for (const n of nodes) widths[n.col] = Math.max(widths[n.col] ?? 0, keyW(n.key));
@@ -64,7 +72,7 @@ export function drawGuide(g, fill, guide, { x, y, device = inputDevice() }) {
     const p = nodes[n.parent];
     const px = colX[p.col] + keyW(p.key);
     const my = rowY(n.row) + 5;
-    g.fillStyle(n.lit ? GOLD : 0x808088, a);
+    g.fillStyle(n.lit ? GOLD : n.live ? LIVE : DEAD, n.live ? a : a * 0.45);
     if (p.row !== n.row) g.fillRect(px + 2, rowY(p.row) + 10, 1, my - rowY(p.row) - 10);
     g.fillRect(p.row !== n.row ? px + 2 : px, my, colX[n.col] - px - (p.row !== n.row ? 2 : 0), 1);
   }
@@ -72,14 +80,17 @@ export function drawGuide(g, fill, guide, { x, y, device = inputDevice() }) {
     const cx = colX[n.col];
     const cy = rowY(n.row);
     const bw = keyW(n.key);
-    g.fillStyle(0x000000, 0.5 * a).fillRect(cx + 1, cy + 1, bw, 10);
-    if (n.lit) g.fillStyle(GOLD, a).fillRect(cx - 1, cy - 1, bw + 2, 12);
-    drawCap(ink, n.key, cx, cy, { device });
+    const on = n.lit || (n.live && only);
+    g.fillStyle(0x000000, (n.live ? 0.5 : 0.3) * a).fillRect(cx + 1, cy + 1, bw, 10);
+    if (on) g.fillStyle(GOLD, a).fillRect(cx - 1, cy - 1, bw + 2, 12);
+    drawCap(n.live ? ink : dimInk, n.key, cx, cy, { device, off: !n.live });
     if (!n.end) continue;
     const sx = cx + bw + 6;
     const hot = n.done && guide.t % 8 < 4;
-    g.fillStyle(hot ? 0xff6020 : 0xffb020, a).fillRect(sx - 1, cy + 1, 3, 9).fillRect(sx - 4, cy + 4, 9, 3).fillRect(sx - 2, cy + 3, 5, 5);
-    drawString(ink, n.end, sx + 7, cy + 1, n.done ? INK.count : rgb15(24, 24, 26));
+    const star = n.done ? (hot ? 0xff6020 : 0xffb020) : n.live ? 0xffb020 : 0x6a6a72;
+    g.fillStyle(star, n.live ? a : a * 0.45).fillRect(sx - 1, cy + 1, 3, 9).fillRect(sx - 4, cy + 4, 9, 3).fillRect(sx - 2, cy + 3, 5, 5);
+    if (!n.live) drawString(dimInk, n.end, sx + 7, cy + 1, INK.dim);
+    else drawString(ink, n.end, sx + 7, cy + 1, n.done || only ? INK.count : rgb15(24, 24, 26));
   }
 }
 

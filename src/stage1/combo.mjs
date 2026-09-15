@@ -45,39 +45,66 @@ export function chainKeys(p) {
 }
 
 // How many of each route's buttons the chain has lit: its keys up to where the chain stops matching.
+// `match` is that run of buttons whether or not the route survived it, so a route the chain has ruled
+// out still knows where it parted company; `live` is a route the chain can still finish, and `lit`
+// counts buttons only on those. `done` is a route the chain has just finished.
 export function routeLights(p, tune) {
   const pressed = chainKeys(p);
   return ROUTES.filter((r) => !r.third || tune.thirdAttack).map(({ mercer, ...r }) => {
     if (mercer && tune.thirdAttack) r.name = mercer;
     const on = Boolean(tune[r.dial]);
-    let lit = 0;
-    while (on && lit < pressed.length && lit < r.keys.length && r.keys[lit] === pressed[lit]) lit++;
-    return { ...r, on, lit: lit === pressed.length ? lit : 0 };
+    let match = 0;
+    while (on && match < pressed.length && match < r.keys.length && r.keys[match] === pressed[match]) match++;
+    const live = match === pressed.length;
+    const lit = live ? match : 0;
+    return { ...r, on, match, live, lit, done: on && lit > 0 && lit === r.keys.length };
   });
 }
 
-// The routes the chain can still finish, or has just finished: what the on-screen combo guide shows.
-export const liveRoutes = (p, tune) => routeLights(p, tune).filter((r) => r.on && r.lit > 0);
+// Every route this chain opened: the ones it can still finish, and the ones its later buttons ruled
+// out, which stay on the map dimmed so the guide's shape holds steady for the whole chain.
+export function guideRoutes(lights) {
+  const rows = lights.filter((r) => r.on && r.match > 0);
+  return rows.some((r) => r.live) ? rows : [];
+}
+
+export const liveRoutes = (p, tune) => guideRoutes(routeLights(p, tune));
+
+export const NAME_HOLD = 40;
+
+// The word the combo counter shouts when a route completes, held for a beat and then cleared.
+export function comboName(prev, routes, hold = NAME_HOLD) {
+  const done = routes.find((r) => r.done);
+  if (done) return prev?.on && prev.name === done.name ? prev : { name: done.name, t: hold, on: true };
+  const t = (prev?.t ?? 0) - 1;
+  return t > 0 ? { name: prev.name, t, on: false } : null;
+}
 
 // The guide's mini-map: the buttons pressed so far along row 0, then the buttons still to press as
 // branches, merged where routes share a button. `col` is the step in the chain, `row` the line it sits
 // on, `parent` the index of the node it hangs from, and a route's last node carries its name as `end`.
+// A ruled-out route hangs off the button where the chain left it, so its branch keeps its place on the
+// map while the live ones carry on; `live` on a node is false down such a branch, and the guide dims it.
 export function guideTree(routes) {
-  if (!routes.length) return [];
-  const lit = routes[0].lit;
-  const nodes = routes[0].keys.slice(0, lit).map((key, col) => ({ key, col, row: 0, parent: col - 1, lit: true, end: null, done: false }));
-  let rows = -1;
+  const first = routes.find((r) => r.live);
+  if (!first) return [];
+  const lit = first.match;
+  const nodes = first.keys.slice(0, lit).map((key, col) => ({ key, col, row: 0, parent: col - 1, lit: true, live: true, end: null, done: false }));
+  // A branch takes the first line at or below the button it hangs from with nothing already on it from
+  // that column on, so branches never write over each other however early a ruled-out route parted.
+  const free = (row, col) => !nodes.some((n) => n.row === row && n.col >= col);
   for (const r of routes) {
-    let parent = lit - 1;
+    let parent = r.match - 1;
     let row = null;
-    for (let col = lit; col < r.keys.length; col++) {
-      const at = row == null ? nodes.findIndex((n) => n.parent === parent && n.col === col && n.key === r.keys[col] && !n.end) : -1;
+    const from = nodes.length;
+    for (let col = r.match; col < r.keys.length; col++) {
+      const at = row == null ? nodes.findIndex((n) => n.parent === parent && n.col === col && n.key === r.keys[col] && n.live === r.live && !n.end) : -1;
       if (at >= 0) { parent = at; continue; }
-      if (row == null) row = Math.max(++rows, nodes[parent]?.row ?? 0);
-      nodes.push({ key: r.keys[col], col, row, parent, lit: false, end: null, done: false });
+      if (row == null) for (row = nodes[parent]?.row ?? 0; !free(row, col); row++);
+      nodes.push({ key: r.keys[col], col, row, parent, lit: false, live: r.live, end: null, done: false });
       parent = nodes.length - 1;
     }
-    if (parent >= 0 && !nodes[parent].end) Object.assign(nodes[parent], { end: r.name, done: r.lit === r.keys.length });
+    if (parent >= 0 && !nodes[parent].end && (r.live || nodes.length > from)) Object.assign(nodes[parent], { end: r.name, done: r.done, live: r.live || nodes[parent].live });
   }
   return nodes;
 }

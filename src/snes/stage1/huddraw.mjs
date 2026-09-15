@@ -8,7 +8,7 @@ import { drawString, measure } from '../text.mjs';
 import { drawCombo, drawGuide } from '../hitfx.mjs';
 import { drawPrompt, measurePrompt } from '../prompt.mjs';
 import { PIPS } from '../../stage1/player.mjs';
-import { guideStep, liveRoutes } from '../../stage1/combo.mjs';
+import { comboName, guideRoutes, guideStep, routeLights } from '../../stage1/combo.mjs';
 import { vellum } from '../../stage1/vellum.mjs';
 import { CARD, cardFrame, clearLines } from './boss.mjs';
 
@@ -34,8 +34,10 @@ export function drawBrawlHud(scene, time) {
   if (w.flash > 0) fill(0, 0, WIDTH, HEIGHT, WHITE, Math.ceil(10 * w.flash / (scene.tune.parryFlash || 1)));
   drawHud(fill, layout);
   if (!scene.paused && !scene.card) {
-    drawCombo(scene.g, fill, w.combo, scene.tune, { right: WIDTH - 10, top: 44 });
-    scene.guide = guideStep(scene.guide, scene.guideOn ? liveRoutes(p, scene.tune) : []);
+    const lights = routeLights(p, scene.tune);
+    scene.comboName = comboName(scene.comboName, lights);
+    drawCombo(scene.g, fill, w.combo, scene.tune, { right: WIDTH - 10, top: 44, name: scene.comboName });
+    scene.guide = guideStep(scene.guide, scene.guideOn ? guideRoutes(lights) : []);
     if (scene.guide) drawGuide(scene.g, fill, scene.guide, { x: 8, y: 38 });
   }
   scene.hudSprites.pool.forEach((img) => img.setAlpha(dim).setScrollFactor(0));

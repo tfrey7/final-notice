@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultTune, fighter, hitFeel, landHit, step } from '../src/stage1/moves.mjs';
-import { GUIDE_FADE, comboRating, comboScale, guideStep, guideTree, liveRoutes, routeLights } from '../src/stage1/combo.mjs';
+import { GUIDE_FADE, NAME_HOLD, comboName, comboRating, comboScale, guideStep, guideTree, liveRoutes, routeLights } from '../src/stage1/combo.mjs';
 import { tuneFor } from '../src/stage1/player.mjs';
 import { snesTune } from '../src/snes/fight.mjs';
 
@@ -98,21 +98,41 @@ test('the route map lights the routes the chain is on', () => {
   assert.equal(routeLights({ state: 'idle' }, { ...tune, routeLH: 0 }).find((r) => r.name === 'LAUNCHER').on, false);
 });
 
-test('the combo guide keeps only the routes the chain can still finish', () => {
+test('the combo guide keeps the routes it ruled out, marked dead', () => {
   const tune = snes();
-  const names = (p, t = tune) => liveRoutes(p, t).map((r) => r.name);
+  const names = (p, t = tune) => liveRoutes(p, t).map((r) => `${r.name}${r.live ? '' : ' (dead)'}`);
   assert.deepEqual(names({ state: 'punch', combo: 1 }), ['FINISHER', 'KNOCKBACK', 'LAUNCHER']);
-  assert.deepEqual(names({ state: 'punch', combo: 2 }), ['FINISHER', 'KNOCKBACK']);
-  assert.deepEqual(names({ state: 'punch', combo: 2 }, { ...tune, routeLLH: 0 }), ['FINISHER']);
+  assert.deepEqual(names({ state: 'punch', combo: 2 }), ['FINISHER', 'KNOCKBACK', 'LAUNCHER (dead)']);
+  assert.deepEqual(names({ state: 'punch', combo: 2 }, { ...tune, routeLLH: 0 }), ['FINISHER', 'LAUNCHER (dead)']);
+  assert.deepEqual(names({ state: 'heavy', route: 'launcher' }), ['FINISHER (dead)', 'KNOCKBACK (dead)', 'LAUNCHER']);
   assert.deepEqual(names({ state: 'idle', chain: 0 }), []);
+});
+
+test('the counter names a route the moment it completes, then clears', () => {
+  const tune = snes();
+  const lights = (p) => routeLights(p, tune);
+  assert.equal(comboName(null, lights({ state: 'punch', combo: 1 })), null);
+  const named = comboName(null, lights({ state: 'heavy', route: 'knockback' }));
+  assert.deepEqual([named.name, named.t, named.on], ['KNOCKBACK', NAME_HOLD, true]);
+  assert.equal(comboName(named, lights({ state: 'heavy', route: 'knockback' })), named);
+  const fading = comboName(named, lights({ state: 'idle', chain: 0 }));
+  assert.deepEqual([fading.name, fading.t, fading.on], ['KNOCKBACK', NAME_HOLD - 1, false]);
+  assert.equal(comboName({ ...fading, t: 1 }, []), null);
+  assert.equal(comboName(fading, lights({ state: 'heavy', route: 'knockback' })).t, NAME_HOLD);
+  assert.equal(comboName(null, lights({ state: 'punch', combo: 3 })).name, 'FINISHER');
 });
 
 test('the guide map merges shared buttons into branches and fades once the chain ends', () => {
   const tune = snes();
-  const map = (p) => guideTree(liveRoutes(p, tune)).map((n) => `${n.key}@${n.col},${n.row}${n.end ? `:${n.end}` : ''}`);
+  const map = (p) => guideTree(liveRoutes(p, tune)).map((n) => `${n.key}@${n.col},${n.row}${n.end ? `:${n.end}` : ''}${n.live ? '' : '!'}`);
   assert.deepEqual(map({ state: 'punch', combo: 1 }), ['Y@0,0', 'Y@1,0', 'Y@2,0:FINISHER', 'X@2,1:KNOCKBACK', 'X@1,2:LAUNCHER']);
+  // The ruled-out launcher keeps its place, hanging off the button the chain left it at.
+  assert.deepEqual(map({ state: 'punch', combo: 2 }), ['Y@0,0', 'Y@1,0', 'Y@2,0:FINISHER', 'X@2,1:KNOCKBACK', 'X@1,2:LAUNCHER!']);
+  // The two ruled-out routes drop to their own lines rather than writing over the live one.
+  assert.deepEqual(map({ state: 'heavy', route: 'launcher' }),
+    ['Y@0,0', 'X@1,0:LAUNCHER', 'Y@1,1!', 'Y@2,1:FINISHER!', 'X@2,2:KNOCKBACK!']);
   const done = guideTree(liveRoutes({ state: 'heavy', route: 'launcher' }, tune));
-  assert.deepEqual(done.map((n) => [n.key, n.end, n.done]), [['Y', null, false], ['X', 'LAUNCHER', true]]);
+  assert.deepEqual(done.filter((n) => n.live).map((n) => [n.key, n.end, n.done]), [['Y', null, false], ['X', 'LAUNCHER', true]]);
   assert.deepEqual(guideTree([]), []);
   const live = guideStep(null, liveRoutes({ state: 'punch', combo: 1 }, tune));
   assert.equal(live.t, GUIDE_FADE);
