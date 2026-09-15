@@ -1,119 +1,153 @@
-// Stage 2 on the S-DSP: the NES escape chase's form, melody and harmony (src/audio/songs/stage2.mjs)
-// re-voiced for eight recorded-sample voices in the SNES arrangement style (docs/MUSIC.md).
+// Stage 2, the escape chase: sketch B (item 2026) built out into a full song. E minor in an unhurried
+// 12/8 at about 133 bpm, Castlevania III's gothic side: a soaring string lead, brass answering in a
+// counter-line, a melodic bass, pad and choir holding the chords, a deep echo. About 2:24 before the
+// loop: intro, A twice, B twice, a breakdown and bridge lifted to F# minor, A in F# minor, and a
+// turnaround back to E minor that loops to the top of A.
 //
-// v1 brass section lead | v2 Rhodes arpeggio, left, a warm pad in the breakdown | v3 square-lead arpeggio
-// a row behind, right, the upper pad in the breakdown | v4 synth bass octave eighths | v5 gated kick |
-// v6 gated snare, its fill stepping down like toms | v7 hats | v8 the alarm and the title nod in the
-// intro, then the lead a third below, Castlevania III style. Effects steal v8 then v7; the NES software
-// echo of the lead is the hardware echo here, long and deep.
+// v1 string lead | v2 pad, right | v3 choir, left | v4 synth bass | v5 kick |
+// v6 snare, fills and the roll | v7 hats | v8 brass counter-line, the tune itself in the breakdown
 
-import { FORM, LOOP_BAR, SCALE } from '../../../audio/songs/stage2.mjs';
-import * as kit from '../../../audio/songs/kit.mjs';
+import { bars, hats, rest, section, voice } from './chase-kit.mjs';
+import { tag, transpose, vibrato } from '../../../audio/songs/kit.mjs';
 import { INSTRUMENTS } from '../recorded.mjs';
 
-const { REST, chord, echo, fold, nameOf, pitchClasses, play, tag, thirdBelow, transpose, vibrato } = kit;
+export const BAR_ROWS = 12;
+const R = rest(BAR_ROWS);
+const UP = 2;
 
-export const BAR_ROWS = 16;
-export const LEADS = FORM.map((b) => transpose(b.lead, b.shift));
+const INTRO_CHORDS = ['Em', 'Em', 'C', 'B7'];
+const INTRO_LEAD = [R, R, 'B5 - - - - - - - - - - -', 'D#6 - - - - - B5 - - F#5 - -'];
 
-const mapNotes = (rows, fn) => rows.split(' ').map((t) => (/^[A-G]/.test(t) ? fn(t) : t)).join(' ');
-const SINGING = ['B', 'climax'];
+const A_CHORDS = ['Em', 'C', 'Am', 'B7', 'Em', 'C', 'D', 'B7'];
+const A_LEAD = [
+  'E5 - - - - - B4 - - E5 - F#5',
+  'G5 - - - - - F#5 - - E5 - G5',
+  'A5 - - - - - C6 - - B5 - A5',
+  'B5 - - - - - - - - D#5 - F#5',
+  'E5 - - - - - B4 - - E5 - F#5',
+  'G5 - - - - - A5 - - B5 - C6',
+  'D6 - - - - - C6 - - B5 - A5',
+  'B5 - - - - - D#6 - - F#6 - -',
+];
+const A_LEAD_2 = [...A_LEAD.slice(0, 7), 'B5 - - A5 - - G5 - - F#5 - D#5'];
 
-const v1 = LEADS.map((bar) => tag(bar, 'brass'));
+const B_CHORDS = ['C', 'D', 'G', 'Em', 'Am', 'D', 'B7', 'B7'];
+const B_LEAD = [
+  'E6 - - - - - D6 - - C6 - -',
+  'D6 - - - - - A5 - - F#5 - A5',
+  'B5 - - - - - - - - D6 - G6',
+  'G6 - - F#6 - - E6 - - B5 - -',
+  'C6 - - - - - E6 - - A6 - -',
+  'F#6 - - - - - E6 - - D6 - C6',
+  'B5 - - - - - D#6 - - F#6 - -',
+  'A6 - - - - - F#6 - - D#6 - B5',
+];
+const B_LEAD_2 = [...B_LEAD.slice(0, 7), 'B5 - - - - - - - - . . .'];
 
-const ARP = [0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6];
-const arp = ({ root, tones }, inst) =>
-  ARP.map((k) => `${nameOf(root + 12 + tones[k % tones.length] + 12 * Math.floor(k / tones.length))}:${inst}`).join(' ');
-const arpBar = (b, i) => !(b.part === 'breakdown' || (b.part === 'intro' && i < 2));
-const HOLD = 'X - - - - - - - - - - - - - - -';
-const pad = (b, tone, lo, hi, inst) => {
-  const { root, tones } = chord(b.symbol, b.shift);
-  return b.part === 'intro' ? REST : HOLD.replace('X', `${nameOf(fold(root + tones[tone], lo, hi))}:${inst}`);
-};
-const v2 = FORM.map((b, i) => (arpBar(b, i) ? arp(chord(b.symbol, b.shift), 'arpL') : pad(b, 1, 57, 69, 'padL')));
-const arpShadow = echo(FORM.map((b) => arp(chord(b.symbol, b.shift), 'arpR')), 1, 'arpR');
-const v3 = FORM.map((b, i) => (arpBar(b, i) ? arpShadow[i] : pad(b, 3, 62, 74, 'padR')));
+// The breakdown and bridge, written in E minor and lifted a tone: the brass carries the tune alone for
+// four bars, the strings take it back, and the bridge plays it in full.
+const C_CHORDS = ['Em', 'C', 'G', 'D', 'Em', 'Am', 'C', 'B7'];
+const C_LEAD = [
+  'B5 - - - - - - - - G5 - F#5',
+  'E5 - - - - - - - - G5 - C6',
+  'B5 - - - - - - - - D6 - -',
+  'A5 - - - - - F#5 - - D5 - -',
+  'E6 - - - - - D6 - - B5 - G5',
+  'A5 - - - - - C6 - - E6 - -',
+  'G6 - - - - - E6 - - C6 - E6',
+  'D#6 - - - - - B5 - - F#5 - -',
+];
+const C_SPARSE = [R, R, R, R, ...C_LEAD.slice(4)];
 
-// Castlevania III's engine room: octaves pumped in sixteenths, pushed off the beat, a climbing turnaround.
+const TURN_CHORDS = ['C', 'D', 'B7', 'B7'];
+const TURN_LEAD = [
+  'E6 - - - - - D6 - - C6 - B5',
+  'A5 - - - - - B5 - - C6 - D6',
+  'D#6 - - - - - B5 - - A5 - F#5',
+  'D#5 - - - - - F#5 - - B5 - -',
+];
+
+export const LOOP_BAR = INTRO_CHORDS.length;
+export const FORM = [
+  ...section('intro', INTRO_CHORDS, INTRO_LEAD),
+  ...section('A', A_CHORDS, A_LEAD),
+  ...section('A', A_CHORDS, A_LEAD_2),
+  ...section('B', B_CHORDS, B_LEAD),
+  ...section('B', B_CHORDS, B_LEAD_2),
+  ...section('break', C_CHORDS, C_SPARSE, UP),
+  ...section('bridge', C_CHORDS, C_LEAD, UP),
+  ...section('A', A_CHORDS, A_LEAD, UP),
+  ...section('A', A_CHORDS, A_LEAD_2, UP),
+  ...section('turn', TURN_CHORDS, TURN_LEAD),
+];
+
+const HELD = (letter) => [letter, ...Array(BAR_ROWS - 1).fill('-')].join(' ');
+const bareIntro = (b) => b.part === 'intro' && b.bar < 2;
+const bareBreak = (b) => b.part === 'break' && b.bar < 4;
+const lastBar = (b) => b.bar === (b.part === 'intro' || b.part === 'turn' ? 3 : 7);
+
+const v1 = FORM.map((b) => tag(b.lead, 'lead'));
+const v2 = FORM.map((b) => (bareIntro(b) ? R : voice(HELD('F'), b.c, 'pad', 12)));
+const v3 = FORM.map((b) => voice(HELD('T'), b.c, 'choir', 12));
+
 const BASS = {
-  drive: 'R R O R R R O R R R O R R O F O',
-  turn: 'R O R O F O F O S O S O O - R -',
-  half: 'R - - - R - - - R - - - F - S -',
+  held: 'R - - - - - R - - - - -',
+  A: 'R - - - - O R - - - - F',
+  B: 'R - - F - - O - - F - -',
+  fill: 'R - F - O - U - O - F -',
+  turn: 'R - - - - - F - - - - -',
 };
 const v4 = FORM.map((b) => {
-  const c = chord(b.symbol, b.shift);
-  if (b.part === 'breakdown') return play(b.last ? BASS.turn : BASS.half, c, b.last ? 'bass' : 'bassLong');
-  return play(b.last ? BASS.turn : BASS.drive, c, 'bass');
+  if (bareIntro(b) || bareBreak(b)) return voice(BASS.held, b.c, 'bass');
+  if (b.part === 'turn') return voice(b.bar === 3 ? BASS.fill : BASS.turn, b.c, 'bass');
+  if (lastBar(b) && b.part !== 'intro') return voice(BASS.fill, b.c, 'bass');
+  return voice(b.part === 'B' || b.part === 'bridge' ? BASS.B : BASS.A, b.c, 'bass');
 });
 
-// The NES DPCM line split in two lanes; each hit cuts the other lane's ring, which is the gate.
-const DRUMS = {
-  groove: 'F - - - F:snare - - - F - F - F:snare - - F',
-  fill: 'F - - - F:snare - - - F:snare D:snare F:snare C:snare F:snare B:snare F:snare A:snare',
-  half: 'F - - - - - - - F:snare - - - - - - -',
+const quiet = (b) => bareIntro(b) || bareBreak(b);
+const v5 = FORM.map((b) => tag(quiet(b) || lastBar(b) ? 'C4 . . . . . . . . . . .'
+  : b.part === 'B' || b.part === 'bridge' ? 'C4 . . . . . C4 . . C4 . .' : 'C4 . . . . . . . . C4 . .', 'kick'));
+const v6 = FORM.map((b) => {
+  if (b.part === 'break' && b.bar === 7) return tag('C4 . C4 . C4 . C4 C4 C4 C4 C4 C4', 'roll');
+  if (quiet(b)) return b.part === 'intro' && b.bar === 1 ? tag('. . . . . . . . . C4 . C4', 'snare') : R;
+  return tag(lastBar(b) ? '. . . . . . C4 . Bb3 A3 G3 F3' : '. . . . . . C4 . . . . .', 'snare');
+});
+const v7 = FORM.map((b) => hats(bareIntro(b) ? '. . . . . . c . . c . .'
+  : bareBreak(b) ? 'c . . c . . c . . c . .' : 'c . c c . c c . c c . o'));
+
+const COUNTER = {
+  intro: 'R - - - - - F - - - - -',
+  A: 'F - - T - - R - - T - -',
+  B: 'U - - - - - H - - F - -',
+  bridge: 'T - - - - - F - - O - -',
+  turn: 'U - - - - - O - - - - -',
 };
-const TOMS = { F: 'C4', D: 'Bb3', C: 'A3', B: 'G3', A: 'F3' };
-const drumBar = (b, i) => {
-  if (b.part === 'intro') return i < 2 ? null : i === 3 ? DRUMS.fill : DRUMS.groove;
-  if (b.last) return DRUMS.fill;
-  return b.part === 'breakdown' ? DRUMS.half : DRUMS.groove;
-};
-const v5 = FORM.map((b, i) => {
-  const bar = drumBar(b, i);
-  return bar ? bar.split(' ').map((t) => (t === 'F' ? 'C4:kick' : t.endsWith(':snare') ? '.' : t)).join(' ') : REST;
-});
-const v6 = FORM.map((b, i) => {
-  const bar = drumBar(b, i);
-  return bar ? bar.split(' ').map((t) => (t === 'F' ? '.' : t.endsWith(':snare') ? `${TOMS[t[0]]}:snare` : t)).join(' ') : REST;
-});
-
-const HATS = { 1: 'C4:chat', 2: 'D4:chat', 3: 'E4:chat', 0: 'C4:ohat', '0:open': 'C4:ohat' };
-const v7 = FORM.map((b, i) => {
-  const p = b.part === 'intro' ? (i < 2 ? '1 . 1 . 1 . 1 . 1 . 1 . 1 . 1 .' : '. . 1 . . . 1 . . . 1 . . . 0:open -')
-    : b.part === 'breakdown' ? (b.last ? '. . . . . . . . 3 3 2 2 1 1 0 0' : REST)
-      : SINGING.includes(b.part) ? '1 . 1 1 1 . 1 1 1 . 1 1 1 . 0:open -'
-        : '. . 1 . . . 1 . . . 1 . . . 0:open -';
-  return p.split(' ').map((t) => HATS[t] ?? t).join(' ');
-});
-
-// The lead doubled a third below wherever it sings, strings in A and the tag, brass in B.
-const NOD = 'G4 - C5 - Eb5 - D5 - C5 - - - - - - -';
-const v8 = FORM.map((b, i) => {
-  if (b.part === 'intro') return i < 2 ? tag('C6 - - - - - - - G5 - - - - - - -', 'siren') : i === 2 ? tag(NOD, 'nod') : REST;
-  if (b.part === 'breakdown') return REST;
-  const scale = pitchClasses(SCALE, b.shift);
-  return mapNotes(LEADS[i], (t) => `${thirdBelow(t, scale)}:${SINGING.includes(b.part) ? 'harm' : 'sharm'}`);
-});
-
-const join = (bars) => bars.join(' | ');
+const v8 = FORM.map((b) => (bareBreak(b)
+  ? tag(transpose(C_LEAD[b.bar], UP - 12), 'horn')
+  : voice(COUNTER[b.part === 'break' ? 'bridge' : b.part], b.c, 'horn', 12)));
 
 export default {
-  tempo: 5,
+  tempo: 9,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 78, evol: 42, efb: 70, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
+  echo: { mvol: 42, evol: 40, efb: 80, edl: 6, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
   instruments: {
-    brass: { ...INSTRUMENTS.brass, vol: 127, pan: -6, pitch: vibrato(0.22, 12, 14) },
-    harm: { ...INSTRUMENTS.brass, vol: 50, pan: 30, pitch: vibrato(0.22, 12, 14) },
-    sharm: { ...INSTRUMENTS.strings, vol: 52, pan: 30, pitch: vibrato(0.15, 13, 18) },
-    arpL: { ...INSTRUMENTS.epiano, adsr: [15, 6, 2, 22], vol: 50, pan: -44 },
-    arpR: { ...INSTRUMENTS.sqlead, adsr: [15, 6, 2, 22], vol: 38, pan: 44 },
-    padL: { ...INSTRUMENTS.pad, vol: 56, pan: -40 },
-    padR: { ...INSTRUMENTS.pad, vol: 50, pan: 40 },
-    bass: { ...INSTRUMENTS.synbass, adsr: [15, 6, 3, 22], vol: 96 },
-    bassLong: { ...INSTRUMENTS.synbass, adsr: [15, 2, 5, 10], vol: 90 },
-    kick: { ...INSTRUMENTS.gkick, vol: 104 },
-    snare: { ...INSTRUMENTS.gsnare, vol: 106 },
-    chat: { ...INSTRUMENTS.chat, vol: 60 },
-    ohat: { ...INSTRUMENTS.ohat, vol: 50 },
-    siren: { ...INSTRUMENTS.strings, vol: 74, pan: 20 },
-    nod: { ...INSTRUMENTS.strings, vol: 70, pan: 20 },
+    lead: { ...INSTRUMENTS.strings, vol: 118, pan: -24, pitch: vibrato(0.22, 15, 14) },
+    horn: { ...INSTRUMENTS.brass, adsr: [12, 3, 6, 6], vol: 70, pan: 70, pitch: vibrato(0.18, 15, 18) },
+    pad: { ...INSTRUMENTS.pad, vol: 52, pan: 84 },
+    choir: { ...INSTRUMENTS.choir, vol: 58, pan: -84 },
+    bass: { ...INSTRUMENTS.synbass, adsr: [11, 3, 6, 8], vol: 90 },
+    kick: { ...INSTRUMENTS.gkick, vol: 96 },
+    snare: { ...INSTRUMENTS.gsnare, vol: 90, pan: 14 },
+    roll: { ...INSTRUMENTS.gsnare, vol: 56, pan: -40 },
+    chat: { ...INSTRUMENTS.chat, vol: 40, pan: 50 },
+    ohat: { ...INSTRUMENTS.ohat, vol: 36, pan: -36 },
   },
-  v1: { rows: join(v1) },
-  v2: { rows: join(v2) },
-  v3: { rows: join(v3) },
-  v4: { rows: join(v4) },
-  v5: { rows: join(v5) },
-  v6: { rows: join(v6) },
-  v7: { rows: join(v7) },
-  v8: { rows: join(v8) },
+  v1: { rows: bars(v1, BAR_ROWS) },
+  v2: { rows: bars(v2, BAR_ROWS) },
+  v3: { rows: bars(v3, BAR_ROWS) },
+  v4: { rows: bars(v4, BAR_ROWS) },
+  v5: { rows: bars(v5, BAR_ROWS) },
+  v6: { rows: bars(v6, BAR_ROWS) },
+  v7: { rows: bars(v7, BAR_ROWS) },
+  v8: { rows: bars(v8, BAR_ROWS) },
 };
