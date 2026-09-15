@@ -97,6 +97,28 @@ export const TUNING = {
   airReachZ: [28, 8, 48, 2],
   airDamage: [1, 0, 4, 1],
   slamDamage: [3, 0, 8, 1],
+  // Mercer's third attack (SNES A), a kick with its own routes: alone or after one light it dazes
+  // (so X crushes), after two lights it sweeps the legs, out of a landed heavy it spins the foe away.
+  // `thirdAttack` at 0 turns the kick off (Ward).
+  thirdAttack: [0, 0, 1, 1],
+  thirdStartup: [4, 1, 12, 1],
+  thirdActive: [3, 1, 8, 1],
+  thirdRecovery: [12, 4, 30, 1],
+  thirdReach: [26, 10, 44, 1],
+  thirdDamage: [2, 0, 6, 1],
+  thirdDaze: [40, 8, 90, 2],
+  routeA: [1, 0, 1, 1],
+  routeLA: [1, 0, 1, 1],
+  routeLLA: [1, 0, 1, 1],
+  routeHA: [1, 0, 1, 1],
+  // Mercer's dive kick: in a jump, down + any attack drives him down at an angle into a foe.
+  diveKick: [0, 0, 1, 1],
+  diveX: [3, 0, 6, 0.25],
+  diveDown: [2.5, 1, 8, 0.25],
+  diveDamage: [3, 0, 8, 1],
+  // Mercer's special (Y+X): one foe in front takes a single hard blow, where Ward clears the room.
+  takedownDamage: [6, 0, 12, 1],
+  takedownReach: [30, 10, 60, 2],
   parryFrames: [12, 1, 30, 1],
   parryLockout: [24, 0, 60, 1],
   parryStagger: [48, 16, 120, 2],
@@ -349,6 +371,50 @@ function heavyHit(world, f, foe, tune) {
   return true;
 }
 
+// The kick a chain leads into: alone a snap, after one light a hook, after two a leg sweep.
+function kickRoute(f, tune) {
+  const combo = f.chain > 0 || f.state === 'punch' ? f.state === 'punch' ? f.combo : f.lastCombo : 0;
+  if (combo === 1 && tune.routeLA) return 'hook';
+  if (combo === 2 && tune.routeLLA) return 'low';
+  return tune.routeA ? 'snap' : null;
+}
+
+function startKick(f, route) {
+  set(f, 'kick');
+  Object.assign(f, { route, landed: false, buffer: 0, heavyBuffer: 0, kickBuffer: 0 });
+}
+
+function kickHit(world, f, foe, tune) {
+  const dir = f.facing;
+  const hit = {
+    snap: { damage: tune.thirdDamage, weight: 'heavy' },
+    hook: { damage: tune.thirdDamage, weight: 'heavy' },
+    low: { damage: tune.thirdDamage + 1, heavy: true },
+    spin: { damage: tune.knockbackDamage, heavy: true },
+  }[f.route];
+  if (!landHit(world, foe, { ...hit, dir }, tune)) return false;
+  if (['snap', 'hook'].includes(f.route) && foe.state === 'hurt') foe.stagger = tune.thirdDaze;
+  if (f.route === 'spin' && foe.state === 'knockdown') foe.vx = dir * tune.knockbackX;
+  world.events.push('kick', f.route);
+  return true;
+}
+
+// Down + an attack in the air: Mercer drives down at a fixed angle and bounces off the foe he hits.
+function startDive(world, f, tune) {
+  Object.assign(f, { dive: true, kicked: true, kickT: tune.kickActive, landed: false, buffer: 0, heavyBuffer: 0, kickBuffer: 0 });
+  f.vx = f.facing * tune.diveX;
+  f.vz = -tune.diveDown;
+  world.events.push('diveKick');
+}
+
+function diveHit(world, f, tune) {
+  const foe = foesOf(world, f).find((o) => o.state !== 'held' && Math.abs(o.x - f.x) <= tune.punchReach
+    && (o.x - f.x) * f.facing >= -4 && Math.abs(o.y - f.y) <= tune.depthReach && f.z - o.z <= 40);
+  if (!foe || !landHit(world, foe, { damage: tune.diveDamage, heavy: true, dir: f.facing }, tune)) return;
+  Object.assign(f, { dive: false, landed: true, vx: -f.facing, vz: 2 });
+  world.events.push('diveHit');
+}
+
 function foesOf(world, f) {
   return world.fighters.filter((o) => o.team !== f.team && o.state !== 'ko');
 }
@@ -373,7 +439,7 @@ function startJump(world, f, input, tune) {
   set(f, 'jump');
   f.vx = dir * (f.running ? tune.runX : tune.walkX);
   f.vz = tune.jumpUp;
-  Object.assign(f, { kicked: false, airHits: 0, slammed: false });
+  Object.assign(f, { kicked: false, airHits: 0, slammed: false, dive: false });
   world.events.push('jump');
 }
 
@@ -411,6 +477,11 @@ function controlFree(world, f, input, tune) {
     startHeavy(f, up ? 'launcher' : (f.chain > 0 && heavyRoute(f.lastCombo, tune)) || 'heavy');
     return;
   }
+  if (f.kickBuffer > 0 && tune.thirdAttack) {
+    const route = kickRoute(f, tune);
+    if (route) startKick(f, route);
+    return;
+  }
   if (input.pressed.has('a')) {
     startJump(world, f, input, tune);
     return;
@@ -429,6 +500,7 @@ function controlFree(world, f, input, tune) {
 function updatePlayer(world, f, input, tune) {
   if (input.pressed.has('b')) f.buffer = tune.bufferFrames + 1;
   if (input.pressed.has('heavy')) f.heavyBuffer = tune.bufferFrames + 1;
+  if (input.pressed.has('kick')) f.kickBuffer = tune.bufferFrames + 1;
   if (f.chain > 0) f.chain--;
   if (f.invuln > 0) f.invuln--;
   f.t++;
@@ -448,7 +520,9 @@ function updatePlayer(world, f, input, tune) {
         }
       }
       const route = f.landed && f.heavyBuffer > 0 && heavyRoute(f.combo, tune);
+      const kick = f.landed && f.kickBuffer > 0 && tune.thirdAttack && f.combo < 3 && kickRoute(f, tune);
       if (f.t > startup + active && route) startHeavy(f, route);
+      else if (f.t > startup + active && kick) startKick(f, kick);
       else if (f.t > startup + active && f.landed && f.combo < lightsMax(tune) && f.buffer > 0) startPunch(f, f.combo + 1);
       else if (f.t >= startup + active + recovery) {
         f.lastCombo = f.combo;
@@ -466,7 +540,29 @@ function updatePlayer(world, f, input, tune) {
       }
       // A landed launcher cancels its recovery into the jump that chases the foe up.
       if (f.landed && f.route === 'launcher' && tune.upLauncher && f.t > startup + active && input.pressed.has('a')) startJump(world, f, input, tune);
+      // Mercer's landed plain heavy cancels into the spinning kick.
+      else if (f.landed && f.route === 'heavy' && tune.thirdAttack && tune.routeHA && f.kickBuffer > 0 && f.t > startup + active) startKick(f, 'spin');
       else if (f.t >= startup + active + recovery) {
+        f.lastCombo = 0;
+        f.chain = 0;
+        f.via = null;
+        set(f, 'idle');
+      }
+      break;
+    }
+    case 'kick': {
+      const [startup, active, recovery] = [tune.thirdStartup, tune.thirdActive, tune.thirdRecovery];
+      if (f.t === 1 && f.route !== 'snap') f.x += f.facing * tune.comboStep;
+      if (!f.landed && f.t > startup && f.t <= startup + active) {
+        const foe = foesOf(world, f).find((o) => o.state !== 'held' && inReach(f, o, tune.thirdReach, tune) && o.z < 16);
+        if (foe) f.landed = kickHit(world, f, foe, tune);
+      }
+      // A landed snap or hook leaves the foe dazed: X on him is the crush.
+      if (f.landed && ['snap', 'hook'].includes(f.route) && f.heavyBuffer > 0 && f.t > startup + active) {
+        const via = f.route;
+        startHeavy(f, 'heavy');
+        f.via = via;
+      } else if (f.t >= startup + active + recovery) {
         f.lastCombo = 0;
         f.chain = 0;
         set(f, 'idle');
@@ -477,6 +573,12 @@ function updatePlayer(world, f, input, tune) {
       f.x += f.vx;
       f.z += f.vz;
       f.vz -= tune.gravity;
+      if (f.dive) {
+        f.vz += tune.gravity;
+        diveHit(world, f, tune);
+      } else if (tune.diveKick && !f.kicked && f.z > 4 && input.held.has('down') && (f.buffer > 0 || f.heavyBuffer > 0 || f.kickBuffer > 0)) {
+        startDive(world, f, tune);
+      }
       if (airCombo(world, f, tune)) break;
       if (f.buffer > 0 && !f.kicked) {
         f.kicked = true;
@@ -491,6 +593,7 @@ function updatePlayer(world, f, input, tune) {
       if (f.z <= 0) {
         f.z = 0;
         f.vz = 0;
+        f.dive = false;
         set(f, 'land');
         world.events.push('land');
       }
@@ -534,6 +637,7 @@ function updatePlayer(world, f, input, tune) {
   }
   if (f.buffer > 0) f.buffer--;
   if (f.heavyBuffer > 0) f.heavyBuffer--;
+  if (f.kickBuffer > 0) f.kickBuffer--;
 }
 
 // Hurt, knockdown, lying down and getting up: the same for everyone.
@@ -643,6 +747,7 @@ export function step(world, input, tune = defaultTune()) {
     world.hitStop--;
     if (input.pressed.has('b')) p.buffer = tune.bufferFrames + 1;
     if (input.pressed.has('heavy')) p.heavyBuffer = tune.bufferFrames + 1;
+    if (input.pressed.has('kick')) p.kickBuffer = tune.bufferFrames + 1;
     return world;
   }
   updatePlayer(world, p, input, tune);

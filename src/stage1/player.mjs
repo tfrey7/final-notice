@@ -19,10 +19,12 @@ export const START = { x: 48, y: 188 };
 // Ward reaches further and ends on a straight; Mercer is closer, quicker, ends on a shoulder check,
 // and his thrown bodies bowl other foes over (docs/NES-PLAN.md section 5).
 // Each has his own special on the SNES A button: Ward lunges along a line, Mercer sweeps both sides.
-// Ward, the balanced default, blocks on L and launches into an air combo; Mercer parries on L.
+// Ward, the balanced default, blocks on L, launches into an air combo and clears the room on Y+X.
+// Mercer, the technical one, parries on L, kicks on A, dive kicks from a jump and his Y+X
+// takedown hits one foe hard.
 export const AUDITORS = {
   ward: { finisher: 'straight', special: 'lunge', guard: 'block', tune: { punchReach: 26, comboStep: 3, finisherStartup: 5, punchRecovery: 7, launchX: 3, bowl: 0, upLauncher: 1 } },
-  mercer: { finisher: 'shoulder', special: 'sweep', guard: 'parry', tune: { punchReach: 18, comboStep: 7, finisherStartup: 3, punchRecovery: 5, launchX: 2, bowl: 1, upLauncher: 0 } },
+  mercer: { finisher: 'shoulder', special: 'takedown', guard: 'parry', tune: { punchReach: 18, comboStep: 7, finisherStartup: 3, punchRecovery: 5, launchX: 2, bowl: 1, upLauncher: 0, thirdAttack: 1, diveKick: 1 } },
 };
 
 export const tuneFor = (who, base = defaultTune()) => ({ ...base, ...AUDITORS[who].tune, playerHp: PIPS });
@@ -105,15 +107,32 @@ function beforeStep(world, pad, tune, events) {
     if (p.t >= STEP.frames) Object.assign(p, { state: 'idle', t: 0 });
   }
   if (pad.heavy) pressed.add('heavy');
+  if (pad.special && tune.thirdAttack) pressed.add('kick');
   return { held: pad.held, pressed, dash: pad.run ?? null };
 }
 
-// The auditor's own special on the SNES A button, a grey box for now: Ward lunges forward through
-// everyone on his line, Mercer sweeps both sides at once. Each foe is knocked down once per special.
+// Mercer's Y+X on the SNES pad: the takedown, on the same cooldown as Ward's room clear. Answers true
+// when it fired.
+function takedown(world, pad, tune, events) {
+  const p = player(world);
+  const cd = world.cooldown;
+  if (!tune.thirdAttack || !pad.clear || world.hitStop > 0 || DOWNED.includes(p.state)) return false;
+  if (cd ? !wantsFreeInjunction(pad, cd) : p.specialLeft > 0) return false;
+  if (['punch', 'heavy', 'kick'].includes(p.state) && p.t <= CLEAR_FRAMES) set(p, 'idle');
+  if (!FREE.includes(p.state)) return false;
+  if (cd) fireCooldown(cd);
+  set(p, 'special');
+  Object.assign(p, { move: 'takedown', struck: [], specialLeft: tune.specialCooldown });
+  events.push('special', 'takedown');
+  return true;
+}
+
+// The auditor's own special, a grey box for now: Ward's lunge on A goes forward through everyone on
+// his line; Mercer's takedown (Y+X) strikes only the nearest foe in front. Each foe is hit once.
 function special(world, pad, tune, events) {
   const p = player(world);
   if (p.specialLeft > 0) p.specialLeft--;
-  if (pad.special && FREE.includes(p.state) && !(p.specialLeft > 0)) {
+  if (pad.special && !tune.thirdAttack && FREE.includes(p.state) && !(p.specialLeft > 0)) {
     set(p, 'special');
     Object.assign(p, { move: AUDITORS[world.who]?.special ?? 'lunge', struck: [], specialLeft: tune.specialCooldown });
     events.push('special');
@@ -122,7 +141,19 @@ function special(world, pad, tune, events) {
   const { specialStartup: startup, specialActive: active, specialRecovery: recovery } = tune;
   const on = p.t > startup && p.t <= startup + active;
   if (on && p.move === 'lunge') p.x += (p.facing * tune.specialReach) / active;
-  if (on) {
+  if (on && p.move === 'takedown' && !p.struck.length) {
+    const foe = world.fighters
+      .filter((o) => o.team !== 'player' && o.state !== 'held' && o.z < 16 && !DOWNED.includes(o.state)
+        && (o.x - p.x) * p.facing >= -4 && (o.x - p.x) * p.facing <= tune.takedownReach && Math.abs(o.y - p.y) <= tune.depthReach * 2)
+      .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+    if (foe) {
+      p.struck.push(foe.id);
+      if (landHit(world, foe, { damage: tune.takedownDamage, heavy: true, dir: p.facing }, tune)) {
+        if (foe.state === 'knockdown') foe.vx = p.facing * tune.knockbackX;
+        events.push('hit');
+      }
+    }
+  } else if (on && p.move !== 'takedown') {
     const reach = p.move === 'lunge' ? tune.punchReach : tune.specialReach / 2;
     for (const foe of world.fighters) {
       if (foe.team === 'player' || p.struck.includes(foe.id) || foe.state === 'held' || foe.z >= 16) continue;
@@ -165,7 +196,8 @@ function injunction(world, pad, tune, events) {
   const p = player(world);
   const cd = world.cooldown;
   const wants = cd ? wantsFreeInjunction(pad, cd) : wantsInjunction(pad, world.meterHits);
-  if (world.hitStop > 0 || DOWNED.includes(p.state) || !wants) return false;
+  // Mercer's Y+X on the SNES pad is his takedown, not the room clear.
+  if (world.hitStop > 0 || DOWNED.includes(p.state) || !wants || (tune.thirdAttack && pad.clear !== undefined)) return false;
   // Y+X lands a frame or two apart, so the attack the first button began gives way to the clear.
   if (['punch', 'heavy'].includes(p.state) && p.t <= CLEAR_FRAMES) set(p, 'idle');
   if (cd) fireCooldown(cd);
@@ -218,12 +250,12 @@ export function stepFloor(world, pad, tune) {
   const events = [];
   world.ring = stepRing(world.ring);
   if (world.cooldown) tickCooldown(world.cooldown);
-  if (injunction(world, pad, tune, events)) pad = withoutAB(pad);
+  if (injunction(world, pad, tune, events) || takedown(world, pad, tune, events)) pad = withoutAB(pad);
   const frozen = world.hitStop > 0;
   if (AUDITORS[world.who]?.guard === 'block') holdBlock(world, pad, tune, frozen, events);
   else openParry(world, pad, tune, frozen, events);
   if (!frozen) special(world, pad, tune, events);
-  const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
+  const input = frozen ? { held: pad.held, pressed: new Set([...pad.pressed, ...(pad.special && tune.thirdAttack ? ['kick'] : [])]), dash: null }
     : struggle(world, pad, events) ?? beforeStep(world, weaponPad(world, pad, tune, events), tune, events);
   const before = foeHp(world);
   step(world, input, tune);

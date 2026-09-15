@@ -21,6 +21,9 @@ export function keysFor(button, layout = PADS.snes) {
 const PAD = { y: 'X / left', b: 'A / bottom', a: 'B / right', x: 'Y / top', l: 'LB / LT', r: 'RB / RT', start: 'Start' };
 const DOES = {
   stage1: { y: 'light, grab', b: 'jump', a: 'special', x: 'heavy', yx: 'Injunction', l: 'block (Ward) / parry (Mercer)', r: 'sidestep back', start: 'pause' },
+  // Each auditor's own buttons, for a screen that knows who is playing.
+  'stage1:ward': { y: 'light, grab', b: 'jump', a: 'lunge', x: 'heavy/launch', yx: 'Injunction (clear room)', l: 'block (hold)', r: 'sidestep back', start: 'pause; up+X launcher' },
+  'stage1:mercer': { y: 'light, grab', b: 'jump, dive', a: 'kick', x: 'heavy', yx: 'Takedown (one foe)', l: 'parry', r: 'sidestep back', start: 'pause; air: down+Y dive kick' },
   stage2: { y: 'cast', b: 'jump', a: 'Injunction', x: 'swap enchantment', l: 'Objection parry (boss)', r: 'hold: stand and aim', start: 'pause' },
 };
 

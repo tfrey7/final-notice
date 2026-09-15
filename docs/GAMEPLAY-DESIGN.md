@@ -4,20 +4,20 @@
 
 ## Final Notice brawl design: Final Fight and Streets of Rage 2 pillars
 
-*`kb_get final-notice-brawl-design` · version 4*
+*`kb_get final-notice-brawl-design` · version 5*
 
 Agreed live in the room by Tim, 2026-09-15, 12:22-13:00 EDT. The brawl stages are 1, 3 and 5; their pillars are *Final Fight* and *Streets of Rage 2*.
 
 - **Moves.** A punch combo with a finisher, a jump kick, grabbing a stunned foe (knee or throw), a sidestep, and a run on a double tap.
-- **Two heroes, two playstyles** (Tim, 2026-09-15 17:14 EDT: "both characters get different playstyles"). Every boss must be beatable with either kit.
-  - **Ellis Ward, the balanced default.** Light (Y) and heavy (X) attacks with the light-into-heavy combo routes. **Block on L, held**: a blow from in front costs a quarter of its damage as chip and never the last pip; grabs and binding red tape from in front are stopped too; a blocked light blow rebounds, so its thrower's recovery runs a third of a second longer (a short punish, next to the parry's long reel); a heavy blow, or a hold of about two seconds, breaks the block and leaves him open for a moment. The block covers only his front. **Launcher, up + heavy**: pops the foe into a slow float; jump after him (B, which cancels the launcher's recovery), up to two air lights (Y) keep him up, and the air heavy (X) slams him into the floor. **Room-clear special**: the Emergency Injunction, free on a cooldown, plus his lunge on A. *Built, item 2287.*
-  - **Mercer, the technical one.** **Objection parry on L**: timed to an incoming hit, it deflects it and the attacker staggers open for a free combo; no block. Three attack buttons for longer, more technical combos, no air combo, a **dive kick** instead, and a **single-target special**. *Today he still has Ward's two attacks and the sweep special; the rest is item 2288.*
+- **Two heroes, two playstyles** (Tim, 2026-09-15 17:14 EDT: "both characters get different playstyles"). Every boss must be beatable with either kit. The on-screen controller legend names the buttons of whichever hero is playing.
+  - **Ellis Ward, the balanced default.** Light (Y) and heavy (X) attacks with the light-into-heavy combo routes. **Block on L, held**: a blow from in front costs a quarter of its damage as chip and never the last pip; grabs and binding red tape from in front are stopped too; a blocked light blow rebounds, so its thrower's recovery runs a third of a second longer (a short punish, next to the parry's long reel); a heavy blow, or a hold of about two seconds, breaks the block and leaves him open for a moment. The block covers only his front. **Launcher, up + heavy**: pops the foe into a slow float; jump after him (B, which cancels the launcher's recovery), up to two air lights (Y) keep him up, and the air heavy (X) slams him into the floor. **Room-clear special**: the Emergency Injunction on Y+X, free on a cooldown, plus his lunge on A. *Built, item 2287.*
+  - **Frank Mercer, the technical one.** **Objection parry on L**: timed to an incoming hit, it deflects it and the attacker staggers open for a free combo; no block. **Three attack buttons**: light (Y), heavy (X) and a kick (A), eight routes to Ward's four: Y Y Y finisher, Y Y X knockback, Y X pop-up (a knockdown, no juggle), a heavy on a dazed foe crushes, **Y Y A leg sweep** (knockdown), **Y A X hook crush** and **A X snap crush** (the kick alone or after one light dazes the foe, and X on him is the crush), **X A spin kick** (a landed heavy cancels into a kick that sends the foe flying). **No air combo; a dive kick instead**: in a jump, down + any attack drives him down and forward at a fixed angle, knocks the foe down and bounces him off. **Single-target special, the Takedown, on Y+X**: on the same cooldown as Ward's room clear, one hard blow to the nearest foe in front and nobody else. *Built, item 2288.*
 - **Office weapons.** Smashed furniture drops short-lived pickups: a stapler, a binder, a fire extinguisher and the red APPROVED stamp.
-- **Emergency Injunction.** Free, on a cooldown.
+- **Emergency Injunction.** Ward's, free on a cooldown; Mercer spends the same cooldown on his Takedown.
 - **Enemies.** At SNES size, with readable wind-ups, taking turns to attack and walking on from the screen edges.
 - **Vellum**, the Stage 1 boss, is bait and punish: his rush and sweep break an ordinary block like any heavy blow, but Ward's block from in front turns them aside for chip and drops Vellum straight into his recovery, his opening; Mercer parries them for the long reel. *Built, item 2287.*
 - **Two-player co-op** is designed in and built later.
-- **Tuning** happens in the brawl lab, `?snes&go=lab`; `?snes&go=lab&pose=air` plays Ward's launcher into his air combo.
+- **Tuning** happens in the brawl lab, `?snes&go=lab` (add `&who=mercer` for Mercer; M shows the hero's route map); `?snes&go=lab&pose=air` plays Ward's launcher into his air combo, `?snes&go=lab&who=mercer&pose=kit` loops Mercer's Y A X hook crush and his dive kick.
 
 ## Bosses and minibosses *(proposed, item 2289, waiting on Tim's verdict)*
 

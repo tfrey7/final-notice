@@ -16,19 +16,29 @@ export function comboScale({ hits, pop }, settle = 8) {
   return base + burst * 0.6;
 }
 
-// Y is the light attack, X the heavy; a route whose dial is 0 is drawn off.
+// Y is the light attack, X the heavy, A Mercer's kick; a route whose dial is 0 is drawn off, and the
+// kick's routes (`third`) are only drawn for an auditor who has the kick.
 export const ROUTES = [
   { dial: 'routeLLL', keys: ['Y', 'Y', 'Y'], name: 'FINISHER' },
   { dial: 'routeLLH', keys: ['Y', 'Y', 'X'], name: 'KNOCKBACK' },
-  { dial: 'routeLH', keys: ['Y', 'X'], name: 'LAUNCHER' },
+  { dial: 'routeLH', keys: ['Y', 'X'], name: 'LAUNCHER', mercer: 'POP-UP' },
   { dial: 'routeDazedH', keys: ['DAZED', 'X'], name: 'CRUSH' },
+  { dial: 'routeLLA', keys: ['Y', 'Y', 'A'], name: 'LEG SWEEP', third: true },
+  { dial: 'routeLA', keys: ['Y', 'A', 'X'], name: 'HOOK CRUSH', third: true },
+  { dial: 'routeA', keys: ['A', 'X'], name: 'SNAP CRUSH', third: true },
+  { dial: 'routeHA', keys: ['X', 'A'], name: 'SPIN KICK', third: true },
+  { dial: 'diveKick', keys: ['JUMP', 'DOWN+Y'], name: 'DIVE KICK', third: true },
 ];
 
 const HEAVY_SEQ = { launcher: ['Y', 'X'], knockback: ['Y', 'Y', 'X'], crush: ['DAZED', 'X'] };
+const KICK_SEQ = { snap: ['A'], hook: ['Y', 'A'], low: ['Y', 'Y', 'A'], spin: ['X', 'A'] };
 
 // The buttons of the chain the auditor is in right now, oldest first.
 export function chainKeys(p) {
   if (p.state === 'punch') return Array(p.combo).fill('Y');
+  if (p.state === 'kick') return KICK_SEQ[p.route] ?? ['A'];
+  if (p.state === 'jump') return p.dive ? ['JUMP', 'DOWN+Y'] : ['JUMP'];
+  if (p.state === 'heavy' && p.via) return [...KICK_SEQ[p.via], 'X'];
   if (p.state === 'heavy') return HEAVY_SEQ[p.route] ?? ['X'];
   if (p.chain > 0 && p.lastCombo > 0) return Array(p.lastCombo).fill('Y');
   return [];
@@ -37,7 +47,8 @@ export function chainKeys(p) {
 // How many of each route's buttons the chain has lit: its keys up to where the chain stops matching.
 export function routeLights(p, tune) {
   const pressed = chainKeys(p);
-  return ROUTES.map((r) => {
+  return ROUTES.filter((r) => !r.third || tune.thirdAttack).map(({ mercer, ...r }) => {
+    if (mercer && tune.thirdAttack) r.name = mercer;
     const on = Boolean(tune[r.dial]);
     let lit = 0;
     while (on && lit < pressed.length && lit < r.keys.length && r.keys[lit] === pressed[lit]) lit++;

@@ -159,7 +159,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.controls?.remove();
-    this.controls = mountControls('stage1');
+    this.controls = mountControls(`stage1:${this.who}`);
     this.events.once('shutdown', () => {
       this.panel?.remove(); this.panel = null;
       this.controls?.remove(); this.controls = null;

@@ -54,7 +54,7 @@ test('a route dial at 0 turns that route off', () => {
   assert.equal(play(floor('ward', 8, { routeLLL: 0 }), [[0, 'b'], [5, 'b'], [13, 'b']]).top, 2);
 });
 
-test('A is each auditor\'s own special: Ward lunges through a foe ahead, Mercer sweeps one behind', () => {
+test("A is Ward's lunge through a foe ahead, and Mercer's kick", () => {
   const ward = floor('ward', 40);
   const x = ward.p.x;
   stepFloor(ward.world, pad([], { special: true }), ward.tune);
@@ -63,10 +63,9 @@ test('A is each auditor\'s own special: Ward lunges through a foe ahead, Mercer 
   assert.ok(ward.p.x > x + 20, 'Ward travels');
   assert.ok(['knockdown', 'down'].includes(ward.dummy.state), ward.dummy.state);
 
-  const mercer = floor('mercer', -20);
+  const mercer = floor('mercer', 8);
   stepFloor(mercer.world, pad([], { special: true }), mercer.tune);
-  for (let i = 0; i < 30; i++) stepFloor(mercer.world, pad(), mercer.tune);
-  assert.ok(['knockdown', 'down'].includes(mercer.dummy.state), mercer.dummy.state);
+  assert.equal(mercer.p.state, 'kick');
 });
 
 test('Y then X a frame apart clears the room and cancels the light it began', () => {

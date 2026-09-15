@@ -9,6 +9,7 @@ import { sfx } from '../audio/player.mjs';
 import { brawlSound } from '../audio/brawl.mjs';
 import { PADS, createPad, pollPad, updatePad } from '../../input.mjs';
 import { airDemoButtons } from './airdemo.mjs';
+import { kitDemoButtons } from './kitdemo.mjs';
 import { AUDITORS, stageSelectUrl } from '../../flow.mjs';
 import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
 import { SHAPE, readLook, turnOwners } from '../../stage1/readout.mjs';
@@ -77,7 +78,7 @@ export class SnesLabScene extends Phaser.Scene {
       onCopy: () => settingsText(this.dials, this.counts, this.who),
       onReset: () => { this.dials.forEach((d) => { d.value = d.start; }); this.panel.flash('Dials reset.'); },
     });
-    this.controls = mountControls('stage1');
+    this.controls = mountControls(`stage1:${this.who}`);
     this.controls.show();
     this.tabbed = false;
     // H overlays hit and hurt boxes, the attack-turn owners and each fighter's state tag; ?boxes starts it on.
@@ -105,6 +106,7 @@ export class SnesLabScene extends Phaser.Scene {
     if (params.get('pose') === 'sheet') this.poseSheet(Number(params.get('n') ?? 0));
     if (params.get('pose') === 'combo') this.poseCombo();
     if (params.get('pose') === 'air') this.poseAir();
+    if (params.get('pose') === 'kit') this.poseKit();
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
@@ -175,8 +177,21 @@ export class SnesLabScene extends Phaser.Scene {
     const foe = Object.assign(fighter('dummy', 'foe', p.x + 24, p.y, this.tune), { dummy: true, facing: -1, hp: 30 });
     w.fighters = [p, foe];
     w.bench = [];
-    this.demo = { pad: createPad(PADS.snes), t: 0 };
+    this.demo = { pad: createPad(PADS.snes), t: 0, buttons: airDemoButtons };
     this.showRoutes = false;
+  }
+
+  // ?who=mercer&pose=kit loops Mercer's Y, A, X combo and his dive kick on one foe who never swings,
+  // with the route map lit as he goes; `&hold=<frames>` freezes it that many frames in.
+  poseKit() {
+    const w = this.world;
+    const p = Object.assign(w.fighters.find((f) => f.team === 'player'), { x: 176, y: 192, facing: 1 });
+    const foe = Object.assign(fighter('dummy', 'foe', p.x + 14, p.y, this.tune), { dummy: true, facing: -1, hp: 99 });
+    w.fighters = [p, foe];
+    w.bench = [];
+    const memo = { phase: 'combo' };
+    this.demo = { pad: createPad(PADS.snes), t: 0, buttons: (world, t, tune) => kitDemoButtons(world, t, tune, memo) };
+    this.showRoutes = true;
   }
 
   dial(key) {
@@ -226,7 +241,7 @@ export class SnesLabScene extends Phaser.Scene {
     this.tabbed = false;
     if (this.demo && !this.held) {
       const d = this.demo;
-      d.pad = updatePad(d.pad, airDemoButtons(this.world, d.t, this.tune));
+      d.pad = updatePad(d.pad, d.buttons(this.world, d.t, this.tune));
       pad = d.pad;
       if (this.poseHold && ++d.t > this.poseHold) this.held = true;
       else if (!this.poseHold) d.t++;
@@ -364,6 +379,9 @@ export class SnesLabScene extends Phaser.Scene {
     });
     if (f.state === 'block') g.fillStyle(0x80b0ff, 0.9).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 4, top + 8, 4, bh - 16);
     if (f.state === 'heavy') g.fillStyle(0xd0d0d0, 0.7).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 14, top + 14, 14, 10);
+    // Mercer's kick reaches low and long; the dive kick trails a streak back up its angle.
+    if (f.state === 'kick') g.fillStyle(0xe05048, 0.7).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 16, top + (f.route === 'low' ? bh - 12 : 26), 16, 8);
+    if (f.dive) for (let i = 1; i <= 4; i++) g.fillStyle(0xe05048, 0.5 - i * 0.1).fillRect(x - f.facing * i * 6 - 4, top + bh - 8 - i * 5, 8, 8);
     if (f.state === 'special') {
       const t = this.tune;
       const on = f.t > t.specialStartup && f.t <= t.specialStartup + t.specialActive;
