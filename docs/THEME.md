@@ -91,7 +91,7 @@ note for note. Its voicing, below, is the title's; other SNES cues write their o
 
 - **Echo on the lead, piano, pads and clap only**; bass and drums dry. The echo buffer shares sound RAM
   with the samples, so `edl` is small (4, 64 ms) and the song's samples plus `edl * 2048` bytes must fit
-  64 KB (the test checks it).
+  the game's 1 MB of sample memory (the test checks it).
 - **Headroom**: master volume about 84, so the whole song peaks under 0.85.
 - **A loop is checked by RMS**: render the song offline in node, and the loop bar's RMS on the second
   pass must match the first within 10%.

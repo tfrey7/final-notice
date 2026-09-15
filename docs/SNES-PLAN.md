@@ -34,7 +34,7 @@ machine draws and sounds: screen, colour, art, backgrounds, effects, synth, song
 
 ## 2. What "SNES game" means here
 
-*`kb_get snes-plan-what-snes-game-means-here` · version 3*
+*`kb_get snes-plan-what-snes-game-means-here` · version 4*
 
 Held to the real machine, checked by `src/snes/limits.mjs` in tests, drawn by Phaser 4.2.1 as now.
 
@@ -46,7 +46,7 @@ Held to the real machine, checked by `src/snes/limits.mjs` in tests, drawn by Ph
 | Sprites | 128 OAM entries on screen; each entry 8x8, 16x16, 32x32 or 64x64 (one size pair per screen, this game uses **16x16 and 32x32**). At most **32 entries on one scanline** and **34 8x8 tiles' worth** (time over); past 32 the highest OAM indexes vanish, past 34 tiles the lowest do — the SNES drops, it does not flicker (**back:** no NES rotation flicker). Checked in `docs/SNES-CLASSICS.md`. |
 | Backgrounds | Mode 1: BG1 and BG2 in 16 colours per tile, BG3 in 4 colours (HUD and text), 8x8 tiles, each layer scrolls on its own; per-scanline scroll changes (HDMA) for floor perspective and heat shimmer. |
 | Effects | Colour math (add, subtract, half) between the main and sub screen for glass, glows and shadows; master brightness 0-15 for fades; mosaic 1-16 px for transitions; windows to mask; Mode 7 (one 256-colour affine layer, scale and rotate) for set pieces only. |
-| Sound | SPC700 + S-DSP: 8 voices of BRR sample playback (9 bytes per 16 4-bit samples, about 3.6:1 against 16-bit PCM), 32 kHz output, 4-point Gaussian interpolation (the soft, warm top end), per-voice ADSR or GAIN, pitch modulation from the previous voice, one shared noise source, an echo with an 8-tap FIR filter and a delay of 16-240 ms; 64 KiB of sound RAM shared by driver, songs, samples and the echo buffer (2,048 bytes per 16 ms of delay, so a 240 ms echo takes 30 KB), so samples are short loops. A sound effect takes a voice (voice 8, then 7) from the music and gives it back. |
+| Sound | SPC700 + S-DSP: 8 voices of BRR sample playback (9 bytes per 16 4-bit samples, about 3.6:1 against 16-bit PCM), 32 kHz output, 4-point Gaussian interpolation (the soft, warm top end), per-voice ADSR or GAIN, pitch modulation from the previous voice, one shared noise source, an echo with an 8-tap FIR filter and a delay of 16-240 ms. **Sample memory is 1 MB, a deliberate cheat** (Tim, 16:17 EDT 09-15, item 2256: "can we cheat and say we actually have 1MB sample memory?"): the real machine had 64 KiB shared by driver, songs, samples and the echo buffer; this game allows `SAMPLE_RAM` = 1 MB (`src/snes/audio/spc.mjs`) for samples plus the echo buffer (2,048 bytes per 16 ms of delay), so instruments are stored at 32 kHz with long attacks and loops. Everything else in this row stays period-true. A sound effect takes a voice (voice 8, then 7) from the music and gives it back. |
 | Pad | D-pad, B, A, Y, X, L, R, Select, Start. |
 | Slowdown | **No emulated slowdown** (Tim, 09-15, item 2172): a crowded scene runs at the same speed as an empty one. The SNES profile's `slowdownBudget` is Infinity; the NES keeps its slowdown. |
 
