@@ -24,7 +24,7 @@ export const SONGS = {
   stage1: 'stage1',
   scene2: 'scene',
   stage2: 'stage2',
-  stage3: 'stage1',
+  stage3: 'backrooms',
   stage5: 'stage2',
   scene3: 'scene',
   ending: 'ending',

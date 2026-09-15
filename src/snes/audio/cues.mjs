@@ -15,4 +15,7 @@ export const vellumPinch = (hp, maxHp) => hp > 0 && hp * 3 <= maxHp;
 // The escape climb up the Archive ahead of the paper flood.
 export const ARCHIVE_CLIMB_SONG = 'archive-climb';
 
+// Stage 4's climb up the express elevator shaft ahead of the runaway car.
+export const SHAFT_SONG = 'shaft';
+
 export const stage2Song =(x) => (areaAt(x) >= DISPOSAL_AREA ? 'disposal' : 'stage2');

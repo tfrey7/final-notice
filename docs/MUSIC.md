@@ -50,6 +50,8 @@ Every other SNES cue (`stage1`, `stage2`, the chase sketches, `boss`, `vellum`, 
 | --- | --- | --- | --- | --- |
 | SNES Disposal Line, the factory floor | 129 BPM, F minor | a 3-3-2 sixteenth string grind, piano hammering the accents, driving synth bass, busy hats | grand piano, a stamping two-hit riff; strings sing in B; no brass | intro 4, A 8, A2 8, B (Db) 8, B2 8, breakdown to the machine 8, A with counter 8, turn 4: 105 s, 97 s loop |
 | SNES Great Seal, the arena | 100 BPM felt half time, C minor | eighth-note string arpeggios, held choir, bell at phrase heads, half-time kick and snare | strings, low, a five-note oath (C G, Eb D C); slow strings in B over chromatic mediants (Ebm, B, Abm, E); no brass | intro 4, A 8, A2 8, B 8, breakdown C against Db with timpani 8, A with counter 8, turn 4: 115 s, 106 s loop |
+| SNES Backrooms, Stage 3 | 129 BPM, B minor with a Phrygian C | syncopated synth bass and kick, typewriter hats in uneven bursts, low piano stabs, a wobbling slow-string hum | Rhodes, a climbing four-note figure that returns a semitone wrong; strings sing over a muzak Gmaj7 wash in B that sours on C and F#7; bell carriage dings, a phone nobody answers in the breakdown; no brass | intro 4, A 7, A2 7, B 8, breakdown 6, A3 7, turn 2: 77 s, 69 s loop |
+| SNES elevator shaft, Stage 4 | 150 BPM, E minor rising | piston sixteenth synth bass, four-on-the-floor kick, sixteenth hats, piano arpeggios, a low-tom counterweight clank | strings with a slow-string shadow an octave under; the four-bar riff climbs a semitone each pass (Em, Fm, F#m, Gm), B on Am, the riff a fourth then a fifth up, a D#dim turn back down; timpani on each new floor; no brass | intro 4, A x4 rising 16, B 8, A +5 4, A +7 4, turn 4: 64 s, 58 s loop |
 
 ## DPCM drums
 

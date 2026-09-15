@@ -1,6 +1,6 @@
 // Stage 4 as an escape climb under ?snes&go=shaft: the auditor climbs the express elevator shaft by girder,
 // cable and car ahead of a runaway car rising in surges, through the checkpoint to the top landing where
-// Bellwether's signature waits. Boxes stand in for every sprite, and there is no sound yet. ?bot lets the
+// Bellwether's signature waits. Boxes stand in for every sprite; the climb has its own song. ?bot lets the
 // shaft bot play; ?frames=<n> plays that many frames first (with the bot under ?bot), for a screenshot.
 /* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
@@ -13,6 +13,8 @@ import { TILE } from '../../stage2/physics.mjs';
 import { CAR, CHECKPOINT_LEDGE, FLOORS, SHAFT, TOP_LEDGE, createShaft, floorsClimbed, stepShaft } from '../../stage4/shaft.mjs';
 import { botButtons, createBot } from '../../stage4/shaftbot.mjs';
 import { mountControls } from '../../controls.mjs';
+import { playSong } from '../audio/player.mjs';
+import { SHAFT_SONG } from '../audio/cues.mjs';
 
 const GREY = { back: 0x26262c, rail: 0x34343a, tile: 0x6a6a72, edge: 0x8a8a92, cable: 0x9a9aa2, car: 0x7a7a84, roof: 0xb0b0b8 };
 const WHITE = rgb15(31, 31, 31);
@@ -43,6 +45,13 @@ export class SnesShaftScene extends Phaser.Scene {
     this.s = createShaft(this.who);
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
+    playSong(this.song = SHAFT_SONG);
+  }
+
+  // The climb plays until the run ends: the clear gets its fanfare, a lost run the game-over sting.
+  cue() {
+    const song = { clear: 'stageClear', 'game over': 'gameOver' }[this.s.over?.kind] ?? SHAFT_SONG;
+    if (song !== this.song) playSong(this.song = song);
   }
 
   botPad() {
@@ -55,6 +64,7 @@ export class SnesShaftScene extends Phaser.Scene {
     const { s } = this;
     if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepShaft(s, this.autoplay ? this.botPad() : pad);
+    this.cue();
     this.draw();
   }
 

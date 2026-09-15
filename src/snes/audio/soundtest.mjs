@@ -15,6 +15,8 @@ export const SOUND_TEST = {
     ['archive-climb', 'Archive climb'],
     ['disposal', 'Disposal Line'],
     ['seal', 'The Great Seal'],
+    ['backrooms', 'Stage 3 Backrooms'],
+    ['shaft', 'Stage 4 elevator shaft'],
     ['boss', 'Boss arena'],
     ['scene3', 'Scene 3 break room'],
     ['ending', 'Ending'],
