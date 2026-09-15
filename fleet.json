@@ -1,5 +1,6 @@
 {
   "repo": "final-notice",
+  "land": true,
   "suite": "node --test",
   "build": null,
   "protect": [".state/", ".ci/"],
