@@ -167,6 +167,8 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
   if (guarding && !body) {
     world.hitStop = tune.hitStop;
     world.events.push('blocked');
+    target.blocked = (target.blocked ?? 0) + 1;
+    target.blockedAt = world.frame ?? 0;
     target.x += dir * tune.knockback;
     return false;
   }

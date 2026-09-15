@@ -34,7 +34,7 @@ function approach(p, f, gap) {
   return held;
 }
 
-// A player who reads tells: parries staff blows, red tape, his sweep and his rush as they land, throws
+// A player who reads tells: parries staff blows and rushes, red tape, his sweep and his rush as they land, throws
 // whatever he grabs at the nearest foe, and punches only a foe who is open.
 function bot(i, world, tune) {
   const p = player(world);
@@ -46,7 +46,8 @@ function bot(i, world, tune) {
   if (p.state === 'grab') return { held: [f.x >= p.x ? 'right' : 'left'], b: true, parry: false };
   const v = vellum(world);
   const tape = world.tapes.some((o) => Math.abs(o.y - p.y) <= tune.depthReach && (p.x - o.x) * Math.sign(o.vx) > 0 && Math.abs(p.x - o.x) < 8 + Math.abs(o.vx) * 5);
-  const staffBlow = foes.some((o) => o.kind !== 'vellum' && o.state === 'windup' && o.t >= tune.kinds[o.kind].windup - 5 && Math.abs(o.x - p.x) < 80);
+  const staffBlow = foes.some((o) => o.kind !== 'vellum' && ((o.state === 'windup' && !o.attack?.rush && !o.attack?.shot && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - 5 && Math.abs(o.x - p.x) < 80)
+    || (o.state === 'charge' && Math.abs(o.y - p.y) <= tune.depthReach && Math.abs(o.x - p.x) - 12 <= o.attack.rush * 5)));
   let bossTell = false;
   if (v) {
     const t = v.vellum ?? tune.vellum;
@@ -77,6 +78,7 @@ function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
   const log = { frames: 0, lives: 0, continues: 0, locks: 0, waves: 0, heals: 0, checkpoints: [], office: 0, cleared: false };
   for (let i = 0; i < cap && !log.cleared; i++) {
     stepFloor(world, pad(brain(i, world, tune, log)), tune);
+    const hurt = player(world).hp < PIPS;
     if (flow.checkpoint !== OFFICE) stepAreas(world, tune);
     log.frames = i + 1;
     const events = world.events;
@@ -84,7 +86,8 @@ function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
     for (const e of events) {
       if (e === 'lock') log.locks++;
       if (e === 'wave') log.waves++;
-      if (e === 'heal') log.heals++;
+      // A box walked over at full health heals nothing, so only a hurt pickup counts.
+      if (e === 'heal' && hurt) log.heals++;
       if (e.startsWith('checkpoint:')) { flow = next(flow, { type: 'checkpoint', id: e.slice(11) }); log.checkpoints.push(e.slice(11)); }
       if (e === 'toOffice') { flow = next(flow, { type: 'checkpoint', id: OFFICE }); world = build(flow, tune); log.office = i; break; }
       if (e === 'lifeLost') {
@@ -112,8 +115,8 @@ for (const who of ['ward', 'mercer']) {
     console.log(`${who}: ${log.cleared ? 'cleared' : 'not cleared'} in ${minutes} min (${log.frames} frames), office at ${(log.office / 3600).toFixed(1)} min, ${log.locks} locks, ${log.waves} waves, ${log.heals} heals, ${log.lives} lives lost, ${log.continues} continues`);
     assert.ok(log.cleared, `stuck after ${log.frames} frames: ${JSON.stringify(log.end)}`);
     assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 5, 'a clean run takes minutes, not seconds; a human takes longer');
-    // Whether he wants the second box swings on a single frame of timing.
-    assert.ok(log.heals >= 1 && log.heals <= 2, `the bot needs a first-aid box, not ${log.heals}`);
+    assert.ok(log.heals <= 1, `the bot needs at most one of the two first-aid boxes, took ${log.heals}`);
+    assert.equal(log.lives, 0, 'a bot that reads tells loses no life');
     assert.ok(log.locks >= 5 && log.locks <= 7 + log.continues * 7, `${log.locks} locks`);
     assert.ok(log.checkpoints.includes('stage1-area3'), 'passes the mid-stage checkpoint');
   });

@@ -23,7 +23,9 @@ function crowd(frames) {
   for (let t = 0; t < frames; t++) {
     if (t % 400 === 0) p.x = stops[(t / 400) % stops.length];
     for (const f of foes) thinkStaff(world, f, tune);
-    const close = foes.some((a, i) => foes.slice(i + 1).some((b) => Math.abs(a.x - b.x) < 12 && Math.abs(a.y - b.y) < 6));
+    // A lunge runs past the others; only foes on their feet and not rushing count.
+    const standing = foes.filter((f) => f.state !== 'charge');
+    const close = standing.some((a, i) => standing.slice(i + 1).some((b) => Math.abs(a.x - b.x) < 12 && Math.abs(a.y - b.y) < 6));
     if (close) stacked++;
     mostAttacking = Math.max(mostAttacking, foes.filter((f) => ['windup', 'punch'].includes(f.state)).length);
   }

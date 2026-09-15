@@ -115,6 +115,11 @@ test('two auditors split the crowd and both are pressed', () => {
   const { hits, foes } = watch(world, tune, 900);
   assert.ok(hits.get('player').length >= 1, 'player 1 never hit');
   assert.ok(hits.get('player2').length >= 1, 'player 2 never hit');
-  const prey = new Set(foes.map((f) => f.prey));
-  assert.equal(prey.size, 2);
+  // A grabbed or floored auditor draws the crowd off for a moment, so count frames the crowd is split.
+  let split = 0;
+  for (let t = 0; t < 300; t++) {
+    stepFloor(world, pad(), tune);
+    if (new Set(foes.filter((f) => world.fighters.includes(f)).map((f) => f.prey)).size === 2) split++;
+  }
+  assert.ok(split >= 100, `split for ${split} of 300 frames`);
 });

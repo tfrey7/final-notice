@@ -28,7 +28,8 @@ test('the SNES staff foes stand and reach 1.5x as far and swing at the brawl wei
   assert.equal(a.windup, nes.associate.windup + BRAWL_WEIGHT.frames.foeWindup);
   assert.equal(a.cooldown, nes.associate.cooldown + BRAWL_WEIGHT.frames.foeCooldown);
   assert.equal(a.hp, nes.associate.hp);
-  assert.equal(kinds.manager.flank, nes.manager.flank * 1.5);
+  assert.equal(kinds.manager.moves.charge.to, nes.manager.moves.charge.to * 1.5);
+  assert.equal(kinds.manager.moves.charge.windup, nes.manager.moves.charge.windup + BRAWL_WEIGHT.frames.foeWindup);
   assert.equal(kinds.counsel.keep, nes.counsel.keep * 1.5);
   assert.equal(kinds.counsel.near, nes.counsel.near * 1.5);
   assert.deepEqual(KINDS, nes);
@@ -48,6 +49,7 @@ test('an SNES Associate given the attack turn stands in and swings on his weighe
   const p = world.fighters[0];
   spawnStaff(world, ['associate'], tune);
   const a = world.fighters.find((f) => f.kind === 'associate');
+  tune.kinds.associate.moves = { jab: tune.kinds.associate.moves.jab };
   Object.assign(a, { x: p.x + 90, y: p.y, cooldown: 1000 });
   for (let t = 0; t < 600 && a.state !== 'windup'; t++) thinkStaff(world, a, tune);
   assert.equal(a.state, 'windup');

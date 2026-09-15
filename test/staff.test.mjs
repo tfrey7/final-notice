@@ -49,43 +49,38 @@ test('at most three foes are on screen; the fourth waits for a seat and walks on
   assert.ok(staff().some((f) => f.kind === 'supervisor'));
 });
 
-test('the Associate walks up, winds up slowly, then punches', () => {
+test('the Associate walks up, winds up quickly, then jabs', () => {
   const { world, tune, p, foe } = floor(['associate']);
   const a = foe('associate');
+  a.nextMove = 'jab';
   run(world, tune, 600, () => idle, () => a.state === 'windup');
   assert.equal(a.state, 'windup');
   const hp = p.hp;
   run(world, tune, 60, () => idle, () => a.state === 'punch');
   assert.equal(a.state, 'punch');
-  assert.ok(KINDS.associate.windup >= 24, 'a slow, readable wind-up');
+  assert.ok(KINDS.associate.windup < KINDS.supervisor.moves.overhead.windup, 'quicker than the heavies');
   assert.equal(p.hp, hp - 1);
 });
 
-test('the Associate reels from two hits and falls on the third', () => {
+test('the Associate reels from one hit and falls on the second', () => {
   const { world, tune, foe } = floor(['associate']);
   const a = foe('associate');
-  landHit(world, a, { damage: 1, heavy: false, dir: 1 }, tune);
-  assert.equal(a.state, 'hurt');
   landHit(world, a, { damage: 1, heavy: false, dir: 1 }, tune);
   assert.equal(a.state, 'hurt');
   landHit(world, a, { damage: 1, heavy: false, dir: 1 }, tune);
   assert.equal(a.state, 'knockdown');
 });
 
-test('the Manager darts round to the auditor\'s back', () => {
-  const { world, tune, p, foe } = floor(['manager']);
-  const m = foe('manager');
-  p.facing = 1;
-  assert.ok(m.x > p.x, 'he starts in front');
-  run(world, tune, 300, () => idle, () => m.state === 'windup');
-  assert.equal(m.state, 'windup');
-  assert.ok(m.x < p.x, 'and strikes from behind');
-  assert.ok(KINDS.manager.speed > KINDS.associate.speed * 2);
+test('the Manager is a slow heavy: tougher and slower than an Associate, and his haymaker knocks down', () => {
+  assert.ok(KINDS.manager.speed < KINDS.associate.speed);
+  assert.ok(KINDS.manager.hp >= KINDS.associate.hp * 3);
+  assert.ok(KINDS.manager.moves.haymaker.heavy);
 });
 
 test('Counsel keeps his distance and throws red tape; the bound auditor mashes free', () => {
   const { world, tune, p, foe } = floor(['counsel']);
   const c = foe('counsel');
+  c.nextMove = 'tape';
   const events = run(world, tune, 600, () => idle, () => p.state === 'bound');
   assert.ok(events.includes('redTape'));
   assert.equal(p.state, 'bound');
@@ -121,7 +116,7 @@ test('the Supervisor guards against punches until a thrown foe breaks his guard'
   assert.equal(landHit(world, s, { damage: 3, heavy: true, dir: 1 }, tune), false, 'even a finisher');
   assert.equal(s.hp, KINDS.supervisor.hp);
   assert.ok(world.events.includes('blocked'));
-  assert.equal(KINDS.supervisor.hp, KINDS.associate.hp * 2);
+  assert.ok(KINDS.supervisor.hp >= KINDS.associate.hp * 4);
 
   const g = floor(['associate', 'supervisor']);
   pose(g.world, 'guardbreak', g.tune);

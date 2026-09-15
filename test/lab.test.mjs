@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LAB, PLANNED, buildDials, labKinds, nudge, settingsText, takeTurns, waveKinds } from '../src/lab/dials.mjs';
+import { LAB, PLANNED, buildDials, labKinds, nudge, settingsText, takeTurns, waveKinds, withKindDials } from '../src/lab/dials.mjs';
 import { TUNING, defaultTune, fighter } from '../src/stage1/moves.mjs';
 import { KINDS } from '../src/stage1/staff.mjs';
 import { WEAPONS } from '../src/stage1/weapons.mjs';
@@ -33,10 +33,32 @@ test('a wave mixes kinds in order', () => {
 });
 
 test('lab kinds scale speed and shift wind-up without touching the originals', () => {
+  const before = structuredClone(KINDS);
   const kinds = labKinds(KINDS, { foeWalkScale: 2, foeWindupAdd: -100 });
   assert.equal(kinds.associate.speed, KINDS.associate.speed * 2);
   assert.equal(kinds.associate.windup, 1);
-  assert.equal(KINDS.associate.windup, 28);
+  assert.equal(kinds.associate.moves.lunge.windup, 1);
+  assert.deepEqual(KINDS, before);
+});
+
+test('every enemy kind\'s health, speed and each attack\'s wind-up and damage get a dial that edits a copy', () => {
+  const dials = buildDials(defaultTune());
+  const foes = dials.filter((d) => d.group === 'foes').map((d) => d.key);
+  for (const [kind, k] of Object.entries(KINDS)) {
+    for (const key of ['hp', 'speed']) assert.ok(foes.includes(`${kind}.${key}`), `${kind}.${key}`);
+    for (const move of Object.keys(k.moves)) {
+      assert.ok(foes.includes(`${kind}.${move}.windup`) && foes.includes(`${kind}.${move}.damage`), `${kind}.${move}`);
+    }
+  }
+  assert.ok(foes.includes('supervisor.counterAfter'));
+  const before = structuredClone(KINDS);
+  nudge(dials.find((d) => d.key === 'manager.charge.windup'), 4);
+  nudge(dials.find((d) => d.key === 'associate.hp'), 1);
+  const kinds = withKindDials(KINDS, dials);
+  assert.equal(kinds.manager.moves.charge.windup, KINDS.manager.moves.charge.windup + 4);
+  assert.equal(kinds.associate.hp, KINDS.associate.hp + 1);
+  assert.deepEqual(KINDS, before);
+  assert.match(settingsText(dials, {}, 'ward'), /\[foes\][^[]*manager\.charge\.windup: 36/);
 });
 
 test('a foe starting a wind-up waits while the attack turns are all taken', () => {

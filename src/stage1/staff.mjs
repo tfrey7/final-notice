@@ -7,7 +7,8 @@ export const MAX_ON_SCREEN = 3;
 // Attack tokens, as Final Fight and Streets of Rage 2 space their crowds: the rest wait their turn.
 export const MAX_ATTACKERS = 2;
 const WAITING = ['idle', 'walk', 'guard', 'feint', 'taunt', 'shove'];
-const STANDING = [...WAITING, 'windup', 'punch'];
+export const ATTACKING = ['windup', 'punch', 'charge', 'hold'];
+const STANDING = [...WAITING, ...ATTACKING];
 const HURTING = ['hurt', 'knockdown', 'down', 'getup', 'bound', 'held'];
 
 // Colour means behaviour (NES-CLASSICS L3), so each kind keeps its own palette in foe-actors.mjs.
@@ -15,18 +16,41 @@ const HURTING = ['hurt', 'knockdown', 'down', 'getup', 'bound', 'held'];
 // carry its own `kinds` (the SNES scene's, grown and weighed); without one these are used.
 // `crowd` is how a kind waits its turn: its circle's size, how often it feints and taunts, how
 // restless it is (`jitter` shortens every act), its taunt gesture, and whether it drifts to your back.
+// `moves` is the kind's attacks: each overrides the kind's own windup, punch (recovery), reach and
+// damage, and `weight` is how often it is picked among those in range. A `rush` move dashes that many
+// px a frame from `from` to `to` px away; a `shot` is thrown at `speed`; a `hold` grabs and squeezes
+// every `squeeze` frames, then throws; a weight-0 `counter` fires only after `counterAfter` blocks.
 export const KINDS = {
-  associate: { hp: 6, speed: 0.5, windup: 28, punch: 14, cooldown: 60, reach: 20, stand: 16, hitsToFall: 3,
-    crowd: { circle: 0.9, feint: 1.6, taunt: 0.6, jitter: 1.8, gesture: 'beckon' } },
-  manager: { hp: 3, speed: 1.25, windup: 10, punch: 10, cooldown: 50, reach: 18, hitsToFall: 2, flank: 16,
-    crowd: { circle: 1.5, feint: 0.4, taunt: 0.7, jitter: 1, gesture: 'tie', back: true } },
-  counsel: { hp: 5, speed: 0.75, windup: 30, punch: 16, cooldown: 110, reach: 100, hitsToFall: 3, keep: 64, near: 32,
+  associate: { hp: 3, speed: 1, windup: 16, punch: 10, cooldown: 40, reach: 20, stand: 16, hitsToFall: 2,
+    moves: { jab: { weight: 3 }, lunge: { windup: 20, punch: 16, rush: 3, from: 28, to: 88, weight: 2 } },
+    crowd: { circle: 0.9, feint: 1.6, taunt: 0.6, jitter: 1.8, gesture: 'beckon', back: true } },
+  manager: { hp: 10, speed: 0.5, windup: 30, punch: 18, cooldown: 70, reach: 24, stand: 22, hitsToFall: 4, damage: 2,
+    moves: {
+      haymaker: { heavy: true, weight: 2 },
+      grab: { windup: 20, punch: 12, reach: 18, damage: 1, hold: 60, squeeze: 20, mash: 6, weight: 2 },
+      charge: { windup: 32, punch: 24, rush: 3.5, from: 48, to: 140, heavy: true, weight: 1 },
+    },
+    crowd: { circle: 1.3, feint: 0.4, taunt: 0.7, jitter: 0.7, gesture: 'tie' } },
+  counsel: { hp: 5, speed: 0.75, windup: 18, punch: 16, cooldown: 90, reach: 100, hitsToFall: 3, keep: 64, near: 32,
+    moves: {
+      paper: { shot: 'paper', speed: 3, weight: 3 },
+      object: { windup: 34, shot: 'object', speed: 2.25, damage: 2, heavy: true, weight: 2 },
+      tape: { windup: 30, shot: 'tape', speed: 2, damage: 0, weight: 1 },
+    },
     crowd: { circle: 2.2, feint: 0.2, taunt: 0.6, jitter: 0.8, gesture: 'tie' } },
-  supervisor: { hp: 12, speed: 0.375, windup: 34, punch: 18, cooldown: 80, reach: 24, stand: 20, hitsToFall: 4, damage: 2, guard: 300,
+  supervisor: { hp: 12, speed: 0.375, windup: 24, punch: 14, cooldown: 80, reach: 24, stand: 20, hitsToFall: 4, guard: 300, counterAfter: 2,
+    moves: {
+      slap: { weight: 2 },
+      overhead: { windup: 40, punch: 20, reach: 26, damage: 2, heavy: true, weight: 1 },
+      counter: { windup: 10, punch: 16, reach: 32, damage: 2, heavy: true, weight: 0 },
+    },
     crowd: { circle: 0.8, feint: 0.2, taunt: 2.2, jitter: 0.6, gesture: 'slap' } },
 };
 
 export const kindsOf = (tune) => tune?.kinds ?? KINDS;
+
+// One attack of a kind, filled out from the kind's own numbers.
+export const moveOf = (k, name) => ({ name, windup: k.windup, punch: k.punch, reach: k.reach, damage: k.damage ?? 1, heavy: false, ...k.moves?.[name] });
 
 // The crowd's dials (the brawl lab turns them): `aggression` speeds the turn holder's approach and
 // shortens every wait, `circleRadius` (px) is how far waiting foes circle, `tauntChance` the share of
@@ -106,7 +130,7 @@ function squareUp(world, f, p, tune) {
   const floor = world.floor;
   const onFloor = (s) => !floor || (s.x >= floor.left && s.x <= floor.right && s.y >= floor.top && s.y <= floor.bottom);
   const live = world.fighters.filter((o) => o.team === 'foe' && kinds[o.kind] && STANDING.includes(o.state)
-    && (['windup', 'punch'].includes(o.state) || holding(world, o) || !world.crowd));
+    && (ATTACKING.includes(o.state) || holding(world, o) || !world.crowd));
   const others = live.filter((o) => !kinds[o.kind].stand).map((o) => spot(o, p, tune));
   const claimed = [];
   for (const o of live.filter((o) => kinds[o.kind].stand)) {
@@ -124,7 +148,7 @@ function squareUp(world, f, p, tune) {
   return { x: p.x + (Math.sign(f.x - p.x) || 1) * kinds[f.kind].stand, y: p.y };
 }
 
-const attackers = (world, f) => world.fighters.filter((o) => o !== f && o.team === 'foe' && o.kind && ['windup', 'punch'].includes(o.state)).length;
+const attackers = (world, f) => world.fighters.filter((o) => o !== f && o.team === 'foe' && o.kind && ATTACKING.includes(o.state)).length;
 
 function moveTo(f, x, y, speed) {
   const dx = x - f.x;
@@ -134,19 +158,40 @@ function moveTo(f, x, y, speed) {
   return Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
 }
 
-function readyToStrike(world, f, p, k, tune) {
-  if (f.cooldown > 0 || DOWNED.includes(p.state) || p.state === 'bound') return false;
-  if (attackers(world, f) >= MAX_ATTACKERS) return false;
-  if (k.keep) {
-    const gap = Math.abs(p.x - f.x);
-    return gap >= k.near && gap <= k.reach && Math.abs(p.y - f.y) <= tune.depthReach && !world.tapes.length;
-  }
-  return inReach(f, p, k.reach, tune);
+// Whether one move can start from here: a throw from its thrower's distance with nothing of his in
+// the air, a rush from its run-up distance on the auditor's row, anything else within reach.
+function inRange(world, f, p, k, m, tune) {
+  const gap = (p.x - f.x) * f.facing;
+  const row = Math.abs(p.y - f.y) <= tune.depthReach;
+  // A thrower backed against the floor's edge can't keep his distance, so he throws from closer in.
+  const cornered = world.floor && (f.x <= world.floor.left + 1 || f.x >= world.floor.right - 1);
+  if (m.shot) return row && gap >= (cornered ? 12 : k.near ?? 0) && gap <= k.reach && !world.tapes.some((s) => s.from === f.id);
+  if (m.rush) return row && gap >= m.from && gap <= m.to;
+  return inReach(f, p, m.reach, tune);
+}
+
+// The attack a foe starts now, or null: one of his moves in range, picked by weight. `f.nextMove`
+// forces the next pick (poses and tests).
+function chooseMove(world, f, p, k, tune) {
+  if (f.cooldown > 0 || DOWNED.includes(p.state) || p.state === 'bound') return null;
+  if (attackers(world, f) >= MAX_ATTACKERS) return null;
+  const names = f.nextMove ? [f.nextMove] : Object.keys(k.moves ?? { strike: {} });
+  const open = names.map((n) => moveOf(k, n)).filter((m) => (f.nextMove || (m.weight ?? 1) > 0) && inRange(world, f, p, k, m, tune));
+  if (!open.length) return null;
+  f.nextMove = null;
+  let r = roll(world) * open.reduce((s, m) => s + (m.weight ?? 1), 0);
+  return open.find((m) => (r -= m.weight ?? 1) < 0) ?? open[0];
+}
+
+function startAttack(f, m) {
+  f.attack = m;
+  f.flankSide = null;
+  set(f, 'windup');
 }
 
 // Deterministic dice kept on the world, so a headless run repeats exactly.
 function roll(world) {
-  const c = world.crowd;
+  const c = world.crowd ??= { seed: 2161, turns: {} };
   c.seed = (Math.imul(c.seed, 1664525) + 1013904223) >>> 0;
   return c.seed / 2 ** 32;
 }
@@ -182,7 +227,7 @@ function stepTurns(world, tune) {
     const holder = staff.find((f) => f.id === turn.holder);
     if (holder) {
       turn.since++;
-      const swinging = ['windup', 'punch'].includes(holder.state);
+      const swinging = ATTACKING.includes(holder.state);
       if (swinging) turn.swung = true;
       if (turn.swung ? swinging : WAITING.includes(holder.state) && turn.since <= c.turnMax) continue;
     }
@@ -307,6 +352,15 @@ export function thinkStaff(world, f, tune) {
     f.bump = Math.abs(f.bump) < 0.2 ? 0 : f.bump * 0.7;
   }
   f.t++;
+  // The Supervisor's answer to a string hammered into his guard: a quick counter out of turn.
+  if (f.blocked && k.moves?.counter) {
+    if ((world.frame ?? 0) - f.blockedAt > 60) f.blocked = 0;
+    else if (f.blocked >= k.counterAfter && WAITING.includes(f.state) && !f.entering) {
+      f.blocked = 0;
+      f.facing = Math.sign(p.x - f.x) || f.facing;
+      startAttack(f, moveOf(k, 'counter'));
+    }
+  }
   switch (f.state) {
     case 'idle': case 'walk': case 'guard': case 'feint': case 'taunt': case 'shove': {
       const mine = world.crowd.turns[p.id]?.holder === f.id;
@@ -322,34 +376,94 @@ export function thinkStaff(world, f, tune) {
       f.facing = Math.sign(p.x - f.x) || f.facing;
       const stance = guarding ? 'guard' : moving ? 'walk' : 'idle';
       if (stance !== f.state) set(f, stance);
-      if (!f.entering && readyToStrike(world, f, p, k, tune)) {
-        set(f, 'windup');
-        f.flankSide = null;
-      }
+      const m = !f.entering && chooseMove(world, f, p, k, tune);
+      if (m) startAttack(f, m);
       break;
     }
-    case 'windup':
-      if (f.t >= k.windup) {
-        set(f, 'punch');
-        if (k.keep) {
-          world.tapes.push({ x: f.x + f.facing * 12, y: f.y, vx: f.facing * TAPE.speed, t: 0, from: f.id });
-          world.events.push('redTape');
-        } else if (inReach(f, p, k.reach, tune) && p.z < 16 && p.state !== 'grab') {
-          landHit(world, p, { damage: k.damage ?? 1, heavy: !!k.guard, dir: f.facing, from: f }, tune);
-        }
-      }
+    case 'windup': {
+      const m = f.attack ??= moveOf(k, Object.keys(k.moves ?? {})[0]);
+      if (f.t >= m.windup) strike(world, f, p, m, tune);
       break;
+    }
     case 'punch':
-      if (f.t >= k.punch) {
+      if (f.t >= (f.attack?.punch ?? k.punch)) {
         f.cooldown = k.cooldown;
+        f.attack = null;
         set(f, 'idle');
       }
+      break;
+    case 'charge':
+      charge(world, f, p, f.attack, tune);
+      break;
+    case 'hold':
+      squeeze(world, f, f.attack, tune);
       break;
     case 'held':
       break;
     default:
       f.flankSide = null;
       updateCommon(world, f, tune);
+  }
+}
+
+// The wind-up's last frame: a blow lands, a throw leaves the hand, a rush sets off or a grab closes.
+function strike(world, f, p, m, tune) {
+  set(f, 'punch');
+  if (m.shot) {
+    world.tapes.push({ x: f.x + f.facing * 12, y: f.y, vx: f.facing * m.speed, t: 0, from: f.id, shot: m.shot, damage: m.damage, heavy: m.heavy });
+    world.events.push(m.shot === 'tape' ? 'redTape' : 'toss');
+    return;
+  }
+  if (m.rush) {
+    set(f, 'charge');
+    world.events.push('charge');
+    return;
+  }
+  if (!inReach(f, p, m.reach, tune) || p.z >= 16 || p.state === 'grab') return;
+  if (!m.hold) {
+    landHit(world, p, { damage: m.damage, heavy: m.heavy, dir: f.facing, from: f }, tune);
+    return;
+  }
+  if (p.invuln > 0 || ['bound', ...DOWNED].includes(p.state)) return;
+  if (p.parry > 0) {
+    deflect(world, p, f, f.facing, tune);
+    return;
+  }
+  Object.assign(p, { heldBy: f.id, mash: m.mash, x: f.x + f.facing * 14, y: f.y, facing: -f.facing });
+  set(p, 'bound');
+  set(f, 'hold');
+  world.events.push('grabbed');
+}
+
+// A rush along the row: it stops on reaching the auditor, who takes the blow unless he can't be hurt,
+// or at a wall or the run's end.
+function charge(world, f, p, m, tune) {
+  const was = f.x;
+  f.x = Math.min(world.floor.right, Math.max(world.floor.left, f.x + f.facing * m.rush));
+  const met = p.z < 16 && !DOWNED.includes(p.state) && Math.abs(p.y - f.y) <= tune.depthReach && Math.abs(p.x - f.x) <= 12;
+  if (met) landHit(world, p, { damage: m.damage, heavy: m.heavy, dir: f.facing, from: f }, tune);
+  if (f.state === 'charge' && (met || f.x === was || f.t * m.rush >= m.to + 24)) set(f, 'punch');
+}
+
+// The Manager's grip: the auditor squirms (mashing, as in a bind) while he squeezes, then is thrown.
+function squeeze(world, f, m, tune) {
+  const held = world.fighters.find((o) => o.heldBy === f.id);
+  if (!held || held.state !== 'bound') {
+    if (held) held.heldBy = null;
+    set(f, 'punch');
+    return;
+  }
+  Object.assign(held, { x: f.x + f.facing * 14, y: f.y });
+  if (f.t % m.squeeze === 0) {
+    held.hp = Math.max(1, held.hp - m.damage);
+    world.events.push('squeeze');
+  }
+  if (f.t >= m.hold) {
+    held.heldBy = null;
+    set(held, 'idle');
+    set(f, 'punch');
+    landHit(world, held, { damage: m.damage + 1, heavy: true, dir: f.facing }, tune);
+    world.events.push('throw');
   }
 }
 
@@ -371,6 +485,11 @@ export function struggle(world, pad, events) {
 // inside a parry window snaps instead, and staggers whoever threw it.
 export function stepStaff(world, tune, events) {
   if (!world.think) return;
+  for (const p of world.fighters.filter((o) => o.heldBy)) {
+    if (world.fighters.some((o) => o.id === p.heldBy && o.state === 'hold')) continue;
+    p.heldBy = null;
+    if (p.state === 'bound') set(p, 'idle');
+  }
   for (const tape of world.tapes) {
     tape.x += tape.vx;
     tape.t++;
@@ -381,6 +500,10 @@ export function stepStaff(world, tune, events) {
       tape.t = TAPE.life;
       if (p.parry > 0) {
         deflect(world, p, world.fighters.find((f) => f.id === tape.from && !DOWNED.includes(f.state)), Math.sign(tape.vx), tune);
+        continue;
+      }
+      if (tape.shot && tape.shot !== 'tape') {
+        landHit(world, p, { damage: tape.damage, heavy: tape.heavy, dir: Math.sign(tape.vx) }, tune);
         continue;
       }
       set(p, 'bound');

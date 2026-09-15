@@ -79,7 +79,7 @@ export function mountLabPanel({ dials, counts = {}, kinds = [], onRespawn, onCop
   for (const dial of dials) {
     if (dial.group !== group) {
       group = dial.group;
-      section({ lab: 'Lab', crowd: 'Crowd', moves: 'Stage 1 moves', weapons: 'Office weapons', planned: 'Planned (not wired yet)' }[group] ?? group);
+      section({ lab: 'Lab', crowd: 'Crowd', foes: 'Enemy types', moves: 'Stage 1 moves', weapons: 'Office weapons', planned: 'Planned (not wired yet)' }[group] ?? group);
     }
     const el = row(group === 'planned' ? 'planned' : '');
     const n = Object.assign(doc.createElement('span'), { className: 'n' });

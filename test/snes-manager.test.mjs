@@ -48,18 +48,3 @@ test('a bot that walks at the SNES Manager and punches every 8 frames knocks him
   const ko = fight(snesTune(), 1200);
   assert.ok(ko !== null, 'still standing after 1,200 frames');
 });
-
-test('the Manager holding the attack turn keeps the back spot he picked while the auditor turns round', () => {
-  const tune = snesTune();
-  const { world, p, m } = managerFloor(tune);
-  Object.assign(m, { x: p.x + 60, y: p.y });
-  p.facing = 1;
-  const idle = { held: new Set(), pressed: new Set(), dash: null };
-  for (let t = 0; t < 300 && world.crowd?.turns[p.id]?.holder !== m.id; t++) stepFloor(world, idle, tune);
-  m.cooldown = 1000;
-  stepFloor(world, idle, tune);
-  assert.equal(m.flankSide, -1, 'he aims behind the auditor');
-  p.facing = -1;
-  for (let t = 0; t < 20; t++) stepFloor(world, idle, tune);
-  assert.equal(m.flankSide, -1, 'turning round does not send him to the other side');
-});

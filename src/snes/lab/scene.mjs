@@ -9,15 +9,15 @@ import { sfx } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
 import { AUDITORS } from '../../flow.mjs';
 import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
-import { readLook, turnOwners } from '../../stage1/readout.mjs';
+import { SHAPE, readLook, turnOwners } from '../../stage1/readout.mjs';
 import { drawReadout } from '../readout.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
-import { CROWD, KINDS, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
+import { CROWD, KINDS, moveOf, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { MAX_HITS, RING, SEGMENTS, freeInjunction } from '../../injunction.mjs';
 import { scaledTune } from '../stage1/finisher.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
-import { buildDials, labKinds, settingsText, takeTurns, waveKinds } from '../../lab/dials.mjs';
+import { buildDials, labKinds, settingsText, takeTurns, waveKinds, withKindDials } from '../../lab/dials.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
 import { isShortcut, mountControls } from '../../controls.mjs';
 import { armWorld, scaledWeapons } from '../../stage1/weapons.mjs';
@@ -129,7 +129,12 @@ export class SnesLabScene extends Phaser.Scene {
     }, fields);
     const sheets = [
       () => [foe('associate', 120, {}), foe('manager', 190, { state: 'walk', facing: 1 }), foe('counsel', 256, {})],
-      () => { p.parry = 6; return [foe('associate', 120, { state: 'windup', t: 2 }), foe('supervisor', 220, { state: 'windup', t: 33 })]; },
+      () => {
+        p.parry = 6;
+        const winding = (kind, move, x, t) => foe(kind, x, { state: 'windup', t, attack: moveOf(tune.kinds[kind], move) });
+        w.tapes = [{ x: 150, y: 176, vx: -3, t: 4, from: 'counsel', shot: 'paper' }];
+        return [winding('associate', 'lunge', 96, 8), winding('manager', 'grab', 156, 12), winding('supervisor', 'overhead', 214, 30), foe('counsel', 268, { state: 'punch', t: 2, y: 176 })];
+      },
       () => { Object.assign(p, { state: 'punch', combo: 1, t: tune.punchStartup + 1 }); return [foe('manager', 150, {}), foe('associate', 240, { state: 'punch', t: 1 })]; },
       () => [foe('supervisor', 120, { state: 'guard' }), foe('associate', 220, { state: 'hurt', stagger: tune.parryStagger, t: 10 })],
       () => {
@@ -191,7 +196,7 @@ export class SnesLabScene extends Phaser.Scene {
     for (const d of this.dials) if (d.group === 'moves') this.base[d.key] = d.value;
     for (const d of this.dials) if (d.group === 'crowd') CROWD[d.key] = d.value;
     Object.assign(this.tune, scaledTune(this.base, STAGE1.scale));
-    const turned = labKinds(this.kinds, { foeWalkScale: this.dial('foeWalkScale'), foeWindupAdd: this.dial('foeWindupAdd') });
+    const turned = labKinds(withKindDials(this.kinds, this.dials), { foeWalkScale: this.dial('foeWalkScale'), foeWindupAdd: this.dial('foeWindupAdd') });
     for (const [k, v] of Object.entries(turned)) Object.assign(KINDS[k], v);
     if (this.dial('meterFull')) this.world.meterHits = MAX_HITS;
     this.world.cooldown.frames = this.dial('injunctionCooldown');
@@ -252,7 +257,7 @@ export class SnesLabScene extends Phaser.Scene {
       if (s) this.drawFurniture(s);
       else if (wp) this.drawWeapon(wp.kind, wp.x, wp.y - wp.z, wp.state === 'floor' && wp.t > w.weaponTune.weaponLife - 90 && wp.t % 8 < 4);
       else if (o) this.drawProp(o);
-      else if (t) g.fillStyle(0xc03030).fillRect(Math.round(t.x - 10), t.y - 36, 20, 4);
+      else if (t) this.drawShot(t);
       else this.drawFighter(f);
     }
     drawSparks(g, w.sparks, 0, this.tune);
@@ -273,8 +278,8 @@ export class SnesLabScene extends Phaser.Scene {
       if (wp) { const { w, h } = WEAPON_BOX[wp.kind]; return boxEntries(wp.x - w / 2, wp.y - wp.z - h, w, h, wp.kind); }
       if (o) return boxEntries(o.x - 9, o.y - 20 - o.z, 18, 18, 'prop');
       if (!f) return boxEntries(t.t.x - 10, t.t.y - 36, 20, 4, 'tape');
-      const bh = f.kind === 'supervisor' ? 62 : 56;
-      return boxEntries(f.x - 12, f.y - bh - f.z, 24, bh, f.kind ?? 'player', thingPriority(t));
+      const [bw, bh] = SHAPE[f.kind] ?? [24, 56];
+      return boxEntries(f.x - bw / 2, f.y - bh - f.z, bw, bh, f.kind ?? 'player', thingPriority(t));
     });
     const { stats } = frameEntries(entries);
     stats.lines.forEach((n, y) => {
@@ -284,6 +289,14 @@ export class SnesLabScene extends Phaser.Scene {
       if (n > drawn) this.g.fillStyle(0xe04040).fillRect(WIDTH - (n - drawn) * 3, y, (n - drawn) * 3, 1);
     });
     drawString(this.fill, `LINE ${Math.max(0, ...stats.lines)}/${MAX_PER_LINE} PAL ${stats.palettes} DROP ${stats.dropped}`, 8, 42, stats.dropped ? rgb15(31, 12, 10) : rgb15(20, 20, 22));
+  }
+
+  // Counsel's throws: red tape a long red strip, paperwork a white sheet, an office object a dark block.
+  drawShot(t) {
+    const [w, h, c] = { paper: [10, 7, 0xf0f0e8], object: [12, 12, 0x505058] }[t.shot] ?? [20, 4, 0xc03030];
+    const spin = t.shot === 'paper' && t.t % 8 < 4 ? 2 : 0;
+    this.g.fillStyle(c).fillRect(Math.round(t.x - w / 2), t.y - 34 - h / 2 - spin, w, h - spin);
+    if (t.shot) this.g.lineStyle(1, 0x18181c).strokeRect(Math.round(t.x - w / 2), t.y - 34 - h / 2 - spin, w, h - spin);
   }
 
   drawProp(o) {
@@ -313,8 +326,9 @@ export class SnesLabScene extends Phaser.Scene {
     const x = Math.round(f.x);
     g.fillStyle(GREY.shadow).fillRect(x - 12, f.y - 2, 24, 4);
     const lying = LYING.includes(f.state) && f.state !== 'getup';
-    const bw = lying ? 48 : f.team === 'player' ? 22 : 24;
-    const bh = lying ? 14 : f.kind === 'supervisor' ? 62 : 56;
+    const [sw, sh] = SHAPE[f.kind] ?? [f.team === 'player' ? 22 : 24, 56];
+    const bw = lying ? sh - 8 : sw;
+    const bh = lying ? 14 : sh;
     const top = Math.round(f.y - bh - f.z);
     const look = readLook(f);
     const flash = (look === 'windup' && f.t % 8 < 4) || f.hitFlash > 0;

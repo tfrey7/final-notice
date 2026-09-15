@@ -37,7 +37,7 @@ import { mountControls } from '../../controls.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, clearDone, clearLines, fangFlash } from './boss.mjs';
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
-import { turnOwners } from '../../stage1/readout.mjs';
+import { SHAPE, turnOwners } from '../../stage1/readout.mjs';
 import { routeLights } from '../../stage1/combo.mjs';
 import { drawReadout } from '../readout.mjs';
 import { drawCombo, drawSparks } from '../hitfx.mjs';
@@ -363,6 +363,8 @@ export class SnesStage1Scene extends Phaser.Scene {
       if (f?.marked > 0) return [...this.foeSprites(f, at(f.x), f.t * MS), ...this.weaponSprites('stamp', at(f.x), f.y - BODY_H - 6 - f.z)];
       if (o) return artOr(this, `prop:${o.kind}`, { w: 24, h: 24, palette: PROP_PALETTE }).frame('stand', 0, Math.round(at(o.x) - 12), Math.round(o.y - 24 - o.z * STAGE1.scale));
       if (box) return artOr(this, 'prop:firstAid', { w: 24, h: 16, palette: [rgb15(2, 2, 4), WHITE, rgb15(28, 4, 4)] }).frame('stand', 0, Math.round(at(box.x) - 12), box.y - 16);
+      if (tape?.shot === 'paper') return artOr(this, 'prop:paper', { w: 16, h: 8, palette: [rgb15(2, 2, 4), WHITE, rgb15(24, 24, 22)] }).frame('stand', 0, Math.round(at(tape.x) - 8), tape.y - 40);
+      if (tape?.shot === 'object') return artOr(this, 'prop:object', { w: 16, h: 16, palette: [rgb15(2, 2, 4), rgb15(10, 10, 12), rgb15(20, 20, 22)] }).frame('stand', 0, Math.round(at(tape.x) - 8), tape.y - 44);
       if (tape) return artOr(this, 'prop:tape', { w: 24, h: 8, palette: [rgb15(2, 2, 4), rgb15(26, 4, 4), WHITE] }).frame('stand', 0, Math.round(at(tape.x) - 12), tape.y - 40);
       const ms = f.t * MS;
       return f.team === 'player' ? this.playerSprites(f, at(f.x), ms) : this.foeSprites(f, at(f.x), ms);
@@ -384,8 +386,9 @@ export class SnesStage1Scene extends Phaser.Scene {
       if (f === this.fin?.foe || Math.abs(f.x - off - WIDTH / 2) > WIDTH / 2 + 32) continue;
       const vellumBox = f.kind === 'vellum';
       const lying = (vellumBox ? ['down', 'slumped', 'knockdown'] : ['down', 'ko']).includes(f.state);
-      const bw = lying ? (vellumBox ? 60 : 56) : vellumBox ? 36 : 32;
-      const bh = lying ? (vellumBox ? 28 : 24) : vellumBox ? 66 : f.team === 'player' ? BODY_H + 2 : BODY_H;
+      const shape = SHAPE[f.kind];
+      const bw = lying ? (vellumBox ? 60 : 56) : vellumBox ? 36 : shape?.[0] ?? 32;
+      const bh = lying ? (vellumBox ? 28 : 24) : vellumBox ? 66 : f.team === 'player' ? BODY_H + 2 : shape?.[1] ?? BODY_H;
       drawReadout(g, this.markFill, f, { x: Math.round(f.x - off), top: Math.round(f.y - bh - f.z), w: bw, h: bh, feet: f.y, lying }, {
         tune: this.tune, dx: -off, frame: this.game.loop.frame, cooldown: w.cooldown, boxes: this.boxes, turn: turns.includes(f),
       });

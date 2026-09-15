@@ -2,7 +2,7 @@
 // one by pad, the attack-turn gate and the settings text Tim copies into the room.
 // Dials change the lab's live tables only; nothing here writes the game's defaults.
 import { TUNING } from '../stage1/moves.mjs';
-import { CROWD, KINDS } from '../stage1/staff.mjs';
+import { CROWD, KINDS, moveOf } from '../stage1/staff.mjs';
 import { WEAPONS } from '../stage1/weapons.mjs';
 import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
@@ -28,6 +28,34 @@ export const CROWD_DIALS = {
   closeIn: [CROWD.closeIn, 0, 300, 10],
 };
 
+// Each enemy kind's own dials: health, walking speed, the Supervisor's blocks before a counter, and
+// every attack's wind-up and damage. Keys are `kind.field` or `kind.move.field`.
+export function kindDials(kinds = KINDS) {
+  const out = {};
+  for (const [kind, k] of Object.entries(kinds)) {
+    out[`${kind}.hp`] = [k.hp, 1, 30, 1];
+    out[`${kind}.speed`] = [k.speed, 0.125, 3, 0.125];
+    if (k.counterAfter) out[`${kind}.counterAfter`] = [k.counterAfter, 1, 6, 1];
+    for (const name of Object.keys(k.moves ?? {})) {
+      const m = moveOf(k, name);
+      out[`${kind}.${name}.windup`] = [m.windup, 1, 90, 1];
+      out[`${kind}.${name}.damage`] = [m.damage, 0, 8, 1];
+    }
+  }
+  return out;
+}
+
+// A copy of the kinds with the enemy dials written in.
+export function withKindDials(kinds, dials) {
+  const out = structuredClone(kinds);
+  for (const d of dials.filter((x) => x.group === 'foes')) {
+    const [kind, a, b] = d.key.split('.');
+    if (b) out[kind].moves[a][b] = d.value;
+    else out[kind][a] = d.value;
+  }
+  return out;
+}
+
 export const MAX_OF_KIND = 6;
 
 // Every dial in panel order, grouped. `value` is the lab's starting point for that dial.
@@ -39,6 +67,7 @@ export function buildDials(base) {
   return [
     ...group('lab', LAB),
     ...group('crowd', CROWD_DIALS),
+    ...group('foes', kindDials()),
     ...group('moves', TUNING, base),
     ...group('weapons', WEAPONS),
     ...group('planned', PLANNED),
@@ -67,6 +96,7 @@ export function waveKinds(counts) {
 export function labKinds(original, { foeWalkScale, foeWindupAdd }) {
   return Object.fromEntries(Object.entries(original).map(([k, v]) => [k, {
     ...v, speed: v.speed * foeWalkScale, windup: Math.max(1, v.windup + foeWindupAdd),
+    moves: v.moves && Object.fromEntries(Object.entries(v.moves).map(([name, m]) => [name, 'windup' in m ? { ...m, windup: Math.max(1, m.windup + foeWindupAdd) } : m])),
   }]));
 }
 
@@ -96,6 +126,8 @@ export function settingsText(dials, counts, who) {
     '[lab]', byGroup('lab'),
     '',
     '[crowd] (circleRadius before the SNES 1.5x pixel scale)', byGroup('crowd'),
+    '',
+    '[foes] (speed before the SNES weight and scale, wind-ups before the SNES weight)', byGroup('foes'),
     '',
     '[moves] (before the SNES 1.5x pixel scale)', byGroup('moves'),
     '',

@@ -149,12 +149,24 @@ test('his guard still stops a punch; the parry, not punching, is the way through
   console.log(`punch bot: ${line(punch)}\nparry bot: ${line(parry)}`);
   assert.ok(parry.beaten, 'the parry bot beats him');
   assert.ok(parry.parries > 0);
-  assert.ok(parry.frames < punch.frames * 0.7, `parry ${parry.frames} vs punch ${punch.frames}`);
+  // His summoned Associates are the weak rushers now, so punching through them costs the punch bot less time.
+  assert.ok(parry.frames < punch.frames * 0.8, `parry ${parry.frames} vs punch ${punch.frames}`);
   assert.ok(punch.pipsLost > 0, 'the punch bot loses pips');
-  assert.ok(punch.blocked > 0, 'the punch bot runs into his guard');
+  // Whether the punch bot happens to swing into his guard swings on a frame of timing, so stage it.
+  const { world, tune, p, v } = office();
+  Object.assign(p, { x: v.x - tune.punchReach + 4, y: v.y, facing: 1 });
+  const hp = v.hp;
+  const events = [];
+  for (let i = 0; i < 20; i++) {
+    stepFloor(world, pad({ b: i === 0 }), tune);
+    events.push(...world.events);
+  }
+  assert.ok(events.includes('blocked'), 'a punch into his guard is blocked');
+  assert.equal(v.hp, hp);
 });
 
 test('KINDS stay the NES numbers after building the SNES tune', () => {
+  const nes = structuredClone(KINDS);
   snesTune();
-  assert.equal(KINDS.associate.windup, 28);
+  assert.deepEqual(KINDS, nes);
 });

@@ -55,6 +55,10 @@ export function drawReadout(g, fill, f, body, { tune, dx = 0, frame = 0, cooldow
     const gw = measure(r.gesture);
     drawString(fill, r.gesture, Math.round(x - gw / 2), top - 22 - (frame % 16 < 8 ? 1 : 0), rgb15(28, 12, 28));
   }
+  if (r.move) {
+    const mw = measure(r.move);
+    drawString(fill, r.move, Math.round(x - mw / 2), top - 22, rgb15(31, 20, 6));
+  }
   const lw = measure(r.letter);
   drawString(fill, r.letter, Math.round(x - lw / 2), top - 11, WHITE);
   if (r.weapon) g.fillStyle(WEAPON_COLOUR[r.weapon] ?? 0x808080).fillRect(Math.round(x + lw / 2) + 3, top - 10, 6, 6).lineStyle(1, 0xffffff).strokeRect(Math.round(x + lw / 2) + 3, top - 10, 6, 6);

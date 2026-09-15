@@ -8,6 +8,7 @@ import { STAFF_WEIGHT, VELLUM_WEIGHT, weighed } from '../weight.mjs';
 // Every tuning number measured in pixels; times and damage keep their values.
 export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp'];
 export const STAFF_SCALED = ['speed', 'reach', 'stand', 'flank', 'keep', 'near'];
+export const MOVE_SCALED = ['reach', 'rush', 'from', 'to', 'speed'];
 
 export const VELLUM_SCALED = ['speed', 'stand', 'rushSpeed', 'rushReach', 'sweepReach'];
 
@@ -32,6 +33,10 @@ export function scaledTune(base, scale) {
   const tune = grown(base, SCALED, scale);
   const staff = (k) => {
     const out = grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale);
+    if (k.moves) {
+      const move = (m) => weighed(grown(m, MOVE_SCALED, scale), { frames: { windup: STAFF_WEIGHT.frames.windup } });
+      out.moves = Object.fromEntries(Object.entries(k.moves).map(([name, m]) => [name, move(m)]));
+    }
     return k.flank ? { ...out, speed: Math.min(out.speed, tune.walkX) } : out;
   };
   return {
