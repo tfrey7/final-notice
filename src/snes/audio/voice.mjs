@@ -111,6 +111,19 @@ export const CAST = {
 
 export const castNames = () => Object.entries(CAST).flatMap(([k, c]) => [k, ...Object.keys(c.moods ?? {}).map((m) => `${k}:${m}`)]);
 
+// How hard a brawl moment is acted. Chatterbox's `exaggeration` is its emotion dial and its
+// `cfg_weight` the pacing: the lower it is, the further the reading drifts from a flat script.
+// A hit is a reflex, a taunt is unhurried and smug, and a death cry is the biggest thing the
+// character ever does. `lift` is added to the character's own exaggeration rather than replacing
+// it, so a flat Supervisor stays flatter than a shrill Associate (item 2222).
+export const CFG_DEFAULT = 0.3;
+export const EXAGGERATION_MAX = 1.4;
+export const ACTING = {
+  hurt: { lift: 0.45, cfg: 0.25, notes: 'a reflex yelp, loose and fast' },
+  taunt: { lift: 0.1, cfg: 0.45, notes: 'sneering, in no hurry' },
+  death: { lift: 0.55, cfg: 0.2, notes: 'the last thing they say' },
+};
+
 // The character's settings with the crush applied on top. `at` names the strength; left out it is
 // the house level, which is what everything in the game uses.
 export function voiceOf(who, at = level) {
@@ -127,13 +140,24 @@ export function voiceOf(who, at = level) {
 // The pace Kokoro is asked for, so the take lands at `speed` once the S-DSP pitches it.
 export const takeSpeed = (v) => Math.round((v.speed / 2 ** (v.pitch / 12)) * 1000) / 1000;
 
-// What a take was asked, hashed into its name. A Chatterbox take sets no pace, so its name leaves it out.
-export const takeKey = (v, text) => (v.actor === 'chatterbox' ? `chatterbox|${v.voice}|${v.exaggeration}|${text}` : `${v.voice}|${takeSpeed(v)}|${text}`);
+// The character acting one brawl moment: their voice with that moment's emotion dialled in. An
+// unknown moment (or a character nobody acts) is the plain voice.
+export function actingOf(who, moment, at = level) {
+  const v = voiceOf(who, at);
+  const act = ACTING[moment];
+  if (!act || v.actor !== 'chatterbox') return v;
+  const exaggeration = Math.round(Math.min(EXAGGERATION_MAX, (v.exaggeration ?? 0.5) + act.lift) * 100) / 100;
+  return { ...v, exaggeration, cfg: act.cfg, moment };
+}
+
+// What a take was asked, hashed into its name. A Chatterbox take sets no pace, so its name leaves
+// it out; a pacing other than the default is part of what was asked, so it goes in.
+export const takeKey = (v, text) => (v.actor === 'chatterbox' ? `chatterbox|${v.voice}|${v.exaggeration}${v.cfg && v.cfg !== CFG_DEFAULT ? `|cfg${v.cfg}` : ''}|${text}` : `${v.voice}|${takeSpeed(v)}|${text}`);
 export const takePrefix = (v) => (v.actor === 'chatterbox' ? `cb-${v.voice}` : v.voice);
 
 // A take's file name in assets/voice/takes: the voice and a hash of what it was asked.
-export async function takeFile(who, text) {
-  const v = voiceOf(who);
+export async function takeFile(who, text, moment) {
+  const v = actingOf(who, moment);
   const digest = await globalThis.crypto.subtle.digest('SHA-1', new TextEncoder().encode(takeKey(v, text)));
   const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `${takePrefix(v)}-${hex.slice(0, 10)}.wav`;

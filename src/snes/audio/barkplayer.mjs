@@ -14,9 +14,9 @@ let loading = null;
 const fetchTake = async (name) => new Uint8Array(await (await fetch(new URL(name, TAKES))).arrayBuffer());
 
 export function loadBarks(read = fetchTake) {
-  loading ??= Promise.all(barkLines().map(async ({ who, text }) => {
+  loading ??= Promise.all(barkLines().map(async ({ who, text, moment }) => {
     try {
-      loaded.set(`${who}|${text}`, digitize(who, parseWav(await read(await takeFile(who, text)))));
+      loaded.set(`${who}|${text}`, digitize(who, parseWav(await read(await takeFile(who, text, moment)))));
     } catch {
       // A take that will not load leaves that line silent.
     }

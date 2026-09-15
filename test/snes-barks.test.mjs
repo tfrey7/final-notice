@@ -3,8 +3,19 @@ import assert from 'node:assert/strict';
 import { basename } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { BARKS, CHANCE, GAP, REST, barkLines, barkMoments, createBarker, snapshot } from '../src/snes/audio/barks.mjs';
-import { parseWav, renderLine, takeFile } from '../src/snes/audio/voice.mjs';
+import { ACTING, actingOf, parseWav, renderLine, takeFile } from '../src/snes/audio/voice.mjs';
 import { takePath } from '../tools/voice.mjs';
+
+test('each moment is acted at its own emotion, and a hit or a death is bigger than a taunt', () => {
+  for (const who of Object.keys(BARKS)) {
+    const dial = (moment) => actingOf(who, moment).exaggeration;
+    assert.ok(dial('hurt') > dial('taunt'), `${who} yelps harder than he sneers`);
+    assert.ok(dial('death') > dial('taunt'), `${who} dies bigger than he sneers`);
+    assert.ok(actingOf(who, 'death').cfg < actingOf(who, 'taunt').cfg, `${who} dies looser than he sneers`);
+    for (const moment of Object.keys(ACTING)) assert.ok(dial(moment) <= 1.4, `${who} ${moment} stays in range`);
+  }
+  assert.equal(actingOf('associate', 'nothing').exaggeration, actingOf('associate').exaggeration);
+});
 
 test('each enemy type has two or three grunts, two taunts and a death cry; Vellum hurt, taunt and defeat', () => {
   for (const who of ['associate', 'supervisor', 'manager', 'counsel']) {
@@ -16,9 +27,9 @@ test('each enemy type has two or three grunts, two taunts and a death cry; Vellu
 });
 
 test('every bark has its take recorded, named the same in the browser as by the tool, and sounds', async () => {
-  for (const { who, text } of barkLines()) {
-    const path = takePath(who, text);
-    assert.equal(await takeFile(who, text), basename(path), text);
+  for (const { who, text, moment } of barkLines()) {
+    const path = takePath(who, text, moment);
+    assert.equal(await takeFile(who, text, moment), basename(path), text);
     assert.ok(existsSync(path), `${who} "${text}" take recorded`);
     const { left } = renderLine(who, parseWav(readFileSync(path)));
     const peak = left.reduce((m, x) => Math.max(m, Math.abs(x)), 0);

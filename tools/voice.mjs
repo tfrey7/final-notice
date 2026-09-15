@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { castNames, digitize, parseWav, renderLine, takeKey, takePrefix, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
+import { actingOf, castNames, digitize, parseWav, renderLine, takeKey, takePrefix, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 import { allLines } from '../src/snes/barks.mjs';
 import { BARKS, barkLines } from '../src/snes/audio/barks.mjs';
@@ -32,7 +32,7 @@ const TRIES = 4;
 
 const fileFor = (v, text) => join(ROOT, 'assets', 'voice', 'takes', `${takePrefix(v)}-${createHash('sha1').update(takeKey(v, text)).digest('hex').slice(0, 10)}.wav`);
 
-export const takePath = (who, text) => fileFor(voiceOf(who), text);
+export const takePath = (who, text, moment) => fileFor(actingOf(who, moment), text);
 // The Kokoro take whoever acts the character; a Chatterbox character borrows its voice from the sample line's.
 export const kokoroTakePath = (who, text) => fileFor({ ...voiceOf(who), actor: 'kokoro' }, text);
 
@@ -83,26 +83,27 @@ async function kokoroTake(who, text) {
   return path;
 }
 
-// A Chatterbox take of the line, retaken until Whisper hears it through the chain; the first take if none is.
-async function act(who, text) {
-  const v = voiceOf(who);
+// A Chatterbox take of the line, acted at the moment's emotion and retaken until Whisper hears it
+// through the chain; the first take if none is.
+async function act(who, text, moment) {
+  const v = actingOf(who, moment);
   const ref = await kokoroTake(who, v.sample);
   execFileSync('docker', ['exec', CONTAINER, 'mkdir', '-p', REF_DIR]);
   execFileSync('docker', ['cp', ref, `${CONTAINER}:${REF_DIR}/${who}.wav`]);
   let first = null;
   for (let t = 0; t < TRIES; t++) {
-    const bytes = await post(CHATTERBOX, { text, ref: `..${REF_DIR}/${who}.wav`, exaggeration: v.exaggeration, cfg_weight: 0.3 });
+    const bytes = await post(CHATTERBOX, { text, ref: `..${REF_DIR}/${who}.wav`, exaggeration: v.exaggeration, cfg_weight: v.cfg ?? 0.3 });
     first ??= bytes;
     if (readsBack(text, await heard(wav(renderLine(who, parseWav(bytes)))))) return bytes;
   }
   return first;
 }
 
-export async function take(who, text) {
-  const path = takePath(who, text);
+export async function take(who, text, moment) {
+  const path = takePath(who, text, moment);
   if (!existsSync(path)) {
     if (voiceOf(who).actor !== 'chatterbox') await kokoroTake(who, text);
-    else writeFileSync(path, await act(who, text));
+    else writeFileSync(path, await act(who, text, moment));
   }
   return parseWav(readFileSync(path));
 }
@@ -170,10 +171,15 @@ if (process.argv[1]?.endsWith('voice.mjs')) {
     await bakeBarks(rest[0]);
   } else if (first === '--barks') {
     mkdirSync(rest[0], { recursive: true });
-    const gap = new Float32Array(Math.round(32000 * 0.2));
+    const gap = new Float32Array(Math.round(32000 * 0.45));
     for (const who of Object.keys(BARKS)) {
       const parts = [];
-      for (const { text } of barkLines().filter((l) => l.who === who)) parts.push(renderLine(who, await take(who, text)), { left: gap, right: gap });
+      for (const { text, moment } of barkLines().filter((l) => l.who === who)) {
+        const one = renderLine(who, await take(who, text, moment));
+        writeFileSync(join(rest[0], `${who}-${moment}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24)}.wav`), wav(one));
+        console.log(who.padEnd(11), moment.padEnd(6), `exaggeration ${actingOf(who, moment).exaggeration}`, JSON.stringify(text));
+        parts.push(one, { left: gap, right: gap });
+      }
       const glue = (side) => Float32Array.from(parts.flatMap((p) => [...p[side]]));
       const out = join(rest[0], `${who}.wav`);
       writeFileSync(out, wav({ left: glue('left'), right: glue('right'), sampleRate: 32000 }));
