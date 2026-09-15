@@ -48,6 +48,14 @@ test('the SNES TV is S-video sharp with softer scanlines, and composite keeps bl
   assert.ok(snes.looks.composite.bleed > snes.looks.crt.bleed && snes.looks.composite.crawl > 0);
 });
 
+test('the SNES default is a good 1995 TV: faint scanlines, barely curved, a light glow, no bleed', () => {
+  const tv = SNES_LOOKS.crt;
+  assert.equal(tv.bleed, 0);
+  assert.ok(tv.scan <= 0.15 && tv.glow <= 0.12 && tv.curve <= 0.01 && tv.vignette <= 0.05 && tv.mask <= 0.03);
+  assert.deepEqual(SNES_LOOKS.composite,
+    { curve: 0.04, scan: 0.36, glow: 0.34, bleed: 0.9, crawl: 0.11, vignette: 0.26, mask: 0.14, sharp: 1.6 });
+});
+
 test('the SNES frame shows at the 8:7 pixel aspect inside the 4:3 face', () => {
   const snes = machineFor('snes');
   assert.equal(snes.pixelAspect, 8 / 7);

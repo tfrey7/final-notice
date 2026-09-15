@@ -27,10 +27,10 @@ export const LOOKS = {
   composite: { curve: 0.04, scan: 0.42, glow: 0.4, bleed: 1.0, crawl: 0.16, vignette: 0.28, mask: 0.16, sharp: 1.4 },
 };
 
-// The SNES over S-video: luma and chroma on their own wires, so no dot crawl and little bleed, with
-// finer, softer scanlines. Its composite keeps the blur and crawl, a shade gentler on 15-bit colour.
+// The SNES in late 1995 on a good TV over S-video or RGB: no bleed or dot crawl, faint scanlines, a
+// nearly flat face and a light glow, so the pixel art stays crisp. Composite keeps the blur and crawl.
 export const SNES_LOOKS = {
-  crt: { curve: 0.03, scan: 0.32, glow: 0.24, bleed: 0.12, crawl: 0, vignette: 0.2, mask: 0.08, sharp: 4.0 },
+  crt: { curve: 0.008, scan: 0.14, glow: 0.1, bleed: 0, crawl: 0, vignette: 0.04, mask: 0.03, sharp: 6.0 },
   composite: { curve: 0.04, scan: 0.36, glow: 0.34, bleed: 0.9, crawl: 0.11, vignette: 0.26, mask: 0.14, sharp: 1.6 },
 };
 
