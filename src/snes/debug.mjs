@@ -4,7 +4,9 @@ import { SnesLayersScene } from './layerscene.mjs';
 import { SnesFxScene } from './fxscene.mjs';
 import { SnesHudScene } from './hudscene.mjs';
 import { SnesUiScene } from './uiscene.mjs';
+import { bgArtScene } from './bgartscene.mjs';
 import CLAIMS from './bg/claims.mjs';
+import { AREAS as ARCHIVE } from './bg/archive.mjs';
 
 const BACKGROUNDS = { claims: CLAIMS };
 const area = (bg, params) => bg.areas[Math.max(0, Math.min(bg.areas.length - 1, Number(params.get('area') ?? 1) - 1))];
@@ -23,6 +25,7 @@ export const DEBUG_ROUTES = [
     scene: new SnesLayersScene('snes-bg', (params) => area(BACKGROUNDS[params.get('art')], params)),
     what: 'a background module scrolling end to end: art=claims, &area=1 Reception or 2 Service Floor, &x= pins',
   },
+  { flag: 'art', value: 'archive', scene: bgArtScene('archive', ARCHIVE), what: 'Stage 2 areas 1-3: keys 1-3, lamp glow by add, wax front by add-half' },
 ];
 
 export const debugScene = (params) => DEBUG_ROUTES.find((r) => params.has(r.flag)
