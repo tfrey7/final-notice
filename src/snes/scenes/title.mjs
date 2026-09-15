@@ -6,8 +6,9 @@ import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
 import { bakeLayer, bakeScene, composeFrame } from '../layers.mjs';
 import { LEVELS, screen, fromRgba, mathPass, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
-import { afterHours, glintBand, logo, logoPalette, setFloors } from '../bg/ui.mjs';
+import { FLOORS, KEPT_WINDOWS, afterHours, glintBand, logo, logoPalette, logoReading, setFloors } from '../bg/ui.mjs';
 import { INTRO_FRAMES, TITLE_BPM, lightsOut } from '../lights.mjs';
+import { clerkDesk, pastDue, skyFor } from '../clock.mjs';
 import { measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
@@ -26,6 +27,10 @@ const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
 const FLASH = screen(rgb15(9, 8, 5));
 const PROMPT = 'PUSH START';
 const PROMPT_Y = 150;
+
+const CLERK = ['.##.', '####', '####'];
+const CLERK_COLOUR = rgb15(4, 3, 3);
+const PAST_DUE = logoReading('PAST DUE');
 
 const MEMO_SOUNDS = { move: 'pencil', new: 'stampOk', continue: 'stampOk', open: 'stampOk', change: 'stampOk', back: 'paperSlide', done: 'paperSlide' };
 
@@ -59,9 +64,12 @@ export class SnesTitleScene extends Phaser.Scene {
     if (params.has('memo')) {
       this.memo = { ...openMemo(this.settings, hasSave(storage()), params.get('memo') === 'settings' ? 'settings' : 'memo'), slide: SLIDE_FRAMES };
     }
-    this.sky = afterHours();
+    // &hour=<0-23> pins the player's clock for the sky; &pastdue opens on the after-midnight title.
+    this.opened = new Date();
+    this.pastDue = params.has('pastdue');
+    this.sky = afterHours(skyFor(params.has('hour') ? Number(params.get('hour')) : this.opened.getHours()));
     this.baked = bakeScene(this.sky);
-    this.dark = 0;
+    this.lit = null;
     this.logo = null;
     this.main = screen();
     this.out = screen();
@@ -97,11 +105,17 @@ export class SnesTitleScene extends Phaser.Scene {
       }
     }
 
+    if (!this.pastDue && this.pinned == null && f % 60 === 0 && pastDue(this.opened)) {
+      this.pastDue = true;
+      this.glint = null;
+      sfx('relay');
+    }
     // Lights out: one palette write a beat through the piano intro, then the logo zoom.
     const lights = lightsOut(f, TITLE_BPM);
-    if (lights.dark !== this.dark) {
-      this.dark = lights.dark;
-      setFloors(this.sky.palettes, this.dark);
+    const lit = this.pastDue ? -1 : lights.dark;
+    if (lit !== this.lit) {
+      this.lit = lit;
+      setFloors(this.sky.palettes, this.pastDue ? FLOORS : lights.dark, this.pastDue);
       const i = this.baked.findIndex((b) => b.layer.bg === 1);
       this.baked[i] = bakeLayer(this.sky, this.baked[i].layer);
     }
@@ -122,11 +136,12 @@ export class SnesTitleScene extends Phaser.Scene {
 function paintTitle(s, f) {
   composeFrame(s.sky, s.baked, Math.floor(f * PAN), 0, s.rgba);
   fromRgba(s.rgba, s.main);
+  if (!s.pastDue) drawClerk(s.main, clerkDesk(f, KEPT_WINDOWS.count));
   const zoom = logoZoom(f - PRESS_AT);
   const band = glintBand(f - INTRO_FRAMES);
   if (s.glint !== band) {
     s.glint = band;
-    s.logo = mode7Texture({ ...logo, palette: logoPalette(band) });
+    s.logo = mode7Texture({ ...(s.pastDue ? PAST_DUE : logo), palette: logoPalette(band) });
   }
   let frame = f < PRESS_AT ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, 0), LOGO_CENTRE, s.main, s.out);
   // The landing frame: the whole screen brightens once by fixed-colour add.
@@ -141,6 +156,13 @@ function paintTitle(s, f) {
     drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
   }
   return frame;
+}
+
+// The clerk working late: a head and shoulders against the lamp in one window of the lit floor.
+function drawClerk(buf, desk) {
+  const x = KEPT_WINDOWS.x + desk * KEPT_WINDOWS.step;
+  const y = KEPT_WINDOWS.y + KEPT_WINDOWS.size - CLERK.length;
+  CLERK.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') buf[(y + j) * WIDTH + x + i] = CLERK_COLOUR; }));
 }
 
 // The settled title with the memo up, for select's `&wipe=<frame>` screenshot of the drawer.

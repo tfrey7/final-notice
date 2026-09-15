@@ -3,8 +3,9 @@
 // image. Each picture is painted as palette values and cut into 8x8 tiles; identical tiles are stored
 // once, so THE END's credits skyline costs no tiles beyond the title's. Every screen shares the eight
 // palettes below and carries only the tiles its maps use. The default export is the title screen.
-import { rgb15 } from '../color.mjs';
+import { channels, rgb15 } from '../color.mjs';
 import { TILE } from '../layers.mjs';
+import { SKIES } from '../clock.mjs';
 
 const COLS = 32;
 const ROWS = 28;
@@ -97,7 +98,10 @@ const HEAVY = {
   L: ['##....', '##....', '##....', '##....', '##....', '##....', '##....', '##....', '######'],
   N: ['##..##', '###.##', '###.##', '######', '##.###', '##.###', '##..##', '##..##', '##..##'],
   O: ['.####.', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '.####.'],
+  P: ['#####.', '##..##', '##..##', '##..##', '#####.', '##....', '##....', '##....', '##....'],
+  S: ['.#####', '##....', '##....', '##....', '.####.', '....##', '....##', '....##', '#####.'],
   T: ['######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..'],
+  U: ['##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '.####.'],
   ' ': Array(9).fill('......'),
 };
 
@@ -277,17 +281,19 @@ export const skyline = {
 
 // --- the logo ---------------------------------------------------------------------------------
 
-// FINAL NOTICE in heavy condensed brass capitals, two lines, nothing behind them.
-function logoPicture() {
+// FINAL and a second word in heavy condensed brass capitals, two lines, nothing behind them; a second
+// word longer than NOTICE is drawn narrower to fit.
+function logoPicture(second) {
   const g = canvas(136, 88);
   const top = heavyMask('FINAL');
-  const bottom = heavyMask('NOTICE');
+  const bottom = second.length > 6 ? heavyMask(second, 2, 4, 3) : heavyMask(second);
   emboss(g, top, Math.floor((136 - top[0].length) / 2), 4, BRASS);
   emboss(g, bottom, Math.floor((136 - bottom[0].length) / 2), 46, BRASS);
   return g;
 }
 
-export const logo = { palette: palettes[PAL.logo], w: 136, h: 88, pixels: logoPicture().map(hexRow) };
+export const logoReading = (second) => ({ palette: palettes[PAL.logo], w: 136, h: 88, pixels: logoPicture(second).map(hexRow) });
+export const logo = logoReading('NOTICE');
 
 // The glint: every 6 s, 3 frames a band, the highlight row's bands flare white left to right with a
 // warm lead-in either side. `glintBand(t)` is the band at `t` frames after the logo lands, -1 between.
@@ -535,16 +541,25 @@ export const DARK_WINDOW = rgb15(2, 3, 7);
 export const litWindow = (k) => (k % 5 === 3 ? rgb15(22, 28, 25) : rgb15(29, 24, 11));
 export const floorEntry = (k) => (k < 12 ? [TOWER_PAL[0], k + 4] : [TOWER_PAL[1], k - 8]);
 
-// Palette writes for `dark` floors out, top down, skipping the one that stays lit.
-export function setFloors(pals, dark) {
+// Palette writes for `dark` floors out, top down, skipping the one that stays lit unless `keptOut`.
+export function setFloors(pals, dark, keptOut = false) {
   const [slot, entry] = floorEntry(KEPT_FLOOR);
-  pals[slot][entry - 1] = litWindow(KEPT_FLOOR);
+  pals[slot][entry - 1] = keptOut ? DARK_WINDOW : litWindow(KEPT_FLOOR);
   FLOOR_ORDER.forEach((k, i) => {
     const [slot, entry] = floorEntry(k);
     pals[slot][entry - 1] = i < dark ? DARK_WINDOW : litWindow(k);
   });
   return pals;
 }
+
+// The kept floor's windows on screen (the tower does not scroll): left edge of the first, top, pitch, how many, side.
+export const KEPT_WINDOWS = {
+  x: TOWER.cols[0] * TILE + 3,
+  y: (TOWER.floor0 + KEPT_FLOOR) * TILE + 2,
+  step: 6,
+  count: Math.floor(((TOWER.cols[1] - TOWER.cols[0]) * TILE - 9) / 6) + 1,
+  size: 4,
+};
 
 function towerLayer() {
   const cells = grid();
@@ -581,13 +596,14 @@ function towerLayer() {
   return toLayer(1, cells, [0, 0]);
 }
 
-// Night at the top to a violet dusk at the street: fixed-colour add on the backdrop, eight lines a step.
+// The sky's top colour as the backdrop, a fixed-colour add growing toward its horizon colour, 24 lines a step.
 const SKY_STEPS = 7;
 const SKY_LINES = 24;
-const skyGradient = [
-  ...Array.from({ length: SKY_STEPS }, (_, k) => [SKY_LINES, 'add', rgb15(Math.round((8 * k) / SKY_STEPS), Math.round((2 * k) / SKY_STEPS), Math.round((6 * k) / SKY_STEPS)), [0]]),
-  [224 - SKY_LINES * SKY_STEPS, 'none'],
-];
+const skyGradient = ({ top, bottom }) => {
+  const [t, b] = [channels(top), channels(bottom)];
+  const add = (k) => rgb15(...t.map((c, i) => Math.max(0, Math.round(((b[i] - c) * k) / (SKY_STEPS - 1)))));
+  return [...Array.from({ length: SKY_STEPS }, (_, k) => [SKY_LINES, 'add', add(k), [0]]), [224 - SKY_LINES * SKY_STEPS, 'none']];
+};
 
 // The city behind the tower has gone home: dark silhouettes with a few dim windows, so the tower is
 // the only bright thing on the screen. 1 building, 2 lit edge, 3 dim warm window, 4 dim cool window, 5 street.
@@ -613,9 +629,9 @@ function citySkyline() {
 const afterHoursPalettes = () => setFloors(palettes.map((p) => [...p]), 0)
   .map((p, i) => (TOWER_PAL.includes(i) ? [...FRAME, ...p.slice(3)] : i === PAL.far ? pad(CITY) : p));
 
-export const afterHours = () => {
-  const s = screen(NIGHT, [toLayer(2, stamp(grid(SKY_COLS), citySkyline(), PAL.far), [0.5, 0]), towerLayer()]);
-  return { ...s, palettes: afterHoursPalettes(), math: skyGradient };
+export const afterHours = (sky = SKIES.night) => {
+  const s = screen(sky.top, [toLayer(2, stamp(grid(SKY_COLS), citySkyline(), PAL.far), [0.5, 0]), towerLayer()]);
+  return { ...s, palettes: afterHoursPalettes(), math: skyGradient(sky) };
 };
 
 export const screens = {
