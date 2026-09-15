@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { BARKS, KINDS, REST, allLines, bark, barkKind, newBarker } from '../src/snes/barks.mjs';
+import { BARKS, CHANCE, GAP, KINDS, REST, allLines, bark, barkKind, newBarker } from '../src/snes/barks.mjs';
 import BAKED from '../src/snes/audio/barks-brr.mjs';
 import { BARK_VOICE, barkEffect, barkFrames, compileSong, createSequencer } from '../src/snes/audio/player.mjs';
 import { SFX } from '../src/snes/audio/sfx.mjs';
@@ -52,7 +52,7 @@ test('never the same line twice in a row, whatever the dice say', () => {
     const state = newBarker('mercer');
     let prev = null;
     for (let f = 0; f < 400; f++) {
-      const id = bark(state, KINDS[f % KINDS.length], f * 100, { rand });
+      const id = bark(state, KINDS[f % KINDS.length], f * 200, { rand, roll: () => 0 });
       assert.ok(id);
       assert.notEqual(id, prev);
       prev = id;
@@ -60,25 +60,37 @@ test('never the same line twice in a row, whatever the dice say', () => {
   }
 });
 
-test('a louder moment cuts in, a quieter one waits for the line to end', () => {
+test('a louder moment cuts in, a quieter one waits for the line to end and a breath after', () => {
   const state = newBarker('ward');
   const frames = () => 30;
-  assert.ok(bark(state, 'heavy', 0, { frames }));
-  assert.equal(bark(state, 'heavy', 10, { frames }), null);
-  assert.equal(bark(state, 'hurt', 5, { frames })?.startsWith('ward-hurt'), true);
-  assert.equal(bark(state, 'heavy', 20, { frames }), null);
-  assert.match(bark(state, 'ko', 21, { frames }), /^ward-ko-/);
-  assert.match(bark(state, 'heavy', 30 + REST.heavy, { frames }), /^ward-heavy-/);
+  const roll = () => 0;
+  assert.ok(bark(state, 'heavy', 0, { frames, roll }));
+  assert.equal(bark(state, 'heavy', 10, { frames, roll }), null);
+  assert.equal(bark(state, 'hurt', 5, { frames, roll })?.startsWith('ward-hurt'), true);
+  assert.equal(bark(state, 'heavy', 20, { frames, roll }), null);
+  assert.match(bark(state, 'ko', 21, { frames, roll }), /^ward-ko-/);
+  assert.equal(bark(state, 'special', 51 + GAP - 1, { frames, roll }), null);
+  assert.match(bark(state, 'heavy', 30 + REST.heavy, { frames, roll }), /^ward-heavy-/);
 });
 
 test('a string of parries or blows taken is not a chant', () => {
   const state = newBarker('ward');
   const frames = () => 30;
-  assert.match(bark(state, 'parry', 0, { frames }), /^ward-parry-/);
-  assert.equal(bark(state, 'parry', 100, { frames }), null);
-  assert.match(bark(state, 'hurt', 100, { frames }), /^ward-hurt-/);
-  assert.match(bark(state, 'parry', 30 + REST.parry, { frames }), /^ward-parry-/);
+  const roll = () => 0;
+  assert.match(bark(state, 'parry', 0, { frames, roll }), /^ward-parry-/);
+  assert.equal(bark(state, 'parry', 200, { frames, roll }), null);
+  assert.match(bark(state, 'hurt', 30 + GAP, { frames, roll }), /^ward-hurt-/);
+  assert.match(bark(state, 'parry', 30 + REST.parry, { frames, roll }), /^ward-parry-/);
   assert.equal(REST.ko + REST.victory + REST.clear + REST.finisher, 0);
+});
+
+test('grunts are left to chance, big moments always spoken, and only big ones talk over a foe', () => {
+  const state = newBarker('mercer');
+  assert.equal(bark(state, 'heavy', 0, { roll: () => CHANCE.heavy }), null);
+  for (const kind of ['finisher', 'clear', 'victory', 'ko']) assert.equal(CHANCE[kind], 1, kind);
+  for (const kind of ['heavy', 'hurt']) assert.ok(CHANCE[kind] < 0.5, kind);
+  assert.equal(bark(state, 'special', 0, { roll: () => 0, busy: true }), null);
+  assert.match(bark(state, 'parry', 0, { roll: () => 0, busy: true }), /^mercer-parry-/);
 });
 
 test('the floor events pick the loudest thing to say', () => {

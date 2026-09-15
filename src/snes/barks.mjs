@@ -31,8 +31,14 @@ export const KINDS = Object.keys(BARKS.ward);
 // A louder moment cuts a quieter line off; a quieter one waits for the line to finish.
 export const RANK = { heavy: 1, hurt: 2, finisher: 3, clear: 3, special: 4, parry: 5, victory: 6, ko: 7 };
 
-// Frames a kind stays quiet after it is said, so a string of parries or blows taken is not a chant.
-export const REST = { heavy: 45, hurt: 120, finisher: 0, clear: 0, special: 60, parry: 150, victory: 0, ko: 0 };
+// Frames a kind stays quiet after it is said, and the share of its moments it is said on, so a string of
+// parries or blows taken is not a chant and a grunt stays an event.
+export const REST = { heavy: 600, hurt: 480, finisher: 0, clear: 0, special: 300, parry: 480, victory: 0, ko: 0 };
+export const CHANCE = { heavy: 0.3, hurt: 0.35, finisher: 1, clear: 1, special: 0.6, parry: 0.7, victory: 1, ko: 1 };
+// Frames after a line ends before one no louder starts.
+export const GAP = 90;
+// A line this loud is said even over someone else talking.
+const OVER = RANK.parry;
 
 export const lineId = (who, kind, i) => `${who}-${kind}-${i}`;
 
@@ -59,12 +65,15 @@ export function barkKind(events, { hurt = false, finisher = false } = {}) {
 }
 
 // The line to say for `kind` on `frame`, or null while a louder or equal line is still being said or
-// the kind is resting. Never the line said last. `frames(id)` is how long a line lasts; `rand` picks.
-export function bark(state, kind, frame, { frames = () => 40, rand = Math.random } = {}) {
+// has just ended, the kind is resting, the dice say no, or someone else is `busy` talking. Never the
+// line said last. `frames(id)` is how long a line lasts; `rand` picks the line, `roll` the chance.
+export function bark(state, kind, frame, { frames = () => 40, rand = Math.random, roll = Math.random, busy = false } = {}) {
   const texts = kind && BARKS[state.who]?.[kind];
   if (!texts) return null;
-  if (frame < state.until && RANK[kind] <= state.rank) return null;
+  if (busy && RANK[kind] < OVER) return null;
+  if (frame < state.until + GAP && RANK[kind] <= state.rank) return null;
   if (frame < (state.quiet[kind] ?? 0)) return null;
+  if (roll() >= CHANCE[kind]) return null;
   const ids = texts.map((_, i) => lineId(state.who, kind, i)).filter((id) => id !== state.last);
   const id = ids[Math.min(ids.length - 1, Math.floor(rand() * ids.length))];
   const until = frame + frames(id);

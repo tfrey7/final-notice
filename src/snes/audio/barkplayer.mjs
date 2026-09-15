@@ -24,13 +24,26 @@ export function loadBarks(read = fetchTake) {
   return loading;
 }
 
-export function playBark({ who, text }) {
+// Frames a loaded line lasts, 0 when its take did not load.
+export function barkLength({ who, text }) {
   const sample = loaded.get(`${who}|${text}`);
-  if (!sample) return false;
+  if (!sample) return 0;
   const { pitch, rate } = voiceOf(who);
+  return Math.ceil((sample.pcm.length / (rate * 2 ** (pitch / 12))) * 60) + 6;
+}
+
+// The line as a sound: dry, so a hall or chapel echo on the stage never smears a voice.
+export function barkDef({ who, text }) {
+  const sample = loaded.get(`${who}|${text}`);
+  if (!sample) return null;
   const key = `bark:${who}|${text}`;
   SAMPLES[key] = sample;
-  const frames = Math.ceil((sample.pcm.length / (rate * 2 ** (pitch / 12))) * 60) + 6;
-  sfxDef({ voice: FOE_BARK_VOICE, layers: [{ delay: 0, steps: [[{ sample: key, adsr: CHAIN.adsr, vol: CHAIN.vol, echo: true }, 60 + pitch, frames]] }] });
+  return { voice: FOE_BARK_VOICE, layers: [{ delay: 0, steps: [[{ sample: key, adsr: CHAIN.adsr, vol: CHAIN.vol, echo: false }, 60 + voiceOf(who).pitch, barkLength({ who, text })]] }] };
+}
+
+export function playBark(line) {
+  const def = barkDef(line);
+  if (!def) return false;
+  sfxDef(def);
   return true;
 }

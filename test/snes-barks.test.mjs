@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { basename } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
-import { BARKS, HURT_GAP, barkLines, barkMoments, createBarker, snapshot } from '../src/snes/audio/barks.mjs';
+import { BARKS, CHANCE, GAP, REST, barkLines, barkMoments, createBarker, snapshot } from '../src/snes/audio/barks.mjs';
 import { parseWav, renderLine, takeFile } from '../src/snes/audio/voice.mjs';
 import { takePath } from '../tools/voice.mjs';
 
@@ -60,17 +60,42 @@ test('hit, finishing blow, a fresh taunt and a boss summon are each read as thei
   assert.deepEqual(barkMoments(snapshot(fighters), fighters), [], 'a taunt already under way says nothing more');
 });
 
-test('no character says the same bark twice in a row, and a combo does not chatter', () => {
+test('no character says the same bark twice in a row', () => {
   const bark = createBarker(() => 0);
   let last = null;
   for (let i = 0; i < 20; i++) {
-    const [said] = bark([{ who: 'supervisor', moment: 'taunt' }], i * 100);
+    const [said] = bark([{ who: 'supervisor', moment: 'taunt' }], i * 1000);
     assert.notEqual(said.text, last);
     last = said.text;
   }
-  const hurts = createBarker();
-  assert.equal(hurts([{ who: 'associate', moment: 'hurt' }], 0).length, 1);
-  assert.equal(hurts([{ who: 'counsel', moment: 'hurt' }], HURT_GAP - 1).length, 0);
-  assert.equal(hurts([{ who: 'counsel', moment: 'death' }], HURT_GAP - 1).length, 1);
-  assert.equal(hurts([{ who: 'counsel', moment: 'hurt' }], HURT_GAP).length, 1);
+});
+
+test('nobody talks over a line, a type rests between lines, and a death cry skips the rest', () => {
+  const frames = () => 30;
+  const bark = createBarker(() => 0);
+  assert.equal(bark([{ who: 'associate', moment: 'hurt' }, { who: 'counsel', moment: 'hurt' }], 0, { frames }).length, 1);
+  assert.equal(bark([{ who: 'counsel', moment: 'hurt' }], 30 + GAP - 1, { frames }).length, 0);
+  assert.equal(bark([{ who: 'counsel', moment: 'hurt' }], 30 + GAP, { frames }).length, 1);
+  const at = 60 + 2 * GAP;
+  assert.equal(bark([{ who: 'associate', moment: 'hurt' }], at, { frames }).length, 0, 'still resting');
+  assert.equal(bark([{ who: 'associate', moment: 'death' }], at, { frames }).length, 1);
+  assert.ok(bark.speaking(at + 29) && !bark.speaking(at + 30));
+  assert.equal(bark([{ who: 'manager', moment: 'taunt' }], at + 500, { frames, busy: true }).length, 0, 'the partner is talking');
+  assert.equal(bark([{ who: 'associate', moment: 'hurt' }], at + 30 + REST, { frames }).length, 1);
+});
+
+test('the dice keep most grunts and taunts unsaid', () => {
+  let seed = 7;
+  const bark = createBarker(() => (seed = (seed * 16807) % 2147483647) / 2147483647);
+  let said = 0;
+  for (let f = 0; f < 3600; f++) said += bark([{ who: ['associate', 'supervisor', 'manager'][f % 3], moment: 'hurt' }], f, { frames: () => 40 }).length;
+  assert.ok(said > 0 && said <= 3 * Math.ceil(3600 / REST), `a minute of blows, ${said} grunts`);
+  assert.ok(CHANCE.hurt < 0.5 && CHANCE.taunt < 1);
+});
+
+test('enemy voice lines play dry, with no stage echo', async () => {
+  const { barkDef, loadBarks } = await import('../src/snes/audio/barkplayer.mjs');
+  await loadBarks((name) => readFileSync(new URL(`../assets/voice/takes/${name}`, import.meta.url)));
+  const [[inst]] = barkDef({ who: 'counsel', text: BARKS.counsel.taunt[0] }).layers[0].steps;
+  assert.equal(inst.echo, false);
 });

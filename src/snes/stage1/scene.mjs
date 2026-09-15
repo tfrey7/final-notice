@@ -15,7 +15,7 @@ import { brawlSound } from '../audio/brawl.mjs';
 import { bark as pickBark, barkKind, newBarker } from '../barks.mjs';
 import { VELLUM_PINCH, VELLUM_SONG, vellumPinch } from '../audio/cues.mjs';
 import { barkMoments, createBarker, snapshot } from '../audio/barks.mjs';
-import { loadBarks, playBark } from '../audio/barkplayer.mjs';
+import { barkLength, loadBarks, playBark } from '../audio/barkplayer.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
 import RECEPTION from '../bg/reception.mjs';
@@ -214,7 +214,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.registry.set('stage1Frames', frames);
     const voices = snapshot(w.fighters);
     stepFloor(w, pad, this.tune);
-    for (const said of this.barker(barkMoments(voices, w.fighters), frames)) playBark(said);
+    const partnerTalking = loopFrame < this.partner.until;
+    for (const said of this.barker(barkMoments(voices, w.fighters), frames, { frames: barkLength, busy: partnerTalking })) playBark(said);
     if (boss) w.hitStop = bossHitStop(w, boss, bossHp, playerHp, p);
     if (boss && !this.pinch && vellumPinch(boss.hp, boss.maxHp)) {
       this.pinch = true;
@@ -230,7 +231,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const sound = !target && brawlSound(w.events);
     if (sound) sfx(sound);
     const kind = barkKind(w.events, { hurt: p.hp < playerHp, finisher: !!target });
-    const line = kind && pickBark(this.partner, kind, loopFrame, { frames: barkFrames });
+    const line = kind && pickBark(this.partner, kind, loopFrame, { frames: barkFrames, busy: this.barker.speaking(frames) });
     if (line) bark(line);
     for (const e of w.events) {
       if (e === 'heal') this.receipt = postReceipt(this.receipt, time);

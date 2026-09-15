@@ -32,8 +32,12 @@ export const BARKS = {
 
 export const barkLines = () => Object.entries(BARKS).flatMap(([who, moments]) => Object.entries(moments).flatMap(([moment, lines]) => lines.map((text) => ({ who, moment, text }))));
 
-// A grunt is cut short by a gap this long after the last one, so a combo reads as a few, not a chatter.
-export const HURT_GAP = 14;
+// Frames a character type stays quiet after speaking, and the share of its moments it speaks on, so a
+// room of associates barks a few times, not on every blow. A death cry skips the rest but not the dice.
+export const REST = 540;
+export const CHANCE = { hurt: 0.2, taunt: 0.5, death: 0.4 };
+// Frames of quiet after any line ends before the next one starts.
+export const GAP = 60;
 
 export const snapshot = (fighters) => new Map(fighters.map((f) => [f.id, { hp: f.hp, act: f.act, state: f.state }]));
 
@@ -51,19 +55,26 @@ export function barkMoments(before, fighters) {
   return out;
 }
 
-// Chooses the line for each moment, never the one that character last said for it, and drops a
-// grunt that comes too soon after another.
+// Chooses the line for each moment, never the one that character last said for it. Nobody speaks over
+// a line still being said (`busy` is the partner talking), and each type rests between lines.
+// `frames(line)` is how long a line lasts; `speaking(frame)` tells the partner to hold their tongue.
 export function createBarker(roll = Math.random) {
   const last = {};
-  let quietUntil = -Infinity;
-  return (moments, frame) => moments.flatMap(({ who, moment }) => {
-    if (moment === 'hurt' && frame < quietUntil) return [];
-    if (moment === 'hurt') quietUntil = frame + HURT_GAP;
+  const rested = {};
+  let until = -Infinity;
+  const barker = (moments, frame, { frames = () => 60, busy = false } = {}) => moments.flatMap(({ who, moment }) => {
+    if (busy || frame < until + GAP) return [];
+    if (moment !== 'death' && frame < (rested[who] ?? -Infinity)) return [];
+    if (roll() >= CHANCE[moment]) return [];
     const lines = BARKS[who][moment];
     const key = `${who}:${moment}`;
     const fresh = lines.length > 1 ? lines.filter((l) => l !== last[key]) : lines;
     const text = fresh[Math.floor(roll() * fresh.length) % fresh.length];
     last[key] = text;
+    until = frame + frames({ who, moment, text });
+    rested[who] = until + REST;
     return [{ who, moment, text }];
   });
+  barker.speaking = (frame) => frame < until;
+  return barker;
 }
