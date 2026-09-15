@@ -5,6 +5,7 @@
 import { MAX_MOSAIC, LEVELS } from './fx.mjs';
 import { INTRO_FRAMES } from './lights.mjs';
 import { ZOOM_FRAMES } from './scenes/front.mjs';
+import { WIDTH, HEIGHT } from './screen.mjs';
 import { wrapText } from './text.mjs';
 
 export const FPS = 60;
@@ -44,21 +45,19 @@ export const LINES = [
 ];
 export const lineFrame = (line) => SHOT_AT[line.shot - 1] + Math.round(line.at * FPS);
 
-// Final Fight's subtitles, not an RPG text box: plain white lines centred in the black band under the
-// picture, no window and no name tag; the picture shows who is talking.
-export const SUB = { y: 191, w: 240, rows: 2 };
-export const SUB_LINGER = 30;
+// Subtitles are bare outlined text centred in the black band under the picture, Final Fight style:
+// no window, no name, no portrait. `wrap` keeps a line inside the picture's width.
+export const SUB_BAND = { x: 0, y: (HEIGHT + SHOT_H) >> 1, w: WIDTH, h: (HEIGHT - SHOT_H) >> 1, rows: 2, wrap: 248 };
 
-// The subtitle showing on `frame`, or null: from the line's first frame until it has finished sounding
-// plus half a second (never into the next line or shot), a long line split into timed pages.
+// The subtitle showing on `frame`, or null: exactly while the line sounds (never into the next line
+// or shot), a long line split into timed pages.
 export function subtitleAt(frame) {
   for (const [i, line] of LINES.entries()) {
     const from = lineFrame(line);
     const next = LINES[i + 1]?.shot === line.shot ? lineFrame(LINES[i + 1]) : SHOT_AT[line.shot];
-    const until = Math.min(next, from + Math.round(line.s * FPS) + SUB_LINGER);
-    if (frame < from || frame >= until) continue;
-    const pages = wrapText(line.text, SUB.w, SUB.rows);
     const spoken = Math.round(line.s * FPS);
+    if (frame < from || frame >= Math.min(next, from + spoken)) continue;
+    const pages = wrapText(line.text, SUB_BAND.wrap, SUB_BAND.rows);
     const page = Math.min(pages.length - 1, Math.floor(((frame - from) * pages.length) / spoken));
     return { who: line.who, lines: pages[page] };
   }

@@ -84,20 +84,36 @@ export function windowGradient(lines, top = windowColours[0], bottom = windowCol
   });
 }
 
+function stamp(fill, text, x, y, inkOf) {
+  let cx = x;
+  for (const ch of text) {
+    const g = glyph(ch);
+    g.rows.forEach((row, r) => {
+      const c = inkOf(r);
+      for (let i = 0; i < g.w; i++) if (row[i] === '#') fill(cx + i, y + r, 1, 1, c);
+    });
+    cx += g.w + GAP;
+  }
+}
+
 export function drawString(fill, text, x, y, colour = BG3_PALETTE[3], shadow = BG3_PALETTE[1]) {
   const ramp = inkRamp(colour);
-  const passes = shadow == null ? [[0, 0, null]] : [[1, 0, shadow], [0, 1, shadow], [1, 1, shadow], [0, 0, null]];
-  for (const [dx, dy, flat] of passes) {
-    let cx = x;
-    for (const ch of text) {
-      const g = glyph(ch);
-      g.rows.forEach((row, r) => {
-        const c = flat ?? ramp[SHADE_ROWS[r]];
-        for (let i = 0; i < g.w; i++) if (row[i] === '#') fill(cx + i + dx, y + r + dy, 1, 1, c);
-      });
-      cx += g.w + GAP;
-    }
-  }
+  if (shadow != null) for (const [dx, dy] of [[1, 0], [0, 1], [1, 1]]) stamp(fill, text, x + dx, y + dy, () => shadow);
+  stamp(fill, text, x, y, (r) => ramp[SHADE_ROWS[r]]);
+}
+
+const AROUND = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+
+// Subtitles as Final Fight's attract intro sets them: pale text with a one-pixel dark outline on no
+// window, each line centred across the band and the lines centred down it.
+export function drawSubtitle(fill, lines, band, colour = BG3_PALETTE[3], outline = rgb15(0, 0, 0)) {
+  const ramp = inkRamp(colour);
+  const top = band.y + Math.round((band.h - (lines.length - 1) * LINE_H - FONT_H) / 2);
+  lines.forEach((l, i) => {
+    const [x, y] = [band.x + Math.round((band.w - measure(l)) / 2), top + i * LINE_H];
+    for (const [dx, dy] of AROUND) stamp(fill, l, x + dx, y + dy, () => outline);
+    stamp(fill, l, x, y, (r) => ramp[SHADE_ROWS[r]]);
+  });
 }
 
 // The window: the gradient fill, then a two-colour frame with its corners cut.

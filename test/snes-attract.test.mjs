@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SHOT_W, SUB, TITLE_FROM, TITLE_SONG_AT,
+  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SHOT_W, SUB_BAND, TITLE_FROM, TITLE_SONG_AT,
   attractAt, attractCues, attractStep, cameraPixel, lineFrame, shotAt, subtitleAt,
 } from '../src/snes/attract.mjs';
-import { measure } from '../src/snes/text.mjs';
+import { drawSubtitle, measure } from '../src/snes/text.mjs';
 import { INTRO_FRAMES } from '../src/snes/lights.mjs';
 import { ZOOM_FRAMES } from '../src/snes/scenes/front.mjs';
 
@@ -70,29 +70,44 @@ test('the punch clock hits on the beat through shot 6 only', () => {
   assert.ok(punches.every((f) => shotAt(f) === 6 && f >= PUNCH_FROM && f < PUNCH_TO));
 });
 
-test('every spoken line is subtitled while it sounds, under the picture, and nothing else is', () => {
+test('every spoken line is subtitled exactly while it sounds, under the picture, and nothing else is', () => {
   for (const line of LINES) {
     const from = lineFrame(line);
-    for (let f = from; f < from + Math.round(line.s * FPS); f += 7) {
+    const end = from + Math.round(line.s * FPS);
+    for (let f = from; f < end; f += 7) {
       const sub = subtitleAt(f);
       assert.equal(sub?.who, line.who, `${line.clip} at ${f}`);
       assert.ok(line.text.includes(sub.lines[0].split(' ')[0]));
     }
+    const after = subtitleAt(end);
+    assert.ok(!after || !line.text.includes(after.lines.join(' ')), `${line.clip} clears when it ends`);
   }
   assert.equal(subtitleAt(0), null);
   assert.equal(subtitleAt(SHOT_AT[5] + 60), null);
   assert.equal(subtitleAt(END_AT - 1), null);
-  assert.ok(SUB.y >= (224 - SHOT_H) / 2 + SHOT_H);
-  assert.ok(SUB.y + SUB.rows * 12 <= 224);
+  assert.equal(SUB_BAND.y, (224 - SHOT_H) / 2 + SHOT_H);
+  assert.equal(SUB_BAND.y + SUB_BAND.h, 224);
 });
 
-test('a long subtitle pages through the whole line in two plain rows', () => {
+test('a subtitle is outlined text centred in the band, with no window behind it', () => {
+  const lit = new Map();
+  drawSubtitle((x, y, w, h, c) => lit.set(`${x},${y}`, c), ['Somebody will.'], SUB_BAND);
+  const xs = [...lit.keys()].map((k) => Number(k.split(',')[0]));
+  const ys = [...lit.keys()].map((k) => Number(k.split(',')[1]));
+  const [left, right] = [Math.min(...xs), Math.max(...xs)];
+  assert.ok(Math.abs(left - (SUB_BAND.w - 1 - right)) <= 1);
+  assert.ok(Math.min(...ys) > SUB_BAND.y && Math.max(...ys) < SUB_BAND.y + SUB_BAND.h);
+  assert.ok(lit.size < (right - left + 1) * 13);
+  assert.ok([...lit.values()].includes(0));
+});
+
+test('a long subtitle pages through the whole line inside two rows of the band', () => {
   const line = LINES[0];
   const seen = new Set();
   for (let f = lineFrame(line); f < lineFrame(line) + Math.round(line.s * FPS); f++) {
     const { lines } = subtitleAt(f);
-    assert.ok(lines.length <= SUB.rows);
-    for (const l of lines) assert.ok(measure(l) <= SUB.w);
+    assert.ok(lines.length <= SUB_BAND.rows);
+    for (const l of lines) assert.ok(measure(l) <= SUB_BAND.wrap);
     seen.add(lines.join(' '));
   }
   assert.equal([...seen].join(' '), line.text);
