@@ -1,0 +1,58 @@
+// Speaks a line in a cast member's voice (src/snes/audio/voice.mjs): the Kokoro take is recorded
+// once into assets/voice/takes (the local Kokoro on 127.0.0.1:8936, or FINAL_NOTICE_KOKORO_URL),
+// then digitized for the S-DSP and written as a 32 kHz WAV. A take already on disk is never re-asked.
+//
+//   node tools/voice.mjs <character> "<line>" <out.wav>
+//   node tools/voice.mjs --sheet <dir>      every cast member saying their sample line
+//   node tools/voice.mjs --cast             the cast and their settings
+
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { castNames, parseWav, renderLine, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
+import { wav } from './snes-render.mjs';
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+const KOKORO = process.env.FINAL_NOTICE_KOKORO_URL ?? 'http://127.0.0.1:8936/speak';
+
+export function takePath(who, text) {
+  const v = voiceOf(who);
+  const hash = createHash('sha1').update(`${v.voice}|${takeSpeed(v)}|${text}`).digest('hex').slice(0, 10);
+  return join(ROOT, 'assets', 'voice', 'takes', `${v.voice}-${hash}.wav`);
+}
+
+export async function take(who, text) {
+  const path = takePath(who, text);
+  if (!existsSync(path)) {
+    const v = voiceOf(who);
+    const res = await fetch(KOKORO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: v.voice, speed: takeSpeed(v) }) });
+    if (!res.ok) throw new Error(`Kokoro answered ${res.status} for ${who}`);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+  }
+  return parseWav(readFileSync(path));
+}
+
+if (process.argv[1]?.endsWith('voice.mjs')) {
+  const [first, ...rest] = process.argv.slice(2);
+  if (first === '--cast') {
+    for (const who of castNames()) {
+      const { name, notes, sample, echo, fir, ...settings } = voiceOf(who);
+      console.log(`${who}: ${name} (${notes}) ${JSON.stringify(settings)}`);
+    }
+  } else if (first === '--sheet') {
+    mkdirSync(rest[0], { recursive: true });
+    for (const who of castNames()) {
+      const out = join(rest[0], `${who.replace(':', '-')}.wav`);
+      writeFileSync(out, wav(renderLine(who, await take(who, voiceOf(who).sample))));
+      console.log(out, JSON.stringify(voiceOf(who).sample));
+    }
+  } else if (first && rest.length === 2) {
+    writeFileSync(rest[1], wav(renderLine(first, await take(first, rest[0]))));
+    console.log(rest[1]);
+  } else {
+    console.error(`usage: node tools/voice.mjs <character> "<line>" <out.wav> | --sheet <dir> | --cast\ncast: ${castNames().join(', ')}`);
+    process.exit(1);
+  }
+}
