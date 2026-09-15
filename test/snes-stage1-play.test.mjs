@@ -4,6 +4,8 @@ import { defaultTune } from '../src/stage1/moves.mjs';
 import { newFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE, newStage } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
+import { KINDS, spawnStaff, spot, thinkStaff } from '../src/stage1/staff.mjs';
+import { BRAWL_WEIGHT } from '../src/snes/weight.mjs';
 import { FINISHER_FRAMES, SCALED, endsArea, finisherFrame, finisherTarget, livingFoes, scaledTune } from '../src/snes/stage1/finisher.mjs';
 
 test('one scale factor grows every pixel number and leaves times and damage alone', () => {
@@ -11,8 +13,53 @@ test('one scale factor grows every pixel number and leaves times and damage alon
   const big = scaledTune(base, 1.5);
   for (const k of SCALED) assert.equal(big[k], base[k] * 1.5, k);
   for (const k of ['hitStop', 'punchStartup', 'punchDamage', 'playerHp']) assert.equal(big[k], base[k], k);
-  assert.deepEqual(scaledTune(base, 1), base);
+  const { kinds, ...same } = scaledTune(base, 1);
+  assert.deepEqual(same, base);
   assert.equal(STAGE1.scale, 1.5);
+});
+
+test('the SNES staff foes stand and reach 1.5x as far and swing at the brawl weight; the NES keeps its numbers', () => {
+  const nes = structuredClone(KINDS);
+  const { kinds } = scaledTune(defaultTune(), STAGE1.scale);
+  const a = kinds.associate;
+  assert.equal(a.reach, nes.associate.reach * 1.5);
+  assert.equal(a.stand, nes.associate.stand * 1.5);
+  assert.equal(a.speed, nes.associate.speed * BRAWL_WEIGHT.scale.foeSpeed * 1.5);
+  assert.equal(a.windup, nes.associate.windup + BRAWL_WEIGHT.frames.foeWindup);
+  assert.equal(a.cooldown, nes.associate.cooldown + BRAWL_WEIGHT.frames.foeCooldown);
+  assert.equal(a.hp, nes.associate.hp);
+  assert.equal(kinds.manager.flank, nes.manager.flank * 1.5);
+  assert.equal(kinds.counsel.keep, nes.counsel.keep * 1.5);
+  assert.equal(kinds.counsel.near, nes.counsel.near * 1.5);
+  assert.deepEqual(KINDS, nes);
+
+  const p = { x: 200, y: 180, facing: 1 };
+  const f = { kind: 'associate', x: 260, y: 180 };
+  assert.equal(spot(f, p, { kinds }).x - p.x, nes.associate.stand * 1.5);
+  assert.equal(spot(f, p).x - p.x, nes.associate.stand);
+  assert.equal(spot(f, p, defaultTune()).x - p.x, nes.associate.stand);
+});
+
+test('an SNES Associate stands and then swings on his weighed wind-up', () => {
+  const tune = scaledTune(tuneFor('ward', defaultTune()), STAGE1.scale);
+  const world = newFloor('ward', tune);
+  world.fighters = [world.fighters.find((f) => f.team === 'player')];
+  Object.assign(world, { bench: [], tapes: [] });
+  const p = world.fighters[0];
+  spawnStaff(world, ['associate'], tune);
+  const a = world.fighters.find((f) => f.kind === 'associate');
+  Object.assign(a, { x: p.x + 90, y: p.y, cooldown: 1000 });
+  for (let t = 0; t < 600; t++) thinkStaff(world, a, tune);
+  assert.equal(a.state, 'idle');
+  assert.equal(a.x - p.x, tune.kinds.associate.stand);
+  a.cooldown = 0;
+  let wound = null;
+  for (let t = 0; t < 200 && a.state !== 'punch'; t++) {
+    thinkStaff(world, a, tune);
+    if (a.state === 'windup' && wound === null) wound = t;
+    if (a.state === 'punch') assert.equal(t - wound, tune.kinds.associate.windup);
+  }
+  assert.equal(a.state, 'punch');
 });
 
 test('a jump keeps its airtime when scaled: speed and gravity grow together', () => {

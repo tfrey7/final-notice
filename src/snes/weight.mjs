@@ -16,6 +16,12 @@ export const BRAWL_WEIGHT = {
   },
 };
 
+// Stage 1's staff foes (staff.mjs KINDS) close in and swing at the pace BRAWL_WEIGHT sets for foes.
+export const STAFF_WEIGHT = {
+  scale: { speed: BRAWL_WEIGHT.scale.foeSpeed },
+  frames: { windup: BRAWL_WEIGHT.frames.foeWindup, cooldown: BRAWL_WEIGHT.frames.foeCooldown },
+};
+
 export const FOES_WEIGHT = {
   scale: { walkX: 0.8, walkY: 0.8, circleSpeed: 0.8, dodgeSpeed: 0.8, knockback: 1.25 },
   frames: { tokenCooldown: 15, windupFrames: 6, recoverFrames: 6, staggerFrames: 4, knockdownFrames: 12 },

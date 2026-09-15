@@ -6,12 +6,16 @@ import { DOWNED, fighter, inReach, landHit, player, set, updateCommon } from './
 export const MAX_ON_SCREEN = 3;
 
 // Colour means behaviour (NES-CLASSICS L3), so each kind keeps its own palette in foe-actors.mjs.
+// `stand` is where a squaring-up foe rests, `near` the closest Counsel will throw from. A tune may
+// carry its own `kinds` (the SNES scene's, grown and weighed); without one these are used.
 export const KINDS = {
-  associate: { hp: 6, speed: 0.5, windup: 28, punch: 14, cooldown: 60, reach: 20, hitsToFall: 3 },
+  associate: { hp: 6, speed: 0.5, windup: 28, punch: 14, cooldown: 60, reach: 20, stand: 16, hitsToFall: 3 },
   manager: { hp: 3, speed: 1.25, windup: 10, punch: 10, cooldown: 50, reach: 18, hitsToFall: 2, flank: 16 },
-  counsel: { hp: 5, speed: 0.75, windup: 30, punch: 16, cooldown: 110, reach: 100, hitsToFall: 3, keep: 64 },
-  supervisor: { hp: 12, speed: 0.375, windup: 34, punch: 18, cooldown: 80, reach: 24, hitsToFall: 4, damage: 2, guard: 300 },
+  counsel: { hp: 5, speed: 0.75, windup: 30, punch: 16, cooldown: 110, reach: 100, hitsToFall: 3, keep: 64, near: 32 },
+  supervisor: { hp: 12, speed: 0.375, windup: 34, punch: 18, cooldown: 80, reach: 24, stand: 20, hitsToFall: 4, damage: 2, guard: 300 },
 };
+
+export const kindsOf = (tune) => tune?.kinds ?? KINDS;
 
 // The red-tape bind: flies along its row; caught, the auditor mashes A or B to break free.
 export const TAPE = { speed: 2, life: 120, mash: 8, maxFrames: 150, afterInvuln: 30 };
@@ -48,16 +52,16 @@ function fillSeats(world, tune) {
 
 // Where each kind wants to stand: the Associate and Supervisor square up, the Manager goes round to
 // the auditor's back, Counsel holds his distance.
-export function spot(f, p) {
-  const k = KINDS[f.kind];
+export function spot(f, p, tune) {
+  const k = kindsOf(tune)[f.kind];
   const side = Math.sign(f.x - p.x) || 1;
   if (k.flank) {
     const back = -p.facing;
     if (side === back) return { x: p.x + back * k.flank, y: p.y };
-    return { x: p.x + back * k.flank, y: p.y + (f.y < p.y ? -16 : 16) };
+    return { x: p.x + back * k.flank, y: p.y + (f.y < p.y ? -k.flank : k.flank) };
   }
   if (k.keep) return { x: p.x + side * k.keep, y: p.y };
-  return { x: p.x + side * (k.reach - 4), y: p.y };
+  return { x: p.x + side * k.stand, y: p.y };
 }
 
 function moveTo(f, x, y, speed) {
@@ -72,13 +76,13 @@ function readyToStrike(world, f, p, k, tune) {
   if (f.cooldown > 0 || DOWNED.includes(p.state) || p.state === 'bound') return false;
   if (k.keep) {
     const gap = Math.abs(p.x - f.x);
-    return gap >= 32 && gap <= k.reach && Math.abs(p.y - f.y) <= tune.depthReach && !world.tapes.length;
+    return gap >= k.near && gap <= k.reach && Math.abs(p.y - f.y) <= tune.depthReach && !world.tapes.length;
   }
   return inReach(f, p, k.reach, tune);
 }
 
 export function thinkStaff(world, f, tune) {
-  const k = KINDS[f.kind];
+  const k = kindsOf(tune)[f.kind];
   const p = player(world);
   if (f.invuln > 0) f.invuln--;
   if (f.cooldown > 0) f.cooldown--;
@@ -87,7 +91,7 @@ export function thinkStaff(world, f, tune) {
   switch (f.state) {
     case 'idle': case 'walk': case 'guard': {
       const guarding = k.guard && f.guardDown === 0;
-      const { x, y } = spot(f, p);
+      const { x, y } = spot(f, p, tune);
       const moving = moveTo(f, x, y, k.speed);
       f.facing = Math.sign(p.x - f.x) || f.facing;
       const stance = guarding ? 'guard' : moving ? 'walk' : 'idle';

@@ -1,11 +1,21 @@
 // Stage 1 on the SNES, the pure half: the one scale factor that grows reach, hitboxes and speeds to
 // match 56-64 px characters, and the TMNT IV throw-into-camera finisher on an area's last foe.
 import { STAGE } from '../../stage1/areas.mjs';
+import { KINDS } from '../../stage1/staff.mjs';
+import { STAFF_WEIGHT, weighed } from '../weight.mjs';
 
 // Every tuning number measured in pixels; times and damage keep their values.
 export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp'];
+export const STAFF_SCALED = ['speed', 'reach', 'stand', 'flank', 'keep', 'near'];
 
-export const scaledTune = (base, scale) => ({ ...base, ...Object.fromEntries(SCALED.map((k) => [k, base[k] * scale])) });
+const grown = (table, keys, scale) => ({ ...table, ...Object.fromEntries(keys.filter((k) => k in table).map((k) => [k, table[k] * scale])) });
+
+// The player's tune grown, carrying the staff foes' table weighed and grown to match, which
+// staff.mjs reads in place of its NES KINDS.
+export const scaledTune = (base, scale) => ({
+  ...grown(base, SCALED, scale),
+  kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale)])),
+});
 
 export const livingFoes = (world) => world.fighters.filter((f) => f.kind && f.state !== 'ko');
 
