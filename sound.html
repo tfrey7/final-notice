@@ -47,10 +47,12 @@
   <script type="module">
     import { playSong, stopSong, sfx, hasSong, unlocked, currentSong, channelStatus } from './src/audio/player.mjs';
     import { SFX } from './src/audio/sfx.mjs';
+    import { SFX_V1 } from './src/audio/sfx-v1.mjs';
 
     const CUES = ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
-      'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'];
-    const LABELS = Object.fromEntries(CUES.filter((c) => /-v\d$/.test(c)).map((c) => [c, c.replace(/-(v\d)$/, ' ($1)')]));
+      'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup',
+      'stageStart-v1', 'stageClear-v1', 'lifeLost-v1', 'gameOver-v1', 'continue-v1', 'pickup-v1'];
+    const label = (name) => name.replace(/-(v\d)$/, ' ($1)');
     const songsEl = document.getElementById('songs');
     const effectsEl = document.getElementById('effects');
     const prompt = document.getElementById('prompt');
@@ -59,7 +61,7 @@
 
     function add(list, name, play) {
       const li = document.createElement('li');
-      li.textContent = LABELS[name] ?? name;
+      li.textContent = label(name);
       li.addEventListener('click', () => { sel = items.findIndex((i) => i.li === li); render(); play(); });
       list.append(li);
       items.push({ li, play, name });
@@ -69,6 +71,7 @@
     for (const [name, ok] of found) if (ok) add(songsEl, name, () => playSong(name));
     const songCount = items.length;
     for (const name of Object.keys(SFX)) add(effectsEl, name, () => sfx(name));
+    for (const name of Object.keys(SFX_V1)) add(effectsEl, `${name}-v1`, () => sfx(`${name}-v1`));
 
     const meters = document.getElementById('meters');
     const bars = channelStatus().map(({ channel }) => {

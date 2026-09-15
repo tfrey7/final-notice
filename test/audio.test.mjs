@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {
   CHANNELS, DUTY_TABLES, noteToMidi, pulsePeriod, pulseHz, trianglePeriod, pulseAudible,
   lfsrStep, noiseSequence, triangleSteps, mixGain, channelRate, midiToHz,
-  ALL_CHANNELS, VRC6_DUTY_TABLES, sawSteps, sawPeriod,
+  ALL_CHANNELS, VRC6_DUTY_TABLES, sawSteps, sawPeriod, SONG_CHANNELS, DPCM_SAMPLES,
 } from '../src/audio/apu.mjs';
 import { parseRows, compileSong, noteAt, pitchAt, sfx, playSong } from '../src/audio/player.mjs';
-import { SFX } from '../src/audio/sfx.mjs';
+import { SFX, layersOf } from '../src/audio/sfx.mjs';
+import { SFX_V1 } from '../src/audio/sfx-v1.mjs';
 import demo from '../src/audio/songs/demo.mjs';
 
 test('note names read as MIDI numbers', () => {
@@ -104,27 +105,53 @@ test('the demo is 8 bars with something on all four channels', () => {
 const PLAN_SFX = ['punch', 'hit', 'knockdown', 'jump', 'land', 'grab', 'throw', 'step', 'injunction', 'cast',
   'carbonCopy', 'redTape', 'margin', 'waxBreak', 'pickup', 'heal', 'blip', 'menu', 'pause', 'alarm', 'stamp', 'conveyor'];
 
-test('every effect the plan names exists, is short and plays on a 2A03 channel', () => {
+test('the first effects stay one channel each, short, on the 2A03', () => {
+  assert.deepEqual(Object.keys(SFX_V1).sort(), [...PLAN_SFX].sort());
+  for (const name of PLAN_SFX) {
+    const def = SFX_V1[name];
+    assert.ok(CHANNELS.includes(def.channel) && def.channel !== 'pulse1', `${name} keeps off the lead`);
+    assert.ok(def.frames.length > 0 && def.frames.length <= 60, `${name} is under a second`);
+  }
+});
+
+test('every effect the plan names exists, is short and keeps off the lead', () => {
   assert.equal(PLAN_SFX.length, 22);
   for (const name of PLAN_SFX) {
     const def = SFX[name];
     assert.ok(def, name);
-    assert.ok(CHANNELS.includes(def.channel) && def.channel !== 'pulse1', `${name} keeps off the lead`);
-    assert.ok(def.frames.length > 0 && def.frames.length <= 60, `${name} is under a second`);
-    for (const [pitch, vol] of def.frames) {
-      assert.ok(Number.isFinite(pitch) && vol >= 0 && vol <= 15, name);
-      if (def.channel === 'noise') assert.ok(pitch >= 0 && pitch <= 15, name);
+    for (const layer of layersOf(def)) {
+      const ch = layer.channel;
+      assert.ok(SONG_CHANNELS.includes(ch) && ch !== 'pulse1', `${name} keeps off the lead`);
+      assert.ok(layer.frames.length > 0 && (layer.delay ?? 0) + layer.frames.length <= 60, `${name} is under a second`);
+      if (ch === 'dpcm') assert.ok(DPCM_SAMPLES[layer.sample], `${name} names a real sample`);
+      for (const [pitch, vol] of layer.frames) {
+        assert.ok(Number.isFinite(pitch) && vol >= 0 && vol <= 15, name);
+        if (ch === 'noise' || ch === 'dpcm') assert.ok(pitch >= 0 && pitch <= 15, name);
+      }
     }
   }
-  assert.ok(Math.max(...SFX.blip.frames.map(([, v]) => v)) <= 6, 'the text blip is quiet');
-  assert.ok(SFX.blip.frames.length <= 4, 'the text blip fits between letters');
-  const signature = (d) => JSON.stringify(d.frames);
+  const [blip] = layersOf(SFX.blip);
+  assert.equal(layersOf(SFX.blip).length, 1);
+  assert.ok(Math.max(...blip.frames.map(([, v]) => v)) <= 6, 'the text blip is quiet');
+  assert.ok(blip.frames.length <= 4, 'the text blip fits between letters');
+  const signature = (d) => JSON.stringify(d.layers);
   const casts = ['cast', 'carbonCopy', 'redTape', 'margin'].map((n) => signature(SFX[n]));
   assert.equal(new Set(casts).size, 4, 'each enchantment sounds different');
 });
 
-test('the six jingles load by name, play once and last 1 to 4 seconds', async () => {
-  for (const name of ['stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup']) {
+test('the late-era effects layer channels, hit with DPCM and stab with the saw', () => {
+  const uses = (name, ch) => layersOf(SFX[name]).some((l) => l.channel === ch);
+  for (const name of ['punch', 'hit', 'knockdown', 'injunction']) assert.ok(uses(name, 'dpcm'), name);
+  assert.ok(uses('injunction', 'saw'), 'the injunction has a brass stinger');
+  assert.ok(PLAN_SFX.filter((n) => layersOf(SFX[n]).length > 1).length >= 18, 'most effects are layered');
+  for (const name of ['hit', 'stab', 'kickSnare']) {
+    const levels = DPCM_SAMPLES[name];
+    assert.ok(levels.length > 1000 && levels.every((v) => v >= 0 && v <= 127), name);
+  }
+});
+
+test('the six jingles, new and v1, load by name, play once and last 1 to 4 seconds', async () => {
+  for (const base of ['stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup']) for (const name of [base, `${base}-v1`]) {
     const { default: def } = await import(`../src/audio/songs/${name}.mjs`);
     const song = compileSong(def);
     assert.equal(song.loop, null, name);

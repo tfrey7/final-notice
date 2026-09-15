@@ -55,7 +55,24 @@ export const DPCM_SAMPLES = (() => {
   const snare = render(0.14, (t, step) => (0.45 * Math.sin(step(190)) + 0.7 * noise()) * (t < 0.09 ? 1 : Math.exp(-(t - 0.09) * 120)));
   // A clap: three quick bursts and a short tail.
   const clap = render(0.16, (t) => noise() * (t < 0.036 ? Math.exp(-((t % 0.012) * 300)) : 0.8 * Math.exp(-(t - 0.036) * 30)));
-  return Object.fromEntries(Object.entries({ kick, snare, clap }).map(([k, w]) => [k, dpcmDecode(dpcmEncode(w))]));
+  // A body hit: a thump bending down from 180 Hz under a quick noise crack.
+  const hit = render(0.12, (t, step) =>
+    (Math.sin(step(60 + 120 * Math.exp(-t * 20))) + 0.7 * noise() * Math.exp(-t * 45)) * Math.exp(-t * 16));
+  // An orchestra stab: four sawtooth-ish notes of an F major chord struck together, a breath of noise on top.
+  const stab = render(0.28, (t) => {
+    let s = 0;
+    for (const hz of [174.6, 220, 261.6, 349.2]) {
+      for (let k = 1; k <= 6; k++) s += Math.sin(2 * Math.PI * hz * k * t) / k;
+    }
+    return (0.28 * s + 0.3 * noise() * Math.exp(-t * 40)) * Math.min(1, t * 200) * Math.exp(-t * 9);
+  });
+  // The kick-snare: a short kick with a gated snare landing on its tail, one sample for a fill hit.
+  const kickSnare = render(0.22, (t, step) => {
+    const k = t < 0.09 ? Math.sin(step(55 + 120 * Math.exp(-t * 35))) * Math.exp(-t * 14) : 0;
+    const s = t >= 0.07 ? (0.4 * Math.sin(2 * Math.PI * 200 * t) + 0.7 * noise()) * (t < 0.17 ? 1 : Math.exp(-(t - 0.17) * 120)) : 0;
+    return k + s;
+  });
+  return Object.fromEntries(Object.entries({ kick, snare, clap, hit, stab, kickSnare }).map(([k, w]) => [k, dpcmDecode(dpcmEncode(w))]));
 })();
 
 // Duty 0-3 = 12.5%, 25%, 50%, 75%, as the 2A03's 8-step sequencer plays them.

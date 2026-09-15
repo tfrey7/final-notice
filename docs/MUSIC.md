@@ -36,6 +36,30 @@ the `dpcm` channel's token is the playback rate 0-F (F as recorded, lower is low
 tom-like fills) and the instrument names the sample. A sample is cut when its note ends, so hold drum
 notes with `-` rather than `.`.
 
+## Effects and jingles: late NES, not early NES
+
+Tim (01:39 EDT 2026-09-15) on the first effects set: "authentic nes as fuck, especially early nes,
+but i want to target late NES era, even into the 90s, and it's all gotta have a distinct corporate
+wave kick". The target is 1990-94 Famicom polish (Batman: Return of the Joker, Gimmick!, Kirby's
+Adventure, Mega Man 6, Crisis Force) on the same chips: 2A03 with DPCM, plus the VRC6.
+
+| Early NES (v1) | Late NES with the corporate kick (now) |
+| --- | --- |
+| one channel an effect | two to five layers at once: a DPCM thump under a noise crack, a pulse zap with a VRC6 echo |
+| straight-line sweeps | curved pitch envelopes that snap and settle (Kirby's jump) |
+| noise-only hits | sampled DPCM hit, kick-snare and orchestra stab (Sunsoft and Natsume weight) |
+| square-wave fanfares | VRC6 saw brass stingers and a stab for the Injunction |
+| plain pickup beeps | "transaction approved": a two-tone chime with an octave flick on the strike, echoed |
+| a sagging life-lost tune | "call dropped": three falling line tones, then every voice slides an octave away |
+| none | office textures: a fax handshake warble, a dial-up connect on Continue, a desk-phone ring for the alarm, a busy signal closing Game Over, a gated snare on the stamp |
+
+Effects stay under a second and keep off pulse 1, so the lead survives. A layer may take the saw
+or a VRC6 pulse briefly; the song picks the channel up again when the layer ends. The first set
+stays on the sound test as "(v1)": effects as `<name>-v1`, jingles as `<name>-v1.mjs`.
+
+Not done: true Sunsoft bass (a looped DPCM bass sample retuned per note). Sixteen DPCM rates are too
+coarse for a bass line, so the jingles keep the triangle bass and put the weight in the samples.
+
 ## What makes it corporate wave
 
 Corporate wave grew out of vaporwave in the late 2010s. Vaporwave slows and smears 80s muzak, smooth
@@ -90,6 +114,12 @@ under it.
 - **A soft echo is pulse 2 playing the lead 3 rows late** at volume 5 and falling, detuned 0.12 of
   a semitone for a chorus shimmer. Let the chord stabs take pulse 2 on their rows; a stab's
   envelope ends at 0, so the echo's holds after it stay silent instead of smearing.
+- **A layered effect silences a channel's previous owner at its own start, not the effect's.** Two
+  DPCM layers in one effect (a stab, then a kick-snare 28 frames later) otherwise cut the first
+  sample dead the moment the effect fires.
+- **An echo on a VRC6 pulse is the cheapest late-era gloss.** The same frames 3-6 frames later, 5-7
+  volume steps down, on a channel the stage songs only use for pads; it reads as the delay effect
+  Kirby and Mega Man 6 fake with two pulses.
 - **Leave rows empty on the noise channel.** A punch effect takes the noise channel for 9 frames;
   a groove with a third of its rows open lets hits land without the beat falling apart.
 - **The offline render spikes when a note starts between WebAudio's 128-sample blocks.** Samples

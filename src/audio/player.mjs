@@ -42,7 +42,8 @@
  */
 
 import { SONG_CHANNELS as CHANNELS, FRAME_HZ, createApu, noteToMidi } from './apu.mjs';
-import { SFX } from './sfx.mjs';
+import { SFX, layersOf } from './sfx.mjs';
+import { SFX_V1 } from './sfx-v1.mjs';
 
 export function parseRows(channel, text, defaultInst) {
   const tokens = String(text ?? '').split(/\s+/).filter((t) => t && t !== '|');
@@ -242,21 +243,26 @@ function scheduleChannel(ch, t) {
   songVoices[ch] = { id, v };
 }
 
-// An effect takes its channel for its length; the song picks the channel up again after.
+// Each layer of an effect takes its channel for its length; the song picks the channel up again after.
+// A name ending -v1 plays the first set.
 export function sfx(name) {
-  const def = SFX[name];
+  const def = SFX[name] ?? (String(name).endsWith('-v1') ? SFX_V1[name.slice(0, -3)] : undefined);
   if (!def || !ctx) return;
-  const ch = def.channel;
-  const t = ctx.currentTime + 0.01;
-  apu.silence(owners[ch], t);
-  apu.silence(songVoices[ch].v, t);
-  songVoices[ch] = { id: null, v: null };
-  owners[ch] = apu.voice(ch, t, {
-    frames: def.frames.length,
-    duty: def.duty,
-    short: def.short,
-    at: (f) => ({ pitch: def.frames[f][0], vol: def.frames[f][1] }),
-  });
+  const now = ctx.currentTime + 0.01;
+  for (const layer of layersOf(def)) {
+    const ch = layer.channel;
+    const t = now + (layer.delay ?? 0) / FRAME_HZ;
+    apu.silence(owners[ch], t);
+    apu.silence(songVoices[ch].v, t);
+    songVoices[ch] = { id: null, v: null };
+    owners[ch] = apu.voice(ch, t, {
+      frames: layer.frames.length,
+      duty: layer.duty,
+      short: layer.short,
+      sample: layer.sample,
+      at: (f) => ({ pitch: layer.frames[f][0], vol: layer.frames[f][1] }),
+    });
+  }
 }
 
 // For the sound test's meters: each channel's output peak and who holds it.

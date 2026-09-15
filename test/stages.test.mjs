@@ -67,7 +67,7 @@ test('DPCM: the delta counter tracks a slow wave, and the kit has a long kick', 
   decoded.forEach((v, i) => assert.ok(Math.abs(v - (64 + 60 * wave[i])) <= 3, `sample ${i}`));
   assert.ok(decoded.every((v) => v >= 0 && v <= 127));
   assert.ok(DPCM_SAMPLES.kick.length > DPCM_SAMPLES.snare.length);
-  assert.deepEqual(Object.keys(DPCM_SAMPLES), ['kick', 'snare', 'clap']);
+  assert.deepEqual(Object.keys(DPCM_SAMPLES), ['kick', 'snare', 'clap', 'hit', 'stab', 'kickSnare']);
   assert.equal(parseRows('dpcm', 'F:snare D', 'kick')[1].pitch, 13);
   assert.throws(() => parseRows('dpcm', 'C4', 'kick'));
 });
