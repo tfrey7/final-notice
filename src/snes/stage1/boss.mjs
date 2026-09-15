@@ -38,6 +38,17 @@ export function cardFrame(t, times = CARD_TIMES) {
   };
 }
 
+// The stage-clear card after his slump: held `hold` frames (START or B skips it after `skip`), with the
+// run's time and the lives left, before Scene 2.
+export const CLEAR = { hold: 300, skip: 60 };
+
+export function clearLines(frames, lives) {
+  const secs = Math.floor(frames / 60);
+  return ['STAGE 1 CLEAR', `TIME ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, `LIVES ${lives}`];
+}
+
+export const clearDone = (t, pad) => t >= CLEAR.hold || (t >= CLEAR.skip && (pad.pressed.has('start') || pad.pressed.has('b')));
+
 // The sub-screen colour added to the office while his fangs are out, or null: a hard flash every
 // four frames while he bares them, then one short pulse a second for the rest of the fight.
 export const FANG_RED = rgb15(14, 0, 0);

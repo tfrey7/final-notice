@@ -27,7 +27,10 @@ const LOCKS = {
   ],
 };
 
-export const SNES_AREAS = AREAS.map((area) => ({ ...area, locks: LOCKS[area.id] }));
+// A second first-aid box halfway, between the Service Floor's managers and Internal Review's counsel.
+const FIRST_AID = { internalReview: { x: 120, y: 196 } };
+
+export const SNES_AREAS = AREAS.map((area) => ({ ...area, locks: LOCKS[area.id], firstAid: FIRST_AID[area.id] ?? area.firstAid }));
 
 export const SNES_STAGE1 = { areas: SNES_AREAS, entry: 'edges' };
 

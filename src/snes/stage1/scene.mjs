@@ -34,7 +34,7 @@ import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { mountControls } from '../../controls.mjs';
-import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
+import { CARD, OFFICE, bossHitStop, cardFrame, clearDone, clearLines, fangFlash } from './boss.mjs';
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
 import { turnOwners } from '../../stage1/readout.mjs';
@@ -90,6 +90,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.openOnReady = params.has('paused');
     this.office = state.checkpoint === OFFICE;
     this.pinch = false;
+    // The run's clock survives the restart into the office; ?clear holds the stage-clear card still.
+    if (!this.office) this.registry.set('stage1Frames', 0);
+    this.clear = params.has('clear') ? { t: 0, still: true } : null;
     playSong('stageStart');
     this.time.delayedCall(STAGE_START_MS, () => {
       const song = this.pinch ? VELLUM_PINCH : this.office ? VELLUM_SONG : SONGS.stage1;
@@ -161,6 +164,11 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.fast) cheapen(this.world.fighters);
 
     const w = this.world;
+    if (this.clear) {
+      if (!this.clear.still && clearDone(++this.clear.t, pad)) { showFlow(this, next(this.registry.get('flow'), { type: 'stageClear' })); return; }
+      this.draw(time);
+      return;
+    }
     if (this.entrance) {
       this.entrance.t = skipTo(this.entrance.t, pad, VELLUM_IN.end);
       if (vellumEntrance(this.entrance.t).done) this.entrance = null;
@@ -185,6 +193,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const bossHp = boss?.hp;
     const playerHp = p.hp;
     const before = livingFoes(w);
+    this.registry.set('stage1Frames', (this.registry.get('stage1Frames') ?? 0) + 1);
     stepFloor(w, pad, this.tune);
     if (boss) w.hitStop = bossHitStop(w, boss, bossHp, playerHp, p);
     if (boss && !this.pinch && vellumPinch(boss.hp, boss.maxHp)) {
@@ -200,7 +209,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       if (e === 'heal') this.receipt = postReceipt(this.receipt, time);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
       if (e === 'bossDown') { w.shake = this.tune.shakeFrames; playSong('stageClear'); }
-      if (e === 'bossBeaten') { showFlow(this, next(this.registry.get('flow'), { type: 'stageClear' })); return; }
+      if (e === 'bossBeaten') { this.clear = { t: 0, still: false }; break; }
       if (e === 'toOffice') {
         this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: OFFICE }));
         this.scene.restart();
@@ -428,6 +437,20 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
     if (this.card && !this.entrance) this.drawCard(cardFrame(this.card.t));
+    if (this.clear) this.drawClear(clearLines(this.registry.get('stage1Frames') ?? 0, flow.lives));
+  }
+
+  // The stage-clear card: a plain dark panel over the slumped room, the heading in gold.
+  drawClear([heading, ...rows]) {
+    const w = 150;
+    const h = 30 + rows.length * 14;
+    const x = (WIDTH - w) >> 1;
+    const y = 70;
+    this.fill(x + 3, y + 3, w, h, rgb15(0, 0, 0));
+    this.fill(x, y, w, h, rgb15(2, 2, 5));
+    this.fill(x + 6, y + 21, w - 12, 1, rgb15(31, 26, 8));
+    drawString(this.fill, heading, (WIDTH - measure(heading)) >> 1, y + 8, rgb15(31, 26, 8));
+    rows.forEach((row, i) => drawString(this.fill, row, (WIDTH - measure(row)) >> 1, y + 28 + i * 14));
   }
 
   // The boss title card as a filed memo, in the manner of Sunset Riders' wanted posters: it drops in,

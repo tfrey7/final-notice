@@ -87,10 +87,15 @@ test('?snes from a cold load: Enter on every screen reaches Stage 1 with no stal
     await cdp.send('Page.enable');
     await cdp.send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/?snes` });
 
-    const active = async () => (await cdp.send('Runtime.evaluate', {
-      expression: 'window.finalNotice?.scene?.getScenes(true).map((s) => s.sys.settings.key).join(",") ?? ""',
-      returnByValue: true,
-    })).result.result.value;
+    const evaluate = async (expression) => (await cdp.send('Runtime.evaluate', { expression, returnByValue: true })).result.result.value;
+    // A skipped cinema can come and go between two 250 ms polls, so the page itself notes every screen.
+    const RECORD = `(() => {
+      const keys = () => window.finalNotice?.scene?.getScenes(true).map((s) => s.sys.settings.key).join(",") ?? "";
+      window.screensSeen ??= [];
+      window.screensRecorder ??= setInterval(() => { const k = keys(); if (k !== window.screensSeen.at(-1)) window.screensSeen.push(k); }, 4);
+      return keys();
+    })()`;
+    const active = () => evaluate(RECORD);
     const press = async () => {
       for (const type of ['keyDown', 'keyUp']) {
         await cdp.send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
@@ -118,6 +123,7 @@ test('?snes from a cold load: Enter on every screen reaches Stage 1 with no stal
       writeFileSync(process.env.FINAL_NOTICE_E2E_SHOT, Buffer.from(data, 'base64'));
     }
     assert.deepEqual(errors, [], `page errors in Stage 1 (screens: ${seen.join(' > ')})`);
+    seen.push(...(await evaluate('window.screensSeen')));
     for (const screen of ['title', 'select', 'scene1', 'stage1']) {
       assert.ok(seen.some((s) => s.split(',').includes(screen)), `never showed ${screen} (screens: ${seen.join(' > ')})`);
     }

@@ -131,7 +131,8 @@ export function inReach(a, b, reach, tune) {
 // A guard (or a boss's armoured wind-up) stops every blow but a body thrown into it (`body`),
 // which breaks the guard instead. A foe's blow (`from`) met inside the auditor's parry window is deflected.
 export function landHit(world, target, { damage, heavy, dir, body, from }, tune) {
-  if (target.invuln > 0 || DOWNED.includes(target.state)) return false;
+  // A slumped boss is beaten: a punch that knocked him down again would restart his slump forever.
+  if (target.invuln > 0 || DOWNED.includes(target.state) || target.state === 'slumped') return false;
   if (from && target.parry > 0 && !body) {
     deflect(world, target, from, dir, tune);
     return false;
