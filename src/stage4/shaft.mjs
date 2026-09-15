@@ -148,9 +148,9 @@ function stepRunaway(s) {
 
 const without = (set, names) => new Set([...set].filter((b) => !names.includes(b)));
 const HANDS = ['left', 'right', 'up', 'down', 'a'];
-const hangPad = (pad) => ({ ...pad, held: without(pad.held, HANDS), pressed: without(pad.pressed, HANDS), aim: null });
+export const hangPad = (pad) => ({ ...pad, held: without(pad.held, HANDS), pressed: without(pad.pressed, HANDS), aim: null });
 
-function climb(s, pad) {
+export function climb(s, pad) {
   const p = s.run.player;
   const c = s.hang;
   Object.assign(p, { x: c.x, vx: 0, vy: 0, grounded: false });
@@ -168,14 +168,14 @@ function climb(s, pad) {
   if (dy > 0 && s.hangY >= c.bottom) Object.assign(s, { hang: null, regrab: CABLE.regrab });
 }
 
-function grab(s, pad) {
+export function grab(s, pad, cables = SHAFT.cables) {
   const p = s.run.player;
   if (s.regrab > 0) {
     s.regrab -= 1;
     return;
   }
   if (!pad.held.has('up')) return;
-  const c = SHAFT.cables.find((k) => Math.abs(p.x - k.x) <= CABLE.grab && p.y >= k.top && p.y <= k.bottom + 2);
+  const c = cables.find((k) => Math.abs(p.x - k.x) <= CABLE.grab && p.y >= k.top && p.y <= k.bottom + 2);
   if (!c) return;
   Object.assign(s, { hang: c, hangY: Math.min(p.y, c.bottom), ride: null });
   Object.assign(p, { x: c.x, vx: 0, vy: 0, grounded: false });

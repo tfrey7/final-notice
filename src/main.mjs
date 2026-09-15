@@ -25,6 +25,7 @@ import { SnesLabScene } from './snes/lab/scene.mjs';
 import { SnesClimbLabScene } from './snes/lab/climb.mjs';
 import { SnesArchiveClimbScene } from './snes/stage2/climb.mjs';
 import { SnesShaftScene } from './snes/stage4/shaft.mjs';
+import { SnesCapstoneScene } from './snes/stage6/capstone.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -70,6 +71,8 @@ else if (snes && params.get('go') === 'climblab') scene = [new SnesClimbLabScene
 else if (snes && params.get('go') === 'archive') scene = [new SnesArchiveClimbScene()];
 // ?snes&go=shaft is Stage 4 as a grey-box escape climb up the elevator shaft; ?bot lets the shaft bot play.
 else if (snes && params.get('go') === 'shaft') scene = [new SnesShaftScene()];
+// ?snes&go=capstone is Stage 6 as a grey-box finale: the capstone climb, Bellwether and the final choice; &at=crown starts at the fight.
+else if (snes && params.get('go') === 'capstone') scene = [new SnesCapstoneScene()];
 else if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
