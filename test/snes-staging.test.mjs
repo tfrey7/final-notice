@@ -33,7 +33,7 @@ test('the music drops to the pad under the auditor line and comes back with the 
   const last = staged[staged.length - 1];
   assert.equal(last.portrait, null);
   assert.ok(last.fadeAfter > 0);
-  assert.equal(stagePages('incident', cinemaPages('incident', 'ward', snesWrap), 'ward')[0].acting, undefined);
+  assert.equal(stagePages('documents', cinemaPages('documents', 'ward', snesWrap), 'ward')[0].acting, undefined);
 });
 
 test('actors ease between keyframes and take the pose of the last key passed', () => {

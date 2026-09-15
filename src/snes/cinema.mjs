@@ -65,6 +65,7 @@ const LOOKS = {
   'archive-button': { wall: [rgb15(5, 8, 7), rgb15(2, 3, 3)], floor: [rgb15(4, 5, 5), rgb15(1, 2, 2)], shelves: true, button: true },
   'break-room': { wall: [rgb15(10, 16, 15), rgb15(5, 9, 9)], floor: [rgb15(12, 12, 10), rgb15(5, 5, 4)], lights: true, speaker: true },
   'ledger-page': { paper: true },
+  grille: { wall: [rgb15(3, 5, 4), rgb15(1, 2, 2)], floor: [rgb15(2, 3, 3), rgb15(1, 1, 1)], grille: true },
 };
 
 export const BACKDROP_NAMES = Object.keys(LOOKS);
@@ -115,6 +116,13 @@ export function paintBackdrop(fill, name) {
     fill(106, 76, 44, 3, rgb15(16, 16, 17));
     for (let i = 0; i < 12; i++) fill(108 + i, 62 + i, 40 - 2 * i, 1, mix(rgb15(31, 8, 6), rgb15(18, 2, 2), i / 11));
     fill(112, 60, 8, 3, rgb15(31, 22, 20));
+  }
+  if (look.grille) {
+    gradient(fill, 0, 0, PICTURE.w, PICTURE.h, ...look.wall);
+    fill(112, 64, 32, 22, rgb15(24, 22, 15));
+    for (let y = 67; y < 84; y += 4) fill(116, y, 18 + ((y * 5) % 7), 1, rgb15(10, 9, 7));
+    for (let x = 0; x < PICTURE.w; x += 16) fill(x, 0, 3, PICTURE.h, rgb15(6, 7, 7));
+    for (let y = 10; y < PICTURE.h; y += 24) fill(0, y, PICTURE.w, 3, rgb15(6, 7, 7));
   }
   if (look.lights) {
     [40, 150].forEach((x) => { fill(x, 4, 64, 5, rgb15(31, 31, 29)); fill(x - 2, 9, 68, 2, rgb15(18, 22, 21)); });

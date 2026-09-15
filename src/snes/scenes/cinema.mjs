@@ -17,7 +17,7 @@ import { FrontScreen, IN_FRAMES, bufferFill, inStep } from './front.mjs';
 import {
   ADVANCE, ALARM_FLASH, SPIN_CENTRE, changeStep, fadeOutStep, paintPicture, pictureId, snesWrap, spinStep, spinTexture,
 } from '../cinema.mjs';
-import { PAD_VOICES, stageFrame, stagePages } from '../staging.mjs';
+import { PAD_VOICES, mosaicOutStep, stageFrame, stagePages } from '../staging.mjs';
 
 export class SnesCinemaScene extends Phaser.Scene {
   constructor(key) {
@@ -52,7 +52,10 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.view = new FrontScreen(this, `snes-${this.scene.key}`);
     this.paint(this.pic, this.page());
     loadArt('portraits').then((def) => { this.art = def; this.paint(this.pic, this.page()); }, () => {});
-    playSong(SONGS[this.scene.key]);
+    if (this.page().fromPlay) {
+      this.intro = IN_FRAMES;
+      this.arrive();
+    } else playSong(SONGS[this.scene.key]);
     if (this.pinned != null) this.pin(this.pinned);
   }
 
@@ -68,10 +71,11 @@ export class SnesCinemaScene extends Phaser.Scene {
 
   pin(t) {
     const page = this.page();
-    this.intro = this.player.page === 0 ? t : IN_FRAMES;
+    this.intro = this.player.page === 0 && !page.fromPlay ? t : IN_FRAMES;
     this.clock = t;
     this.player = { ...this.player, typed: Math.min(letters(page), Math.floor(t / FRAMES_PER_LETTER)) };
     if (page.sound === 'alarm') this.spin = t;
+    if (page.spinAt != null && t >= page.spinAt) this.spin = t - page.spinAt;
   }
 
   update() {
@@ -82,6 +86,11 @@ export class SnesCinemaScene extends Phaser.Scene {
     if (live && this.leaving == null && pad.pressed.has('start')) this.leaving = 0;
 
     if (this.leaving != null) {
+      if (this.player.pages.at(-1).mosaicOut) {
+        const step = mosaicOutStep(this.leaving++);
+        if (step.done) return this.finish();
+        return this.render(15, step.mosaic);
+      }
       const step = fadeOutStep(this.leaving++);
       if (step.done) return this.finish();
       return this.render(step.level);
@@ -147,10 +156,17 @@ export class SnesCinemaScene extends Phaser.Scene {
     if (page.sound === 'alarm') this.spin = 0;
   }
 
-  render(level) {
+  render(level, mosaic = 1) {
     const frame = this.out;
+    const page = this.page();
+    if (page.spinAt != null && this.clock === page.spinAt && this.pinned == null) {
+      sfx('alarm');
+      this.spin = 0;
+    }
     const s = this.spin == null ? null : spinStep(this.spin);
-    if (s && !s.done) {
+    if (page.spinAt != null && this.clock < page.spinAt) {
+      frame.set(this.old);
+    } else if (s && !s.done) {
       mode7Pass(spinTexture(this.pic), mode7Matrix(s.scale, s.angle), SPIN_CENTRE, this.black, frame);
       if (s.flash) mathPass(frame, this.red, { op: 'add' }, frame);
       if (this.pinned == null) this.spin++;
@@ -158,17 +174,16 @@ export class SnesCinemaScene extends Phaser.Scene {
       this.spin = null;
       frame.set(this.pic);
     }
-    const page = this.page();
     stageFrame(frame, page, this.clock);
     if (this.pinned == null) this.clock++;
-    if (page.acting) return this.view.show(frame, { level });
+    if (page.acting) return this.view.show(frame, { level, mosaic });
     drawTextBox(bufferFill(frame), {
       speaker: SPEAKERS[page.speaker],
       lines: page.lines,
       shown: this.player.typed,
       blink: Math.floor(this.frames / 24) % 2 === 0,
     });
-    this.view.show(frame, { level });
+    this.view.show(frame, { level, mosaic });
   }
 
   finish() {

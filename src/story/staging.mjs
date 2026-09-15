@@ -2,6 +2,9 @@
 // `acting` is a wordless page first: the play sprites on keyframes [frame, x, feet, pose] in the room.
 // `beats[i]` stages the script's beat i: `music` ('cut', 'pad' or a cue name), `fx`, a `portrait`
 // override and `actors`. `cuts` makes every change of picture after the opening a hard cut.
+// `fromPlay` opens on the fight's last frame with no mosaic in, the acting page fading the HUD out over
+// `hud` frames; a beat's `spin` follows its page with a wordless Mode 7 page after `silence` frames;
+// `sound` and `backdrop` apply to every page of the beat; `mosaicOut` leaves by mosaic.
 export const STAGING = {
   assignment: {
     cuts: true,
@@ -26,6 +29,29 @@ export const STAGING = {
           { who: 'auditor', keys: [[0, 226, 142, 'front'], [70, 226, 142, 'front'], [130, 290, 142, 'back']] },
         ],
       },
+    ],
+  },
+  incident: {
+    cuts: true,
+    fromPlay: true,
+    mosaicOut: true,
+    fadeAfter: 120,
+    acting: {
+      backdrop: 'vellum-desk',
+      frames: 240,
+      music: 'cut',
+      hud: 32,
+      actors: [
+        { who: 'vellum', keys: [[0, 128, 124, 'slump'], [196, 128, 124, 'tie'], [198, 128, 124, 'tie'], [200, 128, 124, 'front']] },
+        { who: 'auditor', keys: [[0, 250, 142, 'back'], [30, 250, 142, 'back'], [170, 176, 142, 'back']] },
+      ],
+    },
+    beats: [
+      { music: 'scene' },
+      { music: 'cut' },
+      { sound: 'click', spin: { silence: 12 } },
+      { music: 'scene', fx: 'ledger', backdrop: 'grille', portrait: null },
+      { backdrop: 'break-room', portrait: 'radio', sound: 'click' },
     ],
   },
 };

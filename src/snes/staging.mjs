@@ -2,13 +2,15 @@
 // the stand-in play sprites on their keyframes, the bill sliding across the desk and the lamp's
 // stepped colour-math glow.
 import { rgb15 } from './color.mjs';
-import { screen, mathPass } from './fx.mjs';
+import { MAX_MOSAIC, brightness, screen, mathPass } from './fx.mjs';
 import { drawString } from './text.mjs';
+import { drawHud, hudLayout } from './hud.mjs';
 import { bufferFill } from './scenes/front.mjs';
-import { PICTURE } from './cinema.mjs';
+import { PICTURE, SPIN_FRAMES } from './cinema.mjs';
 import { STAGING } from '../story/staging.mjs';
 
 export const BILL_FRAMES = 8;
+export const MOSAIC_OUT_FRAMES = 20;
 // The scene cue's warm pads (v4 and v5): what 'pad' leaves playing.
 export const PAD_VOICES = [3, 4];
 
@@ -18,18 +20,38 @@ export function stagePages(sceneId, pages, auditor) {
   const plan = STAGING[sceneId];
   if (!plan) return pages;
   const cast = (actors) => actors?.map((a) => ({ ...a, who: a.who === 'auditor' ? auditor : a.who }));
-  const out = pages.map((page) => {
+  const out = [];
+  pages.forEach((page, i) => {
     const beat = plan.beats[page.beat] ?? {};
     const staged = { ...page, cut: !!plan.cuts, actors: cast(beat.actors) ?? null };
     if ('portrait' in beat) staged.portrait = beat.portrait;
+    if (beat.backdrop) staged.backdrop = beat.backdrop;
+    if ('sound' in beat) staged.sound = beat.sound;
     if (page.part === 0) Object.assign(staged, { music: beat.music ?? null, fx: beat.fx ?? null });
-    return staged;
+    out.push(staged);
+    if (beat.spin && pages[i + 1]?.beat !== page.beat) {
+      const { silence } = beat.spin;
+      out.push({ acting: true, cut: true, backdrop: HOME[sceneId], portrait: null, speaker: null, lines: [], frames: silence + SPIN_FRAMES + 8, spinAt: silence, actors: null, sound: null, music: null, fx: null });
+    }
   });
-  if (out.length && plan.fadeAfter != null) out[out.length - 1].fadeAfter = plan.fadeAfter;
+  const last = out.at(-1);
+  if (last && plan.fadeAfter != null) last.fadeAfter = plan.fadeAfter;
+  if (last && plan.mosaicOut) last.mosaicOut = true;
   if (!plan.acting) return out;
-  const { backdrop, frames, actors } = plan.acting;
-  return [{ acting: true, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors), music: null, fx: null }, ...out];
+  const { backdrop, frames, actors, music = null, hud = null } = plan.acting;
+  return [{ acting: true, fromPlay: !!plan.fromPlay, hud, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors), music, fx: null }, ...out];
 }
+
+const HOME = { assignment: 'bellwether-office', incident: 'vellum-desk', documents: 'break-room' };
+
+// Leaving by mosaic: the blocks grow from 1 to 16 px, then the next screen takes over.
+export function mosaicOutStep(frame) {
+  const f = Math.max(0, frame);
+  return { mosaic: Math.min(MAX_MOSAIC, 1 + Math.floor((f * (MAX_MOSAIC - 1)) / MOSAIC_OUT_FRAMES)), done: f >= MOSAIC_OUT_FRAMES };
+}
+
+// The HUD's master brightness on frame t of an acting page that fades it out over `frames`.
+export const hudLevel = (t, frames) => Math.max(0, Math.min(15, 15 - Math.ceil((Math.max(0, t) * 15) / frames)));
 
 // Where an actor stands on frame t: x and feet eased linearly between keys, the pose of the key last passed.
 export function actorAt(keys, t) {
@@ -63,6 +85,7 @@ const SHIRT = rgb15(27, 27, 26);
 export function paintActor(fill, who, x, feet, pose = 'front', h = 60) {
   const { skin, hair, suit, tie } = COLOURS[who] ?? COLOURS.ward;
   const back = pose === 'back';
+  if (pose === 'slump') h -= 10;
   const head = Math.round(h * 0.17);
   const body = Math.round(h * 0.4);
   const legs = h - head - body;
@@ -76,10 +99,34 @@ export function paintActor(fill, who, x, feet, pose = 'front', h = 60) {
     fill(x - 2, top + head, 4, body >> 2, SHIRT);
     fill(x - 1, top + head + 1, 2, body >> 2, tie);
   }
-  fill(x - (head >> 2) - 3, top - 1, (head >> 1) + 6, head + 2, OUTLINE);
-  fill(x - (head >> 2) - 2, top, (head >> 1) + 4, head, back ? hair : skin);
-  fill(x - (head >> 2) - 2, top, (head >> 1) + 4, 3, hair);
+  const hx = pose === 'slump' ? x + 3 : x;
+  const hy = pose === 'slump' ? top + 3 : top;
+  fill(hx - (head >> 2) - 3, hy - 1, (head >> 1) + 6, head + 2, OUTLINE);
+  fill(hx - (head >> 2) - 2, hy, (head >> 1) + 4, head, back ? hair : skin);
+  fill(hx - (head >> 2) - 2, hy, (head >> 1) + 4, 3, hair);
+  if (pose === 'tie') fill(x - 1, top + head + 2, 4, 3, skin);
 }
+
+// The play HUD as the fight left it, drawn at master brightness `level` over the picture.
+export function hudPass(buf, name, level) {
+  if (level <= 0) return buf;
+  const hud = screen(0);
+  drawHud(bufferFill(hud), hudLayout({ name, hp: 8, lives: 3, meter: 2 }));
+  for (let i = 0; i < hud.length; i++) if (hud[i]) buf[i] = brightness(hud[i], level);
+  return buf;
+}
+
+// The ledger far below, glowing up through the floor grille: stepped warm bands added in a window.
+const LEDGER = { cx: 128, cy: 75, x0: 88, x1: 168 };
+let ledgerSub = null;
+export function ledgerGlow() {
+  if (ledgerSub) return ledgerSub;
+  ledgerSub = screen(0);
+  const fill = bufferFill(ledgerSub);
+  [[40, 32, rgb15(3, 3, 1)], [30, 24, rgb15(5, 5, 1)], [20, 16, rgb15(8, 7, 2)]].forEach(([rx, ry, c]) => fill(LEDGER.cx - rx, LEDGER.cy - ry, 2 * rx, 2 * ry, c));
+  return ledgerSub;
+}
+const inGrille = (x, y) => x >= LEDGER.x0 && x < LEDGER.x1 && y < PICTURE.h;
 
 // The desk lamp's pool: three stepped bands of warm light added to the room, masked to the lamp's side.
 const LAMP = { cx: 216, cy: 96, x0: 164 };
@@ -112,5 +159,7 @@ export function stageFrame(buf, page, t) {
     if (b.done) drawString(fill, 'LIFETIMES: 47', b.x + 20, b.y + 8, rgb15(3, 3, 6), null);
   }
   if (page.fx === 'lamp') mathPass(buf, lampGlow(), { op: 'add', where: inLamp }, buf);
+  if (page.fx === 'ledger') mathPass(buf, ledgerGlow(), { op: 'add', where: inGrille }, buf);
+  if (page.hud) hudPass(buf, page.actors?.at(-1)?.who ?? 'ward', hudLevel(t, page.hud));
   return buf;
 }
