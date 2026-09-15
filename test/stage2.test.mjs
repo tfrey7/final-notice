@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { CHANNELS, FRAME_HZ, noteToMidi } from '../src/audio/apu.mjs';
 import { compileSong, parseRows } from '../src/audio/player.mjs';
 import title, { MELODY, KEY } from '../src/audio/songs/title.mjs';
-import stage2 from '../src/audio/songs/stage2.mjs';
+import stage2 from '../src/audio/songs/stage2-v1.mjs';
 
 const inKey = new Set(KEY.map((n) => noteToMidi(`${n}4`) % 12));
 const tokens = (text) => text.split(/\s+/).filter((t) => t && t !== '|');
 
-test('stage2: every channel is whole 8-row bars and ends with the others', () => {
+test('stage2 (v1):every channel is whole 8-row bars and ends with the others', () => {
   const song = compileSong(stage2);
   assert.equal(song.length % 8, 0);
   for (const ch of CHANNELS) {
@@ -19,7 +19,7 @@ test('stage2: every channel is whole 8-row bars and ends with the others', () =>
   }
 });
 
-test('stage2: loops 60-90 s, faster than the title, and nothing holds across the loop point', () => {
+test('stage2 (v1):loops 60-90 s, faster than the title, and nothing holds across the loop point', () => {
   const song = compileSong(stage2);
   const seconds = ((song.length - song.loop) * song.tempo) / FRAME_HZ;
   const whole = (song.length * song.tempo) / FRAME_HZ;
@@ -34,7 +34,7 @@ test('stage2: loops 60-90 s, faster than the title, and nothing holds across the
   }
 });
 
-test('stage2: the loop starts on the hook, and pulse 1 plays the theme', () => {
+test('stage2 (v1):the loop starts on the hook, and pulse 1 plays the theme', () => {
   const song = compileSong(stage2);
   const lead = tokens(stage2.pulse1.rows);
   assert.deepEqual(lead.slice(song.loop, song.loop + 16), tokens(`${MELODY[0]} ${MELODY[1]}`));
@@ -42,7 +42,7 @@ test('stage2: the loop starts on the hook, and pulse 1 plays the theme', () => {
   assert.deepEqual(pitches(lead.slice(song.loop, song.loop + 24 * 8).join(' ')), pitches(MELODY.join(' ')));
 });
 
-test('stage2: pitched notes stay in F major, and pulse 2 has a detuned phrase', () => {
+test('stage2 (v1):pitched notes stay in F major, and pulse 2 has a detuned phrase', () => {
   const song = compileSong(stage2);
   let detuned = 0;
   for (const ch of ['pulse1', 'pulse2', 'triangle']) {

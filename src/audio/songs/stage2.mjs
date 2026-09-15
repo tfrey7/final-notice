@@ -1,81 +1,169 @@
-// The theme as an escape (docs/THEME.md): 180 BPM over a staccato octave-driving triangle, offbeat
-// Famichord stabs and eighth-note hats. A sour pulse that sags flat doubles the hook when it goes wrong.
+// Stage 2, Records Retention: an urgent escape chase in C minor at 180 BPM on sixteenth rows. The
+// VRC6 saw carries the lead as synth brass; the triangle drives octave eighths, the VRC6 pulses run
+// detuned sixteenth arpeggios a row apart, pulse 1 stabs the offbeats and harmonises the B section,
+// pulse 2 sounds the alarm then shadows the brass, and DPCM drums push a broken four. The title's hook
+// is quoted once, in the intro (docs/MUSIC.md).
 //
-// 48 bars, 64 s: intro 4 | A A' B A'' 24 | sour A + B 12 | A' 8, looping to the end of the intro.
+// 72 bars, 96 s: intro 4 | A 16 | B 16 | half-time breakdown 8 | A up a tone 16 | B up a tone 8 |
+// tag 4, looping to the end of the intro.
 
-import { MELODY, CHORDS } from './title.mjs';
+import { REST, chord, echo, fold, nameOf, pitchClasses, play, tag, thirdBelow, transpose, vibrato } from './kit.mjs';
 
-const ROOT = { F: 'F2', G: 'G2', A: 'A2', Bb: 'Bb2', C: 'C3', D: 'D3', E: 'E3' };
-const OCTAVE = { F: 'F3', G: 'G3', A: 'A3', Bb: 'Bb3', C: 'C4', D: 'D4', E: 'E4' };
-const FIFTH = { F: 'C3', G: 'D3', A: 'E3', Bb: 'F3', C: 'G3', D: 'A3', E: 'B3' };
-const STAB = { F: 'F4', G: 'G4', A: 'A4', Bb: 'Bb4', C: 'C5', D: 'D4', E: 'E4' };
+export const SCALE = ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb', 'B'];
 
-const theme = (i, part) => ({ chord: CHORDS[i], melody: MELODY[i], part });
-const REST = '. . . . . . . .';
-
-const INTRO = [
-  { chord: 'F', part: 'intro', drums: 'hats' },
-  { chord: 'F', part: 'intro' },
-  { chord: 'F', part: 'intro', melody: 'C5 - F5 - A5 - G5 F5' },
-  { chord: 'Am', part: 'intro', melody: 'E5 - - - - - - -' },
+const A_CHORDS = ['Cm9', 'Abmaj7', 'Bb9', 'Gm7', 'Cm9', 'Abmaj7', 'Fm9', 'G7'];
+const A_LEAD = [
+  'C5 - . C5 . . Bb4 - C5 - Eb5 - F5 - G5 -',
+  'Ab4 - - - - - - - G4 - Ab4 - C5 - Eb5 -',
+  'D5 - - - - - Bb4 - - - C5 - D5 - F5 -',
+  'D5 - - - - - - - - - - - . . Bb4 B4',
+  'G5 - . G5 . . F5 - G5 - Bb5 - Ab5 - G5 -',
+  'C5 - - - - - - - Ab4 - C5 - Eb5 - G5 -',
+  'Ab5 - - - G5 - - - F5 - - - Eb5 - D5 -',
+  'D5 - - - - - - - B4 - - - D5 - F5 -',
 ];
-const range = (from, to) => Array.from({ length: to - from }, (_, k) => from + k);
-const SECTIONS = [
-  INTRO,
-  range(0, 24).map((i) => theme(i, 'main')),
-  [...range(0, 8), ...range(16, 20)].map((i) => theme(i, 'sour')),
-  range(8, 16).map((i) => theme(i, 'main')),
+const A2_LEAD = [
+  ...A_LEAD.slice(0, 6),
+  'Ab5 - G5 - F5 - Eb5 - F5 - G5 - Ab5 - Bb5 -',
+  'B5 - - - - - - - - - - - . . . .',
 ];
-const BARS = SECTIONS.flatMap((section) => section.map((bar, k) => ({ ...bar, fill: k === section.length - 1 })));
 
-export const LOOP_BAR = INTRO.length;
+const B_CHORDS = ['Fm9', 'Bb9', 'Ebmaj9', 'Abmaj7', 'Dm7b5', 'G7', 'Cm9', 'G7'];
+const B_LEAD = [
+  'C6 - - - - - - - Bb5 - - - Ab5 - - -',
+  'D6 - - - - - - - C6 - - - Bb5 - - -',
+  'G5 - - - - - - - F5 - G5 - Bb5 - D6 -',
+  'C6 - - - - - - - - - - - . . . .',
+  'Ab5 - - - - - - - F5 - - - D5 - F5 -',
+  'G5 - - - - - - - B5 - - - D6 - - -',
+  'Eb6 - - - D6 - - - C6 - - - G5 - - -',
+  'B5 - - - - - - - . . . . D6 - F6 -',
+];
+const B2_LEAD = [...B_LEAD.slice(0, 7), 'B5 - - - - - - - - - - - . . . .'];
 
-const parts = (chord) => chord.split(' ').map((c) => ({ root: c.replace('m', ''), minor: c.endsWith('m') }));
-const tag = (bar, inst) => bar.split(' ').map((t) => (/^[A-G]/.test(t) ? `${t}:${inst}` : t)).join(' ');
+const BREAK_CHORDS = ['Cm9', 'Cm9', 'Abmaj7', 'Abmaj7', 'Cm9', 'Cm9', 'Abmaj7', 'G7'];
+const BREAK_LEAD = [
+  REST, REST, REST, REST,
+  'G5 - - - - - - - - - - - - - - -',
+  'Ab5 - - - - - - - - - - - - - - -',
+  'Bb5 - - - - - - - - - - - - - - -',
+  'B5 - - - - - - - D6 - F6 - G6 - B6 -',
+];
 
-const pulse1 = BARS.map((b) => (b.part === 'intro' ? REST : b.part === 'sour' ? tag(b.melody, 'thin') : b.melody));
+const TAG_CHORDS = ['Fm9', 'G7', 'Fm9', 'G7'];
+const TAG_LEAD = [
+  'Ab5 - G5 - F5 - Eb5 - D5 - C5 - B4 - D5 -',
+  'G5 - - - - - - - - - - - . . . .',
+  'Ab5 - G5 - F5 - Eb5 - F5 - G5 - Ab5 - Bb5 -',
+  'B5 - - - - - - - D6 - - - F6 - - -',
+];
 
-const pulse2 = BARS.map((b) => {
-  if (b.part !== 'main') return b.melody ? tag(b.melody, 'sour') : REST;
-  const hits = parts(b.chord).map(({ root, minor }) => {
-    const stab = `${STAB[root]}:${minor ? 'min' : 'maj'}`;
-    return `. ${stab} . ${stab}`;
-  });
-  return (hits.length === 1 ? [hits[0], hits[0]] : hits).join(' ');
+const section = (part, chords, leads, shift = 0) =>
+  chords.map((symbol, i) => ({ part, symbol, lead: leads[i], shift, last: i === chords.length - 1 }));
+
+export const FORM = [
+  ...section('intro', ['Cm9', 'Cm9', 'Abmaj7', 'G7'], [REST, REST, REST, REST]),
+  ...section('A', [...A_CHORDS, ...A_CHORDS], [...A_LEAD, ...A2_LEAD]),
+  ...section('B', [...B_CHORDS, ...B_CHORDS], [...B_LEAD, ...B2_LEAD]),
+  ...section('breakdown', BREAK_CHORDS, BREAK_LEAD),
+  ...section('return', [...A_CHORDS, ...A_CHORDS], [...A_LEAD, ...A2_LEAD], 2),
+  ...section('climax', B_CHORDS, B2_LEAD, 2),
+  ...section('tag', TAG_CHORDS, TAG_LEAD),
+];
+export const LOOP_BAR = 4;
+export const LEAD = 'saw';
+
+const SINGING = ['B', 'climax'];
+const leads = FORM.map((b) => transpose(b.lead, b.shift));
+const saw = leads.map((bar) => tag(bar, 'brass'));
+
+const NOD = 'G4 - C5 - Eb5 - D5 - C5 - - - - - - -';
+const STABS = '. . X - . . X - . . X - . X - .';
+const pulse1 = FORM.map((b, i) => {
+  if (b.part === 'intro') return i === 2 ? tag(NOD, 'nod') : REST;
+  if (b.part === 'breakdown') return REST;
+  if (SINGING.includes(b.part)) {
+    const scale = pitchClasses(SCALE, b.shift);
+    return leads[i].split(' ').map((t) => (/^[A-G]/.test(t) ? `${thirdBelow(t, scale)}:harm` : t)).join(' ');
+  }
+  const { root, tones } = chord(b.symbol, b.shift);
+  const third = nameOf(fold(root + tones[1], 60, 72));
+  return STABS.split(' ').map((t) => (t === 'X' ? `${third}:stab` : t)).join(' ');
 });
 
-const triangle = BARS.map((b) => {
-  const ps = parts(b.chord);
-  if (ps.length === 2) return ps.map(({ root }) => `${ROOT[root]} ${OCTAVE[root]} ${ROOT[root]} ${FIFTH[root]}`).join(' ');
-  const { root } = ps[0];
-  return `${ROOT[root]} ${OCTAVE[root]} ${ROOT[root]} ${OCTAVE[root]} ${ROOT[root]} ${ROOT[root]} ${FIFTH[root]} ${OCTAVE[root]}`;
+const shadows = echo(leads, 2, 'echo');
+const pulse2 = FORM.map((b, i) => {
+  if (b.part === 'intro') return i < 2 ? tag('C6 - - - - - - - G5 - - - - - - -', 'siren') : REST;
+  return shadows[i];
 });
 
-const HATS = '0:hat 0:hat 0:hat 0:hat 0:hat 0:hat 0:hat 0:hat';
-const BEAT = 'A 0:hat 5:snare 0:hat A A 5:snare 0:hat';
-const FILL = 'A 0:hat 5:snare 0:hat 5:snare 4:snare 3:snare 2:snare';
-const noise = BARS.map((b) => (b.drums === 'hats' ? HATS : b.fill ? FILL : BEAT));
+const ARP = [0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6];
+const arp = ({ root, tones }, inst) =>
+  ARP.map((k) => `${nameOf(root + 12 + tones[k % tones.length] + 12 * Math.floor(k / tones.length))}:${inst}`).join(' ');
+const arpBar = (b, i) => !(b.part === 'breakdown' || (b.part === 'intro' && i < 2));
+const HOLD = 'X - - - - - - - - - - - - - - -';
+const pad = (b, tone, lo, hi, inst) => {
+  const { root, tones } = chord(b.symbol, b.shift);
+  return b.part === 'intro' ? REST : HOLD.replace('X', `${nameOf(fold(root + tones[tone], lo, hi))}:${inst}`);
+};
+const vrc6p1 = FORM.map((b, i) => (arpBar(b, i) ? arp(chord(b.symbol, b.shift), 'arp1') : pad(b, 1, 57, 69, 'pad1')));
+const arpShadow = echo(FORM.map((b) => arp(chord(b.symbol, b.shift), 'arp2')), 1, 'arp2');
+const vrc6p2 = FORM.map((b, i) => (arpBar(b, i) ? arpShadow[i] : pad(b, 3, 62, 74, 'pad2')));
 
-const cycle = (steps) => Array.from({ length: 24 }, (_, f) => steps[Math.floor(f / 2) % steps.length]);
-// A third of a semitone flat, then sagging towards a semitone and a third flat as the note is held.
-const sag = Array.from({ length: 60 }, (_, f) => Math.max(-1.3, -0.3 - Math.max(0, f - 10) * 0.03));
+const triangle = FORM.map((b) => {
+  const c = chord(b.symbol, b.shift);
+  if (b.part === 'breakdown') return play('R - - - - - - - - - - - F - - -', c, 'long');
+  return play(b.last ? 'R - O - R - O - F - F - S - O -' : 'R - O - R - O - R - O - R - O -', c, 'drive');
+});
+
+const noise = FORM.map((b, i) => {
+  if (b.part === 'intro') return i < 2 ? '1 . 1 . 1 . 1 . 1 . 1 . 1 . 1 .' : '. . 1 . . . 1 . . . 1 . . . 0:open -';
+  if (b.part === 'breakdown') return b.last ? '. . . . . . . . 3 3 2 2 1 1 0 0' : REST;
+  if (SINGING.includes(b.part)) return '1 . 1 1 1 . 1 1 1 . 1 1 1 . 0:open -';
+  return '. . 1 . . . 1 . . . 1 . . . 0:open -';
+});
+
+const DRUMS = {
+  groove: 'F - - - F:snare - - - F - F - F:snare - - F',
+  fill: 'F - - - F:snare - - - F:snare D:snare F:snare C:snare F:snare B:snare F:snare A:snare',
+  half: 'F - - - - - - - F:snare - - - - - - -',
+};
+const dpcm = FORM.map((b, i) => {
+  if (b.part === 'intro') return i < 2 ? REST : i === 3 ? DRUMS.fill : DRUMS.groove;
+  if (b.last) return DRUMS.fill;
+  return b.part === 'breakdown' ? DRUMS.half : DRUMS.groove;
+});
+
+const join = (bars) => bars.join(' | ');
+const siren = Array.from({ length: 60 }, (_, f) => +(0.4 * Math.sin((2 * Math.PI * f) / 15)).toFixed(3));
 
 export default {
-  tempo: 10,
-  loop: LOOP_BAR * 8,
+  tempo: 5,
+  loop: LOOP_BAR * 16,
   instruments: {
-    lead: { duty: 2, env: [14, 12, 11, 10, 10, 9, 9, 9, 8], pitch: [0.2, 0, 0] },
-    thin: { duty: 1, env: [11, 10, 9, 9, 8, 8, 7] },
-    sour: { duty: 1, env: [9, 9, 8, 8, 7, 7, 7, 6], pitch: sag },
-    maj: { duty: 1, env: [8, 6, 4, 2, 0], pitch: cycle([0, 4, 7]) },
-    min: { duty: 1, env: [8, 6, 4, 2, 0], pitch: cycle([0, 3, 7]) },
-    bass: { env: [15, 15, 15, 15, 15, 15, 15, 0] },
-    kick: { env: [11, 8, 5, 3, 1, 0], pitch: [0, 1, 2] },
-    snare: { env: [9, 7, 5, 4, 3, 2, 1, 0] },
-    hat: { short: true, env: [5, 3, 1, 0] },
+    brass: { env: [9, 11, 13, 14, 14, 13, 13, 12, 12, 12, 11, 11, 11, 10], pitch: vibrato(0.18, 12, 20), glide: 2 },
+    nod: { duty: 2, env: [10, 10, 9, 9, 8, 8, 7] },
+    stab: { duty: 0, env: [12, 10, 7, 4, 2, 0] },
+    harm: { duty: 1, env: [8, 8, 7, 7, 6, 6, 6, 5] },
+    siren: { duty: 1, env: [9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 6, 5], pitch: siren },
+    echo: { duty: 2, env: [4, 4, 3, 3, 3, 2, 2, 1, 0], pitch: [0.1] },
+    arp1: { duty: 3, env: [8, 6, 5, 4, 3, 2] },
+    arp2: { duty: 5, env: [5, 4, 3, 2, 1, 0], pitch: [0.1] },
+    pad1: { duty: 1, env: [2, 3, 4, 5, 6, 7, 7, 7, 7, 6], pitch: vibrato(0.07, 23) },
+    pad2: { duty: 3, env: [2, 3, 4, 5, 5, 6, 6, 6, 6, 5], pitch: vibrato(0.07, 31).map((v) => +(v + 0.1).toFixed(3)) },
+    drive: { env: [15, 15, 15, 15, 15, 15, 0] },
+    long: { env: [15] },
+    hat: { short: true, env: [4, 2, 1, 0] },
+    open: { short: true, env: [5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0] },
+    kick: { sample: 'kick' },
+    snare: { sample: 'snare', env: [13] },
   },
-  pulse1: { inst: 'lead', rows: pulse1.join(' | ') },
-  pulse2: { inst: 'sour', rows: pulse2.join(' | ') },
-  triangle: { inst: 'bass', rows: triangle.join(' | ') },
-  noise: { inst: 'kick', rows: noise.join(' | ') },
+  pulse1: { inst: 'stab', rows: join(pulse1) },
+  pulse2: { inst: 'echo', rows: join(pulse2) },
+  triangle: { inst: 'drive', rows: join(triangle) },
+  noise: { inst: 'hat', rows: join(noise) },
+  vrc6p1: { inst: 'arp1', rows: join(vrc6p1) },
+  vrc6p2: { inst: 'arp2', rows: join(vrc6p2) },
+  saw: { inst: 'brass', rows: join(saw) },
+  dpcm: { inst: 'kick', rows: join(dpcm) },
 };

@@ -3,6 +3,34 @@
 Tim's ruling (01:09 EDT 2026-09-15): the NES theme was authentic but "not corporate wave enough". The
 theme now plays on the 2A03 plus Konami's VRC6 cartridge chip, the Famicom Castlevania III setup.
 
+## The rule: a shared motif, used lightly; every track its own identity
+
+Tim (01:38 EDT 2026-09-15): the music sounded great but "super repetitive"; keep the shared motif but
+go easy on it, and make every track a banger that stands out in its own way. So:
+
+- **The title's hook is a nod, not a backbone.** A stage quotes its contour once, a few notes in the
+  intro, in the stage's own key. The melody is the stage's own.
+- **Every track has its own tempo, key, groove and lead voice**, and a real form of at least 90 s
+  before it loops: intro, A, B, a breakdown, and a return that changes something (key, fills, a
+  counter-line).
+- **Late NES, 1990-94**: DPCM sampled drums, a fat VRC6 bass or brass, Kirby-style polish.
+
+| Track | Tempo, key | Groove | Lead | Form (bars) |
+| --- | --- | --- | --- | --- |
+| Stage 1, funk brawl | 112 BPM, D dorian | sixteenth funk: saw slap bass, clav chops, DPCM kick and gated snare, a clap breakdown | 2A03 pulse, 25%, sliding, with an echo; a singing 50% pulse and a harmony in B | intro 4, A 8, B 8, A' 8, breakdown 8, A' up a tone 8, turnaround 4: 102 s |
+| Stage 2, escape chase | 180 BPM, C minor | driving triangle octaves, detuned VRC6 sixteenth arpeggios, broken-four DPCM drums, a half-time breakdown | VRC6 saw brass, with pulse offbeat stabs and a harmony in B | intro 4, A 16, B 16, breakdown 8, A up a tone 16, B up a tone 8, tag 4: 96 s |
+
+The first versions stay on the sound test as stage1 (v1) and stage2 (v1).
+
+## DPCM drums
+
+The 2A03's fifth channel plays 1-bit delta samples. `src/audio/apu.mjs` synthesises the kit (a long
+diving corporate-wave kick with a click, a gated snare, a clap) and pushes each through the delta
+encoder at the top rate, so the slope limit roughens the noise the way a real sample does. In a song
+the `dpcm` channel's token is the playback rate 0-F (F as recorded, lower is lower and longer, for
+tom-like fills) and the instrument names the sample. A sample is cut when its note ends, so hold drum
+notes with `-` rather than `.`.
+
 ## What makes it corporate wave
 
 Corporate wave grew out of vaporwave in the late 2010s. Vaporwave slows and smears 80s muzak, smooth
@@ -41,6 +69,12 @@ The scene version keeps the thin 12.5% lead and no drums, and lays the VRC6 chor
 under it.
 
 ## Lessons
+
+- **Build a long song from a form table, not long strings.** One entry a bar (part, chord, lead,
+  key shift) and a function per channel keeps 70 bars of eight channels short to write and easy to
+  vary per section; a key change is a shift on the entry, applied to the chord and the lead alike.
+- **An echo must not cross a key change.** Rest the first rows of every bar in the delayed copy, or
+  the last notes of one key sound in the next.
 
 - **Swing needs its own row grid.** A song has one tempo, so swung eighths come from the grid: 24
   rows a bar (6 a beat) lets the on-beat eighth take 4 rows and the off-beat 2, and every bar is

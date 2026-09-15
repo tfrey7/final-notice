@@ -25,6 +25,8 @@
  *     noise:    { inst: 'kick', rows: 'D 0:hat 5:snare . ...' },
  *     vrc6p1, vrc6p2: VRC6 pulses, duty 0-7 = 1/16 to 8/16
  *     saw:            the VRC6 sawtooth
+ *     dpcm:           DPCM samples: 0-F is the playback rate (F is the sample as recorded), and the
+ *                     instrument names the sample, e.g. kick: { sample: 'kick' }
  *   };
  *
  * rows is one token per row, separated by spaces; '|' is ignored and is there to mark bars.
@@ -39,7 +41,7 @@
  * A missing channel is silent. Shorter channels are padded with silence to the longest.
  */
 
-import { ALL_CHANNELS as CHANNELS, FRAME_HZ, createApu, noteToMidi } from './apu.mjs';
+import { SONG_CHANNELS as CHANNELS, FRAME_HZ, createApu, noteToMidi } from './apu.mjs';
 import { SFX } from './sfx.mjs';
 
 export function parseRows(channel, text, defaultInst) {
@@ -59,8 +61,9 @@ export function parseRows(channel, text, defaultInst) {
       return;
     }
     const [name, inst = defaultInst] = token.split(':');
-    const pitch = channel === 'noise' ? parseInt(name, 16) : noteToMidi(name);
-    if (pitch === null || Number.isNaN(pitch) || (channel === 'noise' && !/^[0-9A-Fa-f]$/.test(name))) {
+    const indexed = channel === 'noise' || channel === 'dpcm';
+    const pitch = indexed ? parseInt(name, 16) : noteToMidi(name);
+    if (pitch === null || Number.isNaN(pitch) || (indexed && !/^[0-9A-Fa-f]$/.test(name))) {
       throw new Error(`${channel} row ${row}: cannot read "${token}"`);
     }
     current = { start: row, pitch, inst, len: 1 };
@@ -233,6 +236,7 @@ function scheduleChannel(ch, t) {
     frames: playing.left,
     duty: inst.duty,
     short: inst.short,
+    sample: inst.sample,
     at: (f) => ({ vol: at(inst.env, f + into) ?? 15, pitch: pitchAt(note, inst, f + into) }),
   });
   songVoices[ch] = { id, v };

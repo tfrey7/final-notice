@@ -171,8 +171,8 @@ tracker format the synth plays; sound effects are data too (`src/audio/sfx.mjs`)
 | --- | --- | --- |
 | Title and select | `title` | sincere, comforting hold-music melody, mid tempo, loops |
 | Scene 1 and 3 | `scene` | the melody slowed, pulse 12.5% duty, sparse |
-| Stage 1 | `stage1` | confident midtempo groove, firm noise drums, loops |
-| Stage 2 | `stage2` | the same melody faster, urgent triangle bass, a detuned pulse phrase |
+| Stage 1 | `stage1` | office-floor funk brawl in D dorian, saw slap bass, DPCM drums, its own melody (docs/MUSIC.md) |
+| Stage 2 | `stage2` | escape chase in C minor at 180 BPM, saw brass lead over racing arpeggios (docs/MUSIC.md) |
 | Bosses | `boss` | tense ostinato, loops |
 | Ending and credits | `ending` | the title melody with one unresolved last phrase |
 | Jingles (no loop) | `stageStart`, `stageClear`, `lifeLost`, `gameOver`, `continue`, `pickup` | 1-4 s each |

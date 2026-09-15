@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { CHANNELS, FRAME_HZ, noteToMidi } from '../src/audio/apu.mjs';
 import { compileSong, parseRows } from '../src/audio/player.mjs';
 import { MELODY, KEY } from '../src/audio/songs/title.mjs';
-import stage1 from '../src/audio/songs/stage1.mjs';
+import stage1 from '../src/audio/songs/stage1-v1.mjs';
 
 const BAR = 24;
 const song = compileSong(stage1);
 const inKey = new Set(KEY.map((n) => noteToMidi(`${n}4`) % 12));
 const starts = (ch, pick = () => true) => song.channels[ch].filter((n, i) => n && n.start === i && pick(n));
 
-test('stage1: every channel is whole 24-row bars and ends with the others', () => {
+test('stage1 (v1):every channel is whole 24-row bars and ends with the others', () => {
   assert.equal(BAR % 8, 0);
   for (const ch of CHANNELS) {
     const bars = stage1[ch].rows.split('|').map((b) => b.trim().split(/\s+/).length);
@@ -19,7 +19,7 @@ test('stage1: every channel is whole 24-row bars and ends with the others', () =
   }
 });
 
-test('stage1: loops on a bar line, runs 60-90 s, and the looped part is at least 40 s', () => {
+test('stage1 (v1):loops on a bar line, runs 60-90 s, and the looped part is at least 40 s', () => {
   assert.equal(song.loop % BAR, 0);
   assert.ok(song.loop > 0 && song.loop < song.length);
   const seconds = (rows) => (rows * song.tempo) / FRAME_HZ;
@@ -27,7 +27,7 @@ test('stage1: loops on a bar line, runs 60-90 s, and the looped part is at least
   assert.ok(seconds(song.length - song.loop) >= 40);
 });
 
-test('stage1: every pitched note and chord tone is in F major', () => {
+test('stage1 (v1):every pitched note and chord tone is in F major', () => {
   for (const ch of ['pulse1', 'pulse2', 'triangle']) {
     for (const note of song.channels[ch]) {
       if (!note) continue;
@@ -39,7 +39,7 @@ test('stage1: every pitched note and chord tone is in F major', () => {
   }
 });
 
-test('stage1: the hook opens the song and opens the loop, in swung eighths', () => {
+test('stage1 (v1):the hook opens the song and opens the loop, in swung eighths', () => {
   const pitches = (notes) => notes.filter((n, i, a) => n && a.indexOf(n) === i).map((n) => n.pitch);
   const hook = pitches(parseRows('pulse1', MELODY.slice(0, 2).join(' '), 'x'));
   assert.deepEqual(pitches(song.channels.pulse1.slice(0, 2 * BAR)), hook);
@@ -51,7 +51,7 @@ test('stage1: the hook opens the song and opens the loop, in swung eighths', () 
   assert.equal(bar1[22].start, 22);
 });
 
-test('stage1: busy bass, ninth-chord stabs, a soft echo, drums with room for punches', () => {
+test('stage1 (v1):busy bass, ninth-chord stabs, a soft echo, drums with room for punches', () => {
   const bars = song.length / BAR;
   assert.ok(starts('triangle').length / bars >= 8, 'at least eight bass notes a bar');
   const stabs = starts('pulse2', (n) => n.inst !== 'echo');

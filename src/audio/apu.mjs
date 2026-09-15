@@ -7,6 +7,56 @@ export const FRAME_HZ = 60;
 export const CHANNELS = ['pulse1', 'pulse2', 'triangle', 'noise'];
 export const VRC6_CHANNELS = ['vrc6p1', 'vrc6p2', 'saw'];
 export const ALL_CHANNELS = [...CHANNELS, ...VRC6_CHANNELS];
+// Songs also get the 2A03's DPCM channel, which plays 1-bit delta samples (drums).
+export const SONG_CHANNELS = [...ALL_CHANNELS, 'dpcm'];
+
+// NTSC DPCM playback rates in hertz, index 0-15.
+export const DPCM_RATES = [
+  4181.71, 4709.93, 5264.04, 5593.04, 6257.95, 7046.35, 7919.35, 8363.42,
+  9419.86, 11186.1, 12604.0, 13982.6, 16884.6, 21306.8, 24858.0, 33143.9,
+];
+
+// The 7-bit DPCM counter moves 2 up for a 1 bit and 2 down for a 0, ignoring a step past 0-127.
+function dpcmStep(counter, bit) {
+  if (bit) return counter <= 125 ? counter + 2 : counter;
+  return counter >= 2 ? counter - 2 : counter;
+}
+
+export function dpcmEncode(wave, start = 64) {
+  let c = start;
+  return wave.map((x) => {
+    const bit = 64 + 60 * x > c ? 1 : 0;
+    c = dpcmStep(c, bit);
+    return bit;
+  });
+}
+
+export function dpcmDecode(bits, start = 64) {
+  let c = start;
+  return bits.map((b) => (c = dpcmStep(c, b)));
+}
+
+// The drum kit, synthesised once and squeezed through the delta encoder at the top rate, so the slope
+// limit gives the noisy parts the grit a real DPCM sample has. Values are the decoded 0-127 counter.
+export const DPCM_SAMPLES = (() => {
+  const sr = DPCM_RATES[15];
+  let seed = 7;
+  const noise = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x3fffffff) - 1;
+  const render = (seconds, fn) => {
+    let phase = 0;
+    return Array.from({ length: Math.round(seconds * sr) }, (_, i) => {
+      const t = i / sr;
+      return Math.max(-1, Math.min(1, fn(t, (hz) => (phase += (2 * Math.PI * hz) / sr))));
+    });
+  };
+  // A long boomy corporate-wave kick: a click, then a sine diving from 160 to 50 Hz.
+  const kick = render(0.26, (t, step) => Math.sin(step(50 + 110 * Math.exp(-t * 28))) * Math.exp(-t * 8) + (t < 0.004 ? 0.8 : 0));
+  // A gated snare: body and noise held flat, then cut dead.
+  const snare = render(0.14, (t, step) => (0.45 * Math.sin(step(190)) + 0.7 * noise()) * (t < 0.09 ? 1 : Math.exp(-(t - 0.09) * 120)));
+  // A clap: three quick bursts and a short tail.
+  const clap = render(0.16, (t) => noise() * (t < 0.036 ? Math.exp(-((t % 0.012) * 300)) : 0.8 * Math.exp(-(t - 0.036) * 30)));
+  return Object.fromEntries(Object.entries({ kick, snare, clap }).map(([k, w]) => [k, dpcmDecode(dpcmEncode(w))]));
+})();
 
 // Duty 0-3 = 12.5%, 25%, 50%, 75%, as the 2A03's 8-step sequencer plays them.
 export const DUTY_TABLES = [
@@ -34,7 +84,7 @@ export const NOISE_PERIODS = [4, 8, 16, 32, 64, 96, 127, 160, 202, 254, 380, 508
 // The VRC6 pulses sit level with the 2A03's; the saw's 0-31 staircase is scaled to about the same swing.
 export const LEVEL = {
   pulse1: 0.00752, pulse2: 0.00752, triangle: 0.00851, noise: 0.00494,
-  vrc6p1: 0.00752, vrc6p2: 0.00752, saw: 0.00026,
+  vrc6p1: 0.00752, vrc6p2: 0.00752, saw: 0.00026, dpcm: 0.00011,
 };
 
 const NOTE_STEPS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -135,7 +185,7 @@ export function createApu(ctx) {
 
   const buses = {};
   const meters = {};
-  for (const ch of ALL_CHANNELS) {
+  for (const ch of SONG_CHANNELS) {
     buses[ch] = ctx.createGain();
     meters[ch] = ctx.createAnalyser();
     meters[ch].fftSize = 512;
@@ -161,8 +211,32 @@ export function createApu(ctx) {
     return { buffer: pulseBuffers[spec.duty ?? 2], cycle: 8 * PULSE_STEP };
   }
 
-  // spec: { frames, duty, short, at(f) -> { vol, pitch } }. Returns { src, start, end }.
+  const dpcmBuffers = Object.fromEntries(
+    Object.entries(DPCM_SAMPLES).map(([k, levels]) => {
+      const buf = ctx.createBuffer(1, levels.length, DPCM_RATES[15]);
+      buf.getChannelData(0).set(levels.map((v) => v - 64));
+      return [k, buf];
+    }),
+  );
+
+  // A sample plays once at the rate its pitch indexes, for the note's length.
+  function sample(when, spec) {
+    const src = ctx.createBufferSource();
+    src.buffer = dpcmBuffers[spec.sample] ?? dpcmBuffers.kick;
+    const { vol, pitch } = spec.at(0);
+    src.playbackRate.value = DPCM_RATES[Math.max(0, Math.min(15, Math.round(pitch)))] / DPCM_RATES[15];
+    const gain = ctx.createGain();
+    gain.gain.value = mixGain('dpcm', vol);
+    src.connect(gain).connect(buses.dpcm);
+    const end = when + spec.frames / FRAME_HZ;
+    src.start(when);
+    src.stop(end);
+    return { src, start: when, end };
+  }
+
+  // spec: { frames, duty, short, sample, at(f) -> { vol, pitch } }. Returns { src, start, end }.
   function voice(channel, when, spec) {
+    if (channel === 'dpcm') return sample(when, spec);
     const { buffer, cycle } = bufferFor(channel, spec);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
