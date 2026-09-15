@@ -1,10 +1,11 @@
-// Stage 2 areas 1-4 on the SNES: the shared escape logic drawn at 40 px over the archive's parallax
-// shelving, the wax front as an add-half tint, the BG3 HUD with enchantment icons. The Great Seal's
-// room is card 1932's; reaching it holds on a card.
+// Stage 2 on the SNES: the shared escape logic drawn at 40 px over the archive's parallax shelving, the
+// wax front as an add-half tint, the BG3 HUD with enchantment icons; then the Great Seal's locked arena,
+// its press a Mode 7 layer swelling toward the floor on each stamp over a colour-subtract shadow, and
+// the enemy-free exit run.
 /* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
-import { screen, mathPass } from '../fx.mjs';
+import { screen, mathPass, mode7Matrix, mode7Pass } from '../fx.mjs';
 import { artOr, loadArt, SpriteLayer } from '../art.mjs';
 import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
@@ -18,13 +19,14 @@ import { mountTunePanel } from '../../tune.mjs';
 import { HITS_PER_SEGMENT } from '../../injunction.mjs';
 import { TILE, solidAt } from '../../stage2/physics.mjs';
 import { carry, swapHand } from '../../stage2/pickups.mjs';
-import { reachedArena } from '../../stage2/greatseal.mjs';
+import { DIRECTOR, FLOOR_Y, SEAL, createArena, enterExit, poseArena, reachedArena, sealOpen, stepArena } from '../../stage2/greatseal.mjs';
 import { BOSS_AREA, areaAt, arenaLocked, createStage, frontsOf, layoutFrom, promptsFor, stepStage } from '../../stage2/areas.mjs';
 import { BELT } from '../../stage2/conveyor.mjs';
 import { STAGE2, backdropFor, bodySize, camera, hudState, onScreen } from './view.mjs';
+import { PRESS_H, RAIL, burstSize, headY, mosaicRect, pressTexture, shadowHalf, stampScale, titleCard } from './seal.mjs';
 
 const MS = 1000 / 60;
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp', belt: 'conveyor', tell: 'alarm', stamp: 'stamp' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp', belt: 'conveyor', tell: 'alarm', stamp: 'stamp', bindingBreak: 'waxBreak', sealOpen: 'alarm' };
 const AREA_ART = ['archiveAccess', 'retentionOrder', 'originalCopy', 'disposalLine'];
 const C = {
   stone: rgb15(7, 7, 9), stoneDark: rgb15(3, 3, 5), stoneTop: rgb15(12, 11, 13),
@@ -32,10 +34,14 @@ const C = {
   wax: rgb15(24, 5, 3), waxLit: rgb15(31, 14, 5), ledger: rgb15(28, 26, 19), tab: rgb15(22, 4, 3),
   belt: rgb15(3, 3, 4), bar: rgb15(15, 15, 17), door: rgb15(6, 6, 8), stripe: rgb15(28, 22, 4),
   ink: rgb15(6, 8, 22), inkLit: rgb15(14, 18, 31), tape: rgb15(24, 4, 4), glyph: rgb15(20, 6, 22), burst: rgb15(31, 26, 10),
+  brass: rgb15(22, 16, 5), brassDark: rgb15(12, 8, 3), gold: rgb15(31, 26, 12), memo: rgb15(3, 3, 7), sign: rgb15(4, 16, 6),
 };
 const TABS = { carbonCopy: C.flash, redTape: C.tape, margin: C.inkLit };
 const SPRITE_CAST = { seal: 'notice', paper: 'carbonCopy', page: 'margin' };
 const WAX_TOP = 24;
+const ARENA_BACKDROP = 3;
+// The arena is taller than the screen at 40 px bodies: frame it from just under the rail to the floor.
+const ARENA_CAM_Y = 56;
 
 export class SnesStage2Scene extends Phaser.Scene {
   constructor() {
@@ -58,18 +64,40 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (params.has('spell')) carry(this.run, params.get('spell')), swapHand(this.run);
     if (params.has('meter')) this.run.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
     window.finalNoticeStage2 = this.run;
-    this.song = 'stage2';
-    playSong(this.song);
 
     this.buf = screen();
     this.wax = screen(C.wax);
+    this.shade = screen(rgb15(12, 12, 12));
+    this.press = pressTexture();
     this.view = new FrontScreen(this, 'snes-stage2');
     this.layer = new SpriteLayer(this, 10);
     this.backs = new Map();
-    this.done = flow.checkpoint === BOSS_AREA.id;
+    if (flow.checkpoint === BOSS_AREA.id) {
+      this.enterArena();
+      // ?pose=stamp|seal stages the fight for a screenshot; ?exit starts on the exit run.
+      if (params.has('pose')) poseArena(this.run, params.get('pose')), this.cardOff = true;
+      if (params.has('exit')) {
+        enterExit(this.run);
+        this.run.events.length = 0;
+        if (params.has('at')) this.run.player.x = Number(params.get('at'));
+      }
+    } else {
+      playSong(this.song = 'stage2');
+    }
     if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
     await loadArt(`${flow.auditor}-stage2`).catch(() => null);
+    await loadArt('greatseal-stage2').catch(() => null);
     this.ready = true;
+  }
+
+  // The locked arena replaces the strip; the title card and the Director's line open it once.
+  enterArena() {
+    this.run = createArena(this.run?.player.auditor ?? this.registry.get('flow').auditor);
+    window.finalNoticeStage2 = this.run;
+    this.bursts = [];
+    this.broken = new WeakSet();
+    this.voiced = false;
+    playSong(this.song = 'boss');
   }
 
   backdrop(index) {
@@ -82,14 +110,18 @@ export class SnesStage2Scene extends Phaser.Scene {
 
   update() {
     if (!this.ready) return;
-    const { run } = this;
-    if (this.done || (this.holdAt !== null && run.frame >= this.holdAt)) { this.draw(this.registry.get('flow')); return; }
+    if (this.holdAt !== null && this.run.frame >= this.holdAt) { this.draw(this.registry.get('flow')); return; }
     const pad = pollPad(this.game.loop.frame);
-    if (this.fast) cheapen([...run.foes, ...(run.bosses ?? [])]);
-    stepStage(run, pad);
-    if (reachedArena(run)) {
-      run.events.push({ type: 'checkpoint', id: BOSS_AREA.id });
-      this.done = true;
+    let { run } = this;
+    if (this.fast) cheapen([...run.foes, ...(run.bosses ?? []), run.boss, run.boss?.seal, ...(run.boss?.bindings ?? [])].filter(Boolean));
+    if (run.boss) {
+      stepArena(run, pad);
+    } else {
+      stepStage(run, pad);
+      if (reachedArena(run)) {
+        this.enterArena();
+        run = this.run;
+      }
     }
     if (run.paused !== this.paused) {
       this.paused = run.paused;
@@ -100,6 +132,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     let flow = this.registry.get('flow');
     for (const e of run.events) {
       if (SOUNDS[e.type]) sfx(SOUNDS[e.type]);
+      if (e.type === 'bossDown') playSong(this.song = 'stageClear');
       if (e.type === 'stageClear') { showFlow(this, next(flow, e)); return; }
       if (e.type === 'checkpoint') this.registry.set('flow', flow = next(flow, e));
       if (e.type === 'lifeLost') {
@@ -108,7 +141,17 @@ export class SnesStage2Scene extends Phaser.Scene {
         this.registry.set('flow', flow);
       }
     }
-    const song = arenaLocked(run) ? 'boss' : 'stage2';
+    if (run.boss) {
+      if (titleCard(run.frame)?.subtitle && !this.voiced) { this.voiced = true; sfx('sealLine'); }
+      for (const b of run.boss.bindings) {
+        if (b.hp > 0 || this.broken.has(b)) continue;
+        this.broken.add(b);
+        this.bursts.push({ x: b.x, y: b.y - b.h / 2, age: 0 });
+      }
+      for (const burst of this.bursts) burst.age++;
+      this.bursts = this.bursts.filter((burst) => burstSize(burst.age) > 0);
+    }
+    const song = run.boss ? this.song : arenaLocked(run) ? 'boss' : 'stage2';
     if (!this.paused && song !== this.song) playSong(this.song = song);
     this.draw(flow);
   }
@@ -116,8 +159,8 @@ export class SnesStage2Scene extends Phaser.Scene {
   draw(flow) {
     const { run } = this;
     const s = STAGE2.scale;
-    const cam = camera(run, s);
-    const { area, baked } = this.backdrop(Math.max(0, areaAt(run.player.x)));
+    const cam = run.boss && !run.exit ? { ...camera(run, s), y: ARENA_CAM_Y } : camera(run, s);
+    const { area, baked } = this.backdrop(run.boss ? ARENA_BACKDROP : Math.max(0, areaAt(run.player.x)));
     const buf = composeArea(area, baked, cam.x, this.buf);
     const fill = bufferFill(buf);
     const rect = (x, y, w, h, c) => { const r = onScreen(cam, s, x, y, w, h); fill(r.x, r.y, r.w, r.h, c); };
@@ -134,7 +177,8 @@ export class SnesStage2Scene extends Phaser.Scene {
         if (!solidAt(a, col, row - 1)) rect(col * TILE, row * TILE, TILE, 2, C.stoneTop);
       }
     }
-    this.drawParts(run, rect, t);
+    if (run.boss) this.drawArena(run, buf, fill, rect, px, py);
+    else this.drawParts(run, rect, t);
 
     const sprites = [];
     const p = run.player;
@@ -143,6 +187,11 @@ export class SnesStage2Scene extends Phaser.Scene {
       const who = artOr(this, `${p.auditor}-stage2`, { w: body.w, h: body.h, palette: [rgb15(2, 2, 6), rgb15(6, 9, 20), rgb15(28, 24, 18)] });
       const flip = p.castPose ? /left/i.test(p.castDir) : p.facing < 0;
       sprites.push(...who.frame(undefined, t, px(p.x) - (body.w >> 1), py(p.y) - body.h, flip));
+    }
+    if (run.boss && !run.exit) {
+      const down = run.boss.state === 'down';
+      const director = artOr(this, 'greatseal-stage2', { w: body.w, h: body.h, palette: [rgb15(2, 1, 4), rgb15(14, 12, 4), rgb15(28, 26, 18)] });
+      sprites.push(...director.frame(down ? 'director.down' : 'director.idle', t, px(DIRECTOR.x) - (body.w >> 1), py(DIRECTOR.y) - body.h + (down ? 10 : 0)));
     }
     const foe = artOr(this, 'associate-stage2', { w: body.w, h: body.h, palette: [rgb15(2, 2, 4), rgb15(8, 8, 10), rgb15(20, 18, 14)] });
     for (const f of run.foes) {
@@ -171,7 +220,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     for (const g of run.glyphs) ring(fill, px(g.x), py(g.y - g.h / 2), 4, 6, 3, run.frame % 8 < 4 ? C.glyph : C.burst);
 
     // The wax front: everything it covers takes the red by add-half, as a sub-screen layer would.
-    for (const front of frontsOf(run.stage)) {
+    for (const front of run.stage ? frontsOf(run.stage) : []) {
       const edge = px(front.x);
       if (!front.active || edge <= 0) continue;
       mathPass(buf, this.wax, { op: 'add', half: true, where: (x, y) => x < edge && y >= WAX_TOP }, buf);
@@ -188,14 +237,82 @@ export class SnesStage2Scene extends Phaser.Scene {
       sprites.unshift(...artOr(this, `hud-${e.icon}`, { w: 16, h: 16, palette: [rgb15(1, 1, 1), e.icon === 'notice' ? rgb15(28, 3, 3) : rgb15(15, 15, 15), rgb15(31, 31, 31)] })
         .frame(undefined, 0, e.x + 2, e.y + 2));
     }
-    promptsFor(run).forEach((text, i) => {
-      if (run.frame % 60 < 45) drawString(fill, text, (WIDTH - measure(text)) >> 1, 60 + i * 14);
-    });
+    if (run.stage) {
+      promptsFor(run).forEach((text, i) => {
+        if (run.frame % 60 < 45) drawString(fill, text, (WIDTH - measure(text)) >> 1, 60 + i * 14);
+      });
+    }
+    if (run.boss && !run.exit && !this.cardOff) drawCard(fill, titleCard(run.frame));
     if (run.paused) drawString(fill, 'PAUSE', (WIDTH - measure('PAUSE')) >> 1, HEIGHT >> 1);
-    if (this.done) drawString(fill, 'THE GREAT SEAL AWAITS', (WIDTH - measure('THE GREAT SEAL AWAITS')) >> 1, HEIGHT >> 1);
 
     this.layer.draw(sprites);
     this.view.show(buf);
+  }
+
+  // The arena under the sprites: rail, bindings, the contract seal, tape and shots, the shadow taken out
+  // of the floor by colour subtract, the press as a Mode 7 layer, and a mosaic over each fresh break.
+  drawArena(run, buf, fill, rect, px, py) {
+    if (run.exit) {
+      const x = run.exit.end;
+      rect(x - 12, FLOOR_Y - 60, 36, 14, C.sign);
+      drawString(fill, 'EXIT', px(x - 12) + 8, py(FLOOR_Y - 60) + 4);
+      return;
+    }
+    const b = run.boss;
+    rect(TILE, RAIL - 4, 14 * TILE, 4, C.brassDark);
+    rect(TILE, RAIL, 14 * TILE, 2, C.brass);
+    rect(DIRECTOR.x - 24, DIRECTOR.y, 40, 4, C.brassDark);
+    rect(DIRECTOR.x - 22, DIRECTOR.y + 4, 3, FLOOR_Y - DIRECTOR.y - 4, C.brassDark);
+    for (const x of b.bindings) {
+      rect(x.x - 1, RAIL + 2, 2, x.y - x.h - RAIL - 2, C.brassDark);
+      if (x.hp <= 0) { rect(x.x - 3, x.y - x.h, 6, 4, C.wax); continue; }
+      rect(x.x - x.w / 2, x.y - x.h, x.w, x.h, x.flash ? C.flash : C.wax);
+      rect(x.x - 3, x.y - x.h + 5, 6, 6, C.waxLit);
+    }
+    const seal = b.seal;
+    const cy = seal.y - seal.h / 2;
+    if (b.state !== 'down') {
+      if (sealOpen(b)) {
+        rect(seal.x - 7, cy - 5, 14, 10, seal.flash ? C.flash : C.gold);
+        rect(seal.x - 3, cy - 3, 6, 6, run.frame % 16 < 8 ? C.flash : C.waxLit);
+      } else {
+        rect(seal.x - 5, cy - 5, 10, 10, C.wax);
+        rect(seal.x - 1, cy - 5, 2, 10, C.brass);
+      }
+    }
+    if (b.tape) {
+      const tape = b.tape;
+      if (tape.t <= SEAL.tapeWarn) {
+        if (tape.t % 8 < 4) rect(tape.dir > 0 ? TILE : 15 * TILE - 6, FLOOR_Y - 12, 6, 12, C.tape);
+      } else {
+        for (let i = 0; i < 24; i += 2) rect(tape.x - tape.dir * i, FLOOR_Y - 8 + ((i + (run.frame >> 1)) % 4 < 2 ? 0 : 2), 2, 3, C.tape);
+      }
+    }
+    for (const shot of b.shots) {
+      rect(shot.x - 4, shot.y - 7, 8, 6, shot.flash ? C.flash : C.wax);
+      rect(shot.x - 1, shot.y - 5, 2, 2, C.gold);
+    }
+
+    const stamp = b.stamp;
+    const x = stamp ? stamp.x : 128;
+    const half = shadowHalf(stamp);
+    if (half && (stamp.t > stamp.shadow - 12 || stamp.t % 8 < 6)) {
+      const [sx, sy, rx, ry] = [px(x), py(stamp.y) - 2, half * STAGE2.scale, 5];
+      mathPass(buf, this.shade, { op: 'sub', where: (u, v) => ((u - sx) / rx) ** 2 + ((v - sy) / ry) ** 2 < 1 }, buf);
+    }
+    const k = stampScale(stamp);
+    const bottom = py(headY(stamp));
+    const h = PRESS_H * k;
+    rect(x - 12, RAIL - 6, 24, 10, C.brassDark);
+    fill(px(x) - 3, py(RAIL + 4), 6, Math.max(0, Math.round(bottom - h) - py(RAIL + 4)), C.brass);
+    mode7Pass(this.press, mode7Matrix(k, 0), [px(x), Math.round(bottom - h / 2)], buf, buf);
+    if (stamp && stamp.t >= stamp.shadow && stamp.t < stamp.shadow + 4) {
+      for (const d of [-1, 1]) rect(x + d * 22 - 4, stamp.y - 8, 8, 2, C.flash);
+    }
+    for (const burst of this.bursts) {
+      const size = burstSize(burst.age);
+      mosaicRect(buf, px(burst.x) - 24, py(burst.y) - 24, 48, 48, size);
+    }
   }
 
   drawParts(run, rect, t) {
@@ -231,6 +348,18 @@ export class SnesStage2Scene extends Phaser.Scene {
     rect(ledger.x - 2, ledger.baseY + 3, 4, 13, C.door);
     if (!ledger.taken) rect(ledger.x - 7, Math.round(ledger.y) - 9 + (Math.floor(t / 400) % 2), 14, 9, C.ledger);
   }
+}
+
+// The boss title card on BG3, a filed memo: the name, the department, and the line's subtitle beneath.
+function drawCard(fill, card) {
+  if (!card) return;
+  const y = Math.round(56 - card.slide * 110);
+  fill(28, y, 200, 46, C.gold);
+  fill(30, y + 2, 196, 42, C.memo);
+  fill(30, y + 2, 196, 8, C.brassDark);
+  drawString(fill, 'FILE 5', 36, y + 2, C.gold);
+  for (const [text, dy] of [['THE GREAT SEAL', 14], ['RETENTION DIRECTOR', 28]]) drawString(fill, text, (WIDTH - measure(text)) >> 1, y + dy);
+  if (card.subtitle) drawString(fill, '"SEALED."', (WIDTH - measure('"SEALED."')) >> 1, HEIGHT - 28);
 }
 
 function ring(fill, x, y, reach, points, size, colour) {

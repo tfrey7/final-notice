@@ -28,8 +28,7 @@ const SCENES = {
   title: snes ? new SnesTitleScene() : new TitleScene(),
   select: snes ? new SnesSelectScene() : new SelectScene(),
   stage1: snes ? new SnesStage1Scene() : new Stage1Scene(),
-  // The SNES Stage 2 plays areas 1-4; the Great Seal's room stays the NES one until card 1932.
-  stage2: snes && params.get('go') !== 'greatseal' ? new SnesStage2Scene() : new EscapeScene(),
+  stage2: snes ? new SnesStage2Scene() : new EscapeScene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: new EndingScene(),
 };

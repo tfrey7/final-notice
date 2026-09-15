@@ -50,6 +50,7 @@ export function backdropFor(index) {
 
 export function hudState(run, flow) {
   const p = run.player;
+  const seal = run.boss && !run.exit ? { name: 'director', hp: run.boss.hp, maxHp: run.boss.maxHp } : null;
   const boss = run.bosses?.find((b) => !b.beaten);
   return {
     name: p.auditor,
@@ -59,6 +60,6 @@ export function hudState(run, flow) {
     meter: segments(run.meterHits),
     carried: run.carried.map((c) => c ?? null),
     hand: run.hand,
-    boss: boss ? { name: 'custodian', hp: boss.hp, maxHp: boss.maxHp ?? boss.hp } : null,
+    boss: seal ?? (boss ? { name: 'custodian', hp: boss.hp, maxHp: boss.maxHp ?? boss.hp } : null),
   };
 }
