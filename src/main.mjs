@@ -24,6 +24,7 @@ import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 import { SnesLabScene } from './snes/lab/scene.mjs';
 import { SnesClimbLabScene } from './snes/lab/climb.mjs';
 import { SnesArchiveClimbScene } from './snes/stage2/climb.mjs';
+import { SnesShaftScene } from './snes/stage4/shaft.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -66,6 +67,8 @@ if (snes && params.get('go') === 'lab') scene = [new SnesLabScene()];
 else if (snes && params.get('go') === 'climblab') scene = [new SnesClimbLabScene()];
 // ?snes&go=archive is Stage 2 as a grey-box escape climb, floor to the Custodian; ?bot lets the climb bot play.
 else if (snes && params.get('go') === 'archive') scene = [new SnesArchiveClimbScene()];
+// ?snes&go=shaft is Stage 4 as a grey-box escape climb up the elevator shaft; ?bot lets the shaft bot play.
+else if (snes && params.get('go') === 'shaft') scene = [new SnesShaftScene()];
 else if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
