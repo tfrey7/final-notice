@@ -42,7 +42,7 @@ const OFFICE_BG = CLAIMS2.areas[2];
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
-  fangs: 'alarm', telegraph: 'blip',
+  fangs: 'alarm', telegraph: 'blip', parry: 'stamp',
 };
 const MENU_SOUNDS = { move: 'pencil', swap: 'stampOk', close: 'paperSlide', thud: 'stamp' };
 const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
@@ -334,6 +334,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     const layout = hudLayout({ ...state, pale: this.drain?.pale ?? p.hp, receipt: this.receipt, now: time });
     const dim = this.paused ? 0.5 : 1;
     this.g.clear();
+    // A parry's flash: the whole screen washed white for a few frames while the fight holds still.
+    if (w.flash > 0) this.fill(0, 0, WIDTH, HEIGHT, WHITE, Math.ceil(10 * w.flash / (this.tune.parryFlash || 1)));
     drawHud(this.fill, layout, steps);
     const { portrait } = layout;
     this.hudSprites.draw(steps.health ? artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })

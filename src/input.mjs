@@ -84,6 +84,7 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
       step: pressed.has('l') ? -1 : pressed.has('r') ? 1 : 0,
       aim: now.has('r'),
       swap: pressed.has('swap'),
+      parry: pressed.has('swap'),
     };
   }
   const chord = now.has('a') && now.has('b') && (pressed.has('a') || pressed.has('b'));

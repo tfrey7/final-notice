@@ -25,6 +25,7 @@ export const tuneFor = (who, base = defaultTune()) => ({ ...base, ...AUDITORS[wh
 
 const FREE = ['idle', 'walk', 'run'];
 const DOWNED = ['knockdown', 'down', 'getup', 'ko'];
+const PARRY_BLOCKED = [...DOWNED, 'bound', 'held'];
 
 function dummy(tune, x) {
   return { ...fighter('dummy', 'foe', x, START.y, tune), dummy: true, facing: -1 };
@@ -151,12 +152,26 @@ function injunction(world, pad, tune, events) {
   return true;
 }
 
+// X opens the parry window; a whiffed one locks the next out for a moment, so mashing never parries.
+function openParry(world, pad, tune, frozen, events) {
+  const p = player(world);
+  if (!frozen) {
+    if (p.parry > 0) p.parry--;
+    if (p.parryLock > 0) p.parryLock--;
+  }
+  if (!pad.parry || p.parryLock > 0 || PARRY_BLOCKED.includes(p.state)) return;
+  p.parry = tune.parryFrames;
+  p.parryLock = tune.parryFrames + tune.parryLockout;
+  events.push('parryTry');
+}
+
 export function stepFloor(world, pad, tune) {
   const events = [];
   world.ring = stepRing(world.ring);
   if (world.cooldown) tickCooldown(world.cooldown);
   if (injunction(world, pad, tune, events)) pad = withoutAB(pad);
   const frozen = world.hitStop > 0;
+  openParry(world, pad, tune, frozen, events);
   const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
     : struggle(world, pad, events) ?? beforeStep(world, pad, tune, events);
   const before = foeHp(world);

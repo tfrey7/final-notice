@@ -48,6 +48,11 @@ export const TUNING = {
   foeSpeed: [0.5, 0.125, 2, 0.125],
   foeWindup: [20, 4, 60, 1],
   foeCooldown: [70, 10, 200, 5],
+  parryFrames: [12, 1, 30, 1],
+  parryLockout: [24, 0, 60, 1],
+  parryStagger: [48, 16, 120, 2],
+  parryFreeze: [8, 0, 20, 1],
+  parryFlash: [6, 0, 20, 1],
 };
 
 export const defaultTune = () => Object.fromEntries(Object.entries(TUNING).map(([k, [v]]) => [k, v]));
@@ -98,9 +103,13 @@ export function inReach(a, b, reach, tune) {
 
 // Lands a hit: hit-stop for everyone, knockback or a knockdown. Answers false when it cannot land.
 // A guard (or a boss's armoured wind-up) stops every blow but a body thrown into it (`body`),
-// which breaks the guard instead.
-export function landHit(world, target, { damage, heavy, dir, body }, tune) {
+// which breaks the guard instead. A foe's blow (`from`) met inside the auditor's parry window is deflected.
+export function landHit(world, target, { damage, heavy, dir, body, from }, tune) {
   if (target.invuln > 0 || DOWNED.includes(target.state)) return false;
+  if (from && target.parry > 0 && !body) {
+    deflect(world, target, from, dir, tune);
+    return false;
+  }
   const guarding = target.state === 'guard' || target.armoured;
   if (guarding && !body) {
     world.hitStop = tune.hitStop;
@@ -117,6 +126,7 @@ export function landHit(world, target, { damage, heavy, dir, body }, tune) {
   if (target.hitsToFall && ++target.taken >= target.hitsToFall) heavy = true;
   if (target.hp === 0) heavy = true;
   if (heavy) target.taken = 0;
+  target.stagger = 0;
   world.hitStop = heavy ? tune.hitStopHeavy : tune.hitStop;
   world.events.push(heavy ? 'heavy' : 'hit');
   if (target.target) release(world, target);
@@ -128,6 +138,19 @@ export function landHit(world, target, { damage, heavy, dir, body }, tune) {
     target.vx = dir * tune.knockback;
   }
   return true;
+}
+
+// The Objection: the fight freezes on a flash and the attacker reels open, long enough for a full combo.
+function deflect(world, p, foe, dir, tune) {
+  p.parry = 0;
+  p.parryLock = 0;
+  world.hitStop = tune.parryFreeze;
+  world.flash = tune.parryFlash;
+  world.events.push('parry');
+  if (foe.target) release(world, foe);
+  set(foe, 'hurt');
+  foe.vx = -dir * tune.knockback;
+  foe.stagger = tune.parryStagger;
 }
 
 function knockDown(f, dir, tune) {
@@ -289,8 +312,9 @@ export function updateCommon(world, f, tune) {
     case 'hurt':
       f.x += f.vx;
       f.vx *= 0.75;
-      if (f.t >= tune.hitstun) {
+      if (f.t >= (f.stagger || tune.hitstun)) {
         f.taken = 0;
+        f.stagger = 0;
         set(f, 'idle');
       }
       break;
@@ -359,7 +383,7 @@ function updateFoe(world, f, tune) {
       if (f.t >= tune.foeWindup) {
         set(f, 'punch');
         if (inReach(f, p, tune.punchReach, tune) && p.z < 16 && p.state !== 'grab') {
-          landHit(world, p, { damage: 1, heavy: false, dir: f.facing }, tune);
+          landHit(world, p, { damage: 1, heavy: false, dir: f.facing, from: f }, tune);
         }
       }
       break;
@@ -381,6 +405,7 @@ export function step(world, input, tune = defaultTune()) {
   world.frame++;
   world.events = [];
   if (world.shake > 0) world.shake--;
+  if (world.flash > 0) world.flash--;
   const p = player(world);
   if (world.hitStop > 0) {
     world.hitStop--;

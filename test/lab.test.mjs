@@ -56,5 +56,6 @@ test('settings text names the wave and every changed dial', () => {
   const text = settingsText(dials, { associate: 2, counsel: 0 }, 'ward');
   assert.match(text, /wave: associate x2/);
   assert.match(text, /changed: hitStop 3 -> 4/);
-  assert.match(text, /parryFrames: 8/);
+  assert.match(text, /parryFrames: 12/);
+  assert.equal(dials.find((d) => d.key === 'parryFrames').group, 'moves');
 });

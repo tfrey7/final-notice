@@ -154,7 +154,7 @@ export function thinkStaff(world, f, tune) {
           world.tapes.push({ x: f.x + f.facing * 12, y: f.y, vx: f.facing * TAPE.speed, t: 0, from: f.id });
           world.events.push('redTape');
         } else if (inReach(f, p, k.reach, tune) && p.z < 16 && p.state !== 'grab') {
-          landHit(world, p, { damage: k.damage ?? 1, heavy: !!k.guard, dir: f.facing }, tune);
+          landHit(world, p, { damage: k.damage ?? 1, heavy: !!k.guard, dir: f.facing, from: f }, tune);
         }
       }
       break;

@@ -6,9 +6,7 @@ import { KINDS } from '../stage1/staff.mjs';
 import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
 // Dials the brawl design will want but the fighting does not have yet; shown and copied, not wired.
-export const PLANNED = {
-  parryFrames: [8, 1, 30, 1],
-};
+export const PLANNED = {};
 
 // Lab-only dials on top of TUNING: enemy speed and wind-up across every kind, attack turns, and the
 // frames the free Emergency Injunction cools down for.

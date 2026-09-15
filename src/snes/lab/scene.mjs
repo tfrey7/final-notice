@@ -22,7 +22,7 @@ const FLOOR = { left: 16, right: WIDTH - 16, top: 150, bottom: 216 };
 const START_COUNTS = { associate: 2, manager: 1, counsel: 0, supervisor: 0 };
 const RESPAWN_FRAMES = 90;
 const REPEAT = { delay: 14, every: 3 };
-const SOUND = { punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step', redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', injunction: 'injunction' };
+const SOUND = { punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step', redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', injunction: 'injunction', parry: 'stamp' };
 const GREY = { wall: 0x34343a, trim: 0x44444c, floor: 0x5a5a62, line: 0x66666e, shadow: 0x222226 };
 const BODY = { player: 0xdcdcdc, associate: 0x9c9c9c, manager: 0xb4ab8c, counsel: 0xa88c8c, supervisor: 0x8894a8 };
 const LETTER = { associate: 'A', manager: 'M', counsel: 'C', supervisor: 'S' };
@@ -62,11 +62,25 @@ export class SnesLabScene extends Phaser.Scene {
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot.
     if (params.has('dials')) this.panel.toggle(true);
+    // ?pose=parry stages an Associate's blow meeting an open parry and holds the frame it lands on,
+    // or `&hold=<frames>` that many frames later.
+    this.poseHold = Number(params.get('hold') ?? 0);
+    if (params.get('pose') === 'parry') this.poseParry();
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
       for (const [k, v] of Object.entries(this.kinds)) Object.assign(KINDS[k], v);
     });
+  }
+
+  poseParry() {
+    const w = this.world;
+    const p = w.fighters.find((f) => f.team === 'player');
+    const [a, ...rest] = w.fighters.filter((f) => f.team === 'foe');
+    Object.assign(p, { x: 120, parry: this.tune.parryFrames });
+    Object.assign(a, { x: p.x + 24, y: p.y, facing: -1, state: 'windup', t: this.tune.kinds.associate.windup - 2, cooldown: 0 });
+    rest.forEach((f, i) => Object.assign(f, { x: FLOOR.right - 8 - i * 30, cooldown: 999 }));
+    this.posed = true;
   }
 
   dial(key) {
@@ -111,7 +125,7 @@ export class SnesLabScene extends Phaser.Scene {
     if (this.tabbed || pad.pressed.has('select')) this.panel.toggle();
     this.tabbed = false;
     if (this.panel.visible) this.drivePanel(pad);
-    else this.play(pad);
+    else if (!this.held) this.play(pad);
     this.draw();
   }
 
@@ -132,6 +146,8 @@ export class SnesLabScene extends Phaser.Scene {
     const w = this.world;
     stepFloor(w, pad, this.tune);
     for (const e of w.events) if (SOUND[e]) sfx(SOUND[e]);
+    if (this.posed && w.events.includes('parry')) this.sincePose = 0;
+    if (this.sincePose !== undefined && this.sincePose++ >= this.poseHold) this.held = true;
     const foes = w.fighters.some((f) => f.team === 'foe') || w.bench.length;
     this.clear = foes ? 0 : this.clear + 1;
     if (this.clear >= RESPAWN_FRAMES) this.respawn();
@@ -160,6 +176,7 @@ export class SnesLabScene extends Phaser.Scene {
       const k = w.ring.t / RING.frames;
       g.lineStyle(2, 0xe0d0a0, 1 - k).strokeCircle(w.ring.x, w.ring.y, RING.from + (RING.to - RING.from) * (1 - (1 - k) ** 3));
     }
+    if (w.flash > 0) g.fillStyle(0xffffff, w.flash / (this.tune.parryFlash || 1) * 0.5).fillRect(-8, -8, WIDTH + 16, HEIGHT + 16);
     this.drawHud();
   }
 
@@ -183,7 +200,9 @@ export class SnesLabScene extends Phaser.Scene {
     const colour = flash ? 0xffffff : f.team === 'player' ? BODY.player : BODY[f.kind] ?? BODY.associate;
     const alpha = f.team === 'player' && f.invuln > 0 && f.invuln % 4 < 2 ? 0.4 : 1;
     g.fillStyle(colour, alpha).fillRect(x - bw / 2, top, bw, bh);
-    g.lineStyle(1, f.state === 'hurt' || f.state === 'held' ? 0xe04040 : 0x18181c).strokeRect(x - bw / 2, top, bw, bh);
+    // Red while hurt, yellow while reeling from a parry, blue while the auditor's parry window is open.
+    const edge = f.stagger > 0 ? 0xf0d040 : f.parry > 0 ? 0x60b0ff : f.state === 'hurt' || f.state === 'held' ? 0xe04040 : 0x18181c;
+    g.lineStyle(f.stagger > 0 || f.parry > 0 ? 2 : 1, edge).strokeRect(x - bw / 2, top, bw, bh);
     if (!lying) {
       // A face notch shows which way the box looks.
       g.fillStyle(0x18181c).fillRect(f.facing > 0 ? x + bw / 2 - 6 : x - bw / 2 + 2, top + 8, 4, 4);
