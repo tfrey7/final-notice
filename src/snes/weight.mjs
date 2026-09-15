@@ -11,7 +11,7 @@ export const BRAWL_WEIGHT = {
   frames: {
     landFrames: 1, punchStartup: 1, punchActive: 1, punchRecovery: 2,
     finisherStartup: 2, finisherActive: 1, finisherRecovery: 6,
-    bufferFrames: 4, comboWindow: 6, hitStop: 1, hitStopHeavy: 3, hitStopFinish: 3, hitstun: 4,
+    bufferFrames: 4, comboWindow: 6, hitStop: 1, hitStopHeavy: 3, hitStopFinish: 4, hitstun: 4,
     hitFlashFrames: 6, heavyShakeFrames: 4,
     downFrames: 12, getUpFrames: 6, throwFrames: 6, shakeFrames: 2, foeWindup: 6, foeCooldown: 15,
   },
