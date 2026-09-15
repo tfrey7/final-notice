@@ -6,22 +6,21 @@ import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { keep } from '../nes/limits.mjs';
 import { createSlowdown, slowdownTick } from '../nes/slowdown.mjs';
 import { NesDebug, nesDebugOn } from '../nes/debug.mjs';
-import { playSong, sfx } from '../audio/player.mjs';
+import { playSong, sfx, stopSong } from '../audio/player.mjs';
+import { cheapen, fastOn } from '../fast.mjs';
 import { pollPad } from '../input.mjs';
-import { AUDITORS as WHO, jumpTo, next } from '../flow.mjs';
-import { drawText, showFlow } from '../scenes/placeholder.mjs';
+import { AUDITORS as WHO, jumpTo, next, showFlow } from '../flow.mjs';
+import { drawText } from '../text/font.mjs';
 import { mountTunePanel } from '../tune.mjs';
 import { TILE, solidAt } from './physics.mjs';
 import { drawActors, loadActorArt } from './draw.mjs';
 import { carry, inHand, swapHand } from './pickups.mjs';
-import { drawStage2Hud } from './hud.mjs';
-import { drawRing } from '../hud.mjs';
+import { bossBarLayout, drawBossBar, drawPause, drawRing, drawStage2Hud } from '../hud.mjs';
 import { HITS_PER_SEGMENT, ringShape } from '../injunction.mjs';
 import { BOSS_AREA, arenaLocked, createStage, layoutFrom, stepStage } from './areas.mjs';
 import { drawPrompts, drawStageParts } from './areadraw.mjs';
 import { createArena, poseArena, reachedArena, stepArena } from './greatseal.mjs';
 import { drawSeal, drawSealBack, loadSealArt } from './sealdraw.mjs';
-import { bossBarLayout, drawBossBar } from '../hud.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
@@ -43,6 +42,8 @@ export class EscapeScene extends Phaser.Scene {
 
   async create() {
     this.ready = false;
+    this.paused = false;
+    this.fast = fastOn();
     const params = new URLSearchParams(location.search);
     let flow = this.registry.get('flow');
     if (!flow || flow.screen !== 'stage2') flow = jumpTo('stage2');
@@ -105,6 +106,7 @@ export class EscapeScene extends Phaser.Scene {
     };
     if (!slowdownTick(this.slowdown, work)) { this.draw(this.registry.get('flow')); return; }
     const pad = pollPad(frame);
+    if (this.fast) cheapen([...run.foes, ...(run.bosses ?? []), run.boss, run.boss?.seal, ...(run.boss?.bindings ?? [])]);
     if (run.boss) {
       stepArena(run, pad);
     } else {
@@ -113,6 +115,13 @@ export class EscapeScene extends Phaser.Scene {
         this.enterArena();
         this.run.events.push({ type: 'checkpoint', id: BOSS_AREA.id });
       }
+    }
+    // Start pauses play anywhere in the stage: music silenced, a blip each way.
+    if (this.run.paused !== this.paused) {
+      this.paused = this.run.paused;
+      sfx('pause');
+      if (this.paused) stopSong();
+      else playSong(this.song);
     }
     let flow = this.registry.get('flow');
     for (const e of this.run.events) {
@@ -128,7 +137,7 @@ export class EscapeScene extends Phaser.Scene {
     }
     // The boss theme while the Custodian's screen is locked, back to the stage's once the ledger is taken.
     const song = this.run.boss ? this.song : arenaLocked(this.run) ? 'boss' : 'stage2';
-    if (song !== this.song) playSong(this.song = song);
+    if (!this.paused && song !== this.song) playSong(this.song = song);
     this.draw(flow);
   }
 
@@ -186,6 +195,7 @@ export class EscapeScene extends Phaser.Scene {
     const hud = this.hud.clear();
     if (run.ring) drawRing(hud, ringShape(run.ring), Math.round(run.ring.x - cx), run.ring.y);
     drawStage2Hud(hud, run, flow);
+    if (run.paused) drawPause(hud);
     if (!run.boss) drawPrompts(hud, run);
     else if (!run.exit) drawBossBar(hud, bossBarLayout({ name: 'director', hp: run.boss.hp, maxHp: run.boss.maxHp }), drawText);
     if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));

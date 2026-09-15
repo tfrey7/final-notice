@@ -1,5 +1,5 @@
 // The game's order of screens, the chosen auditor, lives, continues and checkpoints.
-// Pure: every event returns a new state, and the scenes only ever show `state.screen`.
+// Every event returns a new state, and the scenes only ever show `state.screen`.
 
 export const ORDER = ['title', 'select', 'scene1', 'stage1', 'scene2', 'stage2', 'scene3', 'ending'];
 export const SCREENS = [...ORDER, 'gameover'];
@@ -28,6 +28,15 @@ export const SONGS = {
 };
 
 export const isStage = (screen) => STAGES.includes(screen);
+
+// What the game over screen offers: CONTINUE only while continues remain.
+export const gameOverChoices = (state) => (state.continues > 0 ? ['continue', 'end'] : ['end']);
+
+// The flow state lives in the game registry; showing a state starts the scene for its screen.
+export function showFlow(scene, state) {
+  scene.registry.set('flow', state);
+  if (scene.scene.key !== state.screen) scene.scene.start(state.screen);
+}
 
 export function newGame() {
   return { screen: 'title', auditor: 'ward', lives: LIVES, continues: CONTINUES, stage: null, checkpoint: null };

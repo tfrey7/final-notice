@@ -138,3 +138,13 @@ export function wrap(text, cols = BOX_COLS, rows = BOX_ROWS) {
   for (let i = 0; i < lines.length; i += rows) pages.push(lines.slice(i, i + rows));
   return pages;
 }
+
+// Paints `text` in the 8x8 font onto a Phaser graphics, one pixel rectangle per lit dot.
+export function drawText(g, text, x, y, color) {
+  g.fillStyle(color);
+  [...text].forEach((ch, i) => {
+    glyph(ch).forEach((row, r) => {
+      for (let c = 0; c < CELL; c++) if (row[c] === '#') g.fillRect(x + i * CELL + c, y + r, 1, 1);
+    });
+  });
+}

@@ -1,8 +1,7 @@
 // Stage 2's wax front, fire doors and teaching prompts on screen.
 import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
-import { CELL } from '../text/font.mjs';
-import { drawText } from '../scenes/placeholder.mjs';
+import { CELL, drawText } from '../text/font.mjs';
 import { TILE } from './physics.mjs';
 import { frontsOf, promptsFor } from './areas.mjs';
 import { BELT } from './conveyor.mjs';

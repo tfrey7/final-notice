@@ -6,17 +6,18 @@ import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { keep } from '../nes/limits.mjs';
 import { createSlowdown, pairs, slowdownTick } from '../nes/slowdown.mjs';
 import { NesDebug, nesDebugOn } from '../nes/debug.mjs';
-import { playSong, sfx } from '../audio/player.mjs';
+import { currentSong, playSong, sfx, stopSong } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
-import { SONGS, jumpTo, next } from '../flow.mjs';
+import { SONGS, jumpTo, next, showFlow } from '../flow.mjs';
 import { TUNING, shakeOffset } from './moves.mjs';
 import { FLOOR_W, HITS_PER_SEGMENT, PIPS, SCREEN_W, animFor, newFloor, stepFloor, tuneFor } from './player.mjs';
 import { AREAS, STAGE, areaFor, newStage, stepAreas } from './areas.mjs';
 import { remark } from '../scenes/cinema.mjs';
 import { ringShape } from '../injunction.mjs';
 import { registerTuning, mountTunePanel } from '../tune.mjs';
-import { drawText, showFlow } from '../scenes/placeholder.mjs';
-import { HUD_HEIGHT, bossBarLayout, drawBossBar, drawHud, drawRing, hudLayout } from '../hud.mjs';
+import { drawText } from '../text/font.mjs';
+import { HUD_HEIGHT, bossBarLayout, drawBossBar, drawHud, drawPause, drawRing, hudLayout } from '../hud.mjs';
+import { cheapen, fastOn } from '../fast.mjs';
 import { pose, spawnStaff } from './staff.mjs';
 import { enterOffice, poseOffice, vellum } from './vellum.mjs';
 import { bindSprites, foeSprites, tapeSprites } from './foe-actors.mjs';
@@ -88,12 +89,14 @@ export class Stage1Scene extends Phaser.Scene {
     if (!state || state.screen !== 'stage1') state = jumpTo('stage1');
     this.registry.set('flow', state);
     this.ready = false;
+    this.paused = false;
+    this.fast = fastOn();
     // The boss room's checkpoint is Vellum's locked office.
     this.office = state.checkpoint === OFFICE;
     if (this.office) playSong('boss');
     else {
       playSong('stageStart');
-      this.time.delayedCall(STAGE_START_MS, () => playSong(SONGS.stage1));
+      this.time.delayedCall(STAGE_START_MS, () => { if (this.paused) this.resume = SONGS.stage1; else playSong(SONGS.stage1); });
     }
     this.cameras.main.setBackgroundColor(nes(0x0f));
     const params = new URLSearchParams(location.search);
@@ -208,7 +211,9 @@ export class Stage1Scene extends Phaser.Scene {
     if (!slowdownTick(this.slowdown, work)) { this.draw(); return; }
     const pad = pollPad(loopFrame);
     const flow = this.registry.get('flow');
-    if (pad.pressed.has('start')) { showFlow(this, next(flow, { type: 'stageClear' })); return; }
+    if (pad.pressed.has('start')) this.togglePause();
+    if (this.paused) { this.draw(); return; }
+    if (this.fast) cheapen(this.world.fighters);
 
     stepFloor(this.world, pad, this.tune);
     if (this.areas) stepAreas(this.world, this.tune);
@@ -232,6 +237,18 @@ export class Stage1Scene extends Phaser.Scene {
     const shake = shakeOffset(this.world, this.tune);
     this.cameras.main.setScroll(Math.round(this.world.cameraX) + shake.x, shake.y);
     this.draw();
+  }
+
+  // Start pauses play anywhere in the stage: music silenced, a blip each way.
+  togglePause() {
+    this.paused = !this.paused;
+    sfx('pause');
+    if (this.paused) {
+      this.resume = currentSong() === 'stageStart' ? SONGS.stage1 : currentSong() ?? this.resume;
+      stopSong();
+    } else if (this.resume) {
+      playSong(this.resume);
+    }
   }
 
   draw() {
@@ -282,6 +299,7 @@ export class Stage1Scene extends Phaser.Scene {
       drawText(g, `F${this.game.loop.frame} ${move} STOP ${w.hitStop}`, 8, SAFE + 28, nes(0x30));
       drawText(g, foes.join(' '), 8, SAFE + 40, nes(0x38));
     }
+    if (this.paused) drawPause(g);
     this.debug?.draw(this.layer.stats, this.slowdown);
   }
 }

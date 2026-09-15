@@ -79,7 +79,7 @@ export function scriptedButtons(script, frame) {
   return out;
 }
 
-// The default demo presses Start every 90 frames, which walks the placeholder flow on its own.
+// The default demo presses Start every 90 frames, which pages through the title, select and scenes.
 export const DEMO_SCRIPT = Array.from({ length: 40 }, (_, i) => ({ at: 60 + i * 90, buttons: ['start'] }));
 
 let live = null;

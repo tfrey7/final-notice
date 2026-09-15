@@ -2,13 +2,12 @@
 /* global Phaser */
 import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
-import { measure, wrap } from '../text/font.mjs';
+import { measure, wrap, drawText } from '../text/font.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { currentSong, playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
-import { AUDITORS, SONGS, jumpTo, next } from '../flow.mjs';
+import { AUDITORS, SONGS, jumpTo, next, showFlow } from '../flow.mjs';
 import { SELECT } from '../story/script.mjs';
-import { drawText, showFlow } from './placeholder.mjs';
 import { loadUi } from './title.mjs';
 import { selectStep } from './menu.mjs';
 

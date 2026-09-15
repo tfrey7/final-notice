@@ -1,7 +1,7 @@
 // The Great Seal's arena and the exit run on screen: bulkhead, rail, press, bindings, the Director and his seal.
 import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
-import { drawText } from '../scenes/placeholder.mjs';
+import { drawText } from '../text/font.mjs';
 import { DIRECTOR, FLOOR_Y, SEAL, sealOpen } from './greatseal.mjs';
 
 const MS = 1000 / 60;

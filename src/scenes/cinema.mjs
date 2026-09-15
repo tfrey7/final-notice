@@ -4,13 +4,12 @@
 import { WIDTH, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { artOr, loadArt, bakeBackground } from '../nes/art.mjs';
-import { CELL, BOX_COLS, wrap } from '../text/font.mjs';
+import { CELL, BOX_COLS, wrap, drawText } from '../text/font.mjs';
 import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
-import { SONGS, jumpTo, next } from '../flow.mjs';
+import { SONGS, jumpTo, next, showFlow } from '../flow.mjs';
 import { REMARKS, SPEAKERS } from '../story/script.mjs';
 import { SCENE_IDS, FRAMES_PER_FADE_STEP, startPlayer, tick, press, visibleLines, fadeIndex, fadeSteps } from '../story/cinema.mjs';
-import { drawText, showFlow } from './placeholder.mjs';
 
 const PICTURE = { x: SAFE, y: SAFE, w: WIDTH - 2 * SAFE, h: 144 };
 const PORTRAIT = { x: 96, y: SAFE + 48, w: 64, h: 96 };

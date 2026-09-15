@@ -2,12 +2,11 @@
 /* global Phaser */
 import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
-import { CELL, glyph, measure } from '../text/font.mjs';
+import { CELL, glyph, measure, drawText } from '../text/font.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { playSong } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
-import { SONGS, jumpTo, next } from '../flow.mjs';
-import { drawText, showFlow } from './placeholder.mjs';
+import { SONGS, jumpTo, next, showFlow } from '../flow.mjs';
 import { blinkOn, rng, skyline, titleStep } from './menu.mjs';
 
 const centre = (text, scale = 1) => Math.floor((WIDTH - measure(text) * scale) / 2);
