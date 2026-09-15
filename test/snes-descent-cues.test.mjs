@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import seal, { QUOTE, QUOTE_BAR as SEAL_QUOTE } from '../src/snes/audio/songs/seal.mjs';
-import disposal, { QUOTE_BAR as DISPOSAL_QUOTE } from '../src/snes/audio/songs/disposal.mjs';
+import seal, { FORM as SEAL_FORM } from '../src/snes/audio/songs/seal.mjs';
+import disposal, { FORM as DISPOSAL_FORM } from '../src/snes/audio/songs/disposal.mjs';
 import scene from '../src/snes/audio/songs/scene.mjs';
 import scene3, { DRONE } from '../src/snes/audio/songs/scene3.mjs';
 import ending from '../src/snes/audio/songs/ending.mjs';
@@ -18,36 +18,35 @@ const notes = (bar) => bar.split(/\s+/).filter((t) => /^[A-G]/.test(t));
 const midi = (t) => noteToMidi(t.split(':')[0]);
 const instOf = (t) => t.split(':')[1].split('/')[0];
 
-for (const [name, def, quoteBar] of [['Great Seal', seal, SEAL_QUOTE], ['Disposal Line', disposal, DISPOSAL_QUOTE]]) {
-  test(`the ${name} cue is the gothic band: brass with vibrato, organ strings, a bell, no corporate instrument`, () => {
+const intervals = (ms) => ms.slice(1).map((m, i) => m - ms[i]);
+
+for (const [name, def, form, extra] of [['Great Seal', seal, SEAL_FORM, ['rec-slowstr', 'rec-timpani']], ['Disposal Line', disposal, DISPOSAL_FORM, ['rec-piano']]]) {
+  test(`the ${name} is its own song on the gothic band: strings and piano, no brass, nothing corporate`, () => {
     const used = new Set(VOICE_NAMES.flatMap((v) => notes(def[v].rows).map(instOf)));
     for (const key of used) assert.doesNotMatch(def.instruments[key].sample, CORPORATE, key);
     const samples = [...used].map((key) => def.instruments[key].sample);
-    for (const s of ['rec-brass', 'rec-strings', 'rec-bell', 'rec-synbass']) assert.ok(samples.includes(s), s);
-    const lead = VOICE_NAMES.find((v) => notes(def[v].rows).some((t) => /brass|lead/.test(t)));
-    const brass = def.instruments[instOf(notes(def[lead].rows)[0])];
-    assert.ok(brass.pitch.some((p) => p !== 0), 'the brass has vibrato');
-    const organ = notes(def.v3.rows).map(midi);
-    assert.ok(organ.every((m) => m >= 48 && m < 80), 'the organ strings sit between C3 and G#5');
+    for (const s of ['rec-strings', 'rec-synbass', ...extra]) assert.ok(samples.includes(s), s);
+    assert.ok(!samples.includes('rec-brass'), 'no brass');
+    const tune = notes(def.v1.rows);
+    for (const t of tune) assert.match(def.instruments[instOf(t)].sample, /rec-(strings|slowstr|piano)$/, t);
+    assert.ok(Math.max(...tune.map(midi)) <= noteToMidi('G5'), 'the tune tops out at G5');
   });
 
-  test(`the ${name} tolls the bell on every other downbeat and quotes the title hook in C minor once`, () => {
-    const bell = bars(def, 'v4');
-    bell.forEach((b, i) => {
-      if (i !== quoteBar) assert.equal(/^[A-G]\S*:toll/.test(b), i % 2 === 0, `bar ${i}`);
-    });
-    assert.equal(bell.filter((b) => b.includes(':bell')).length, 1);
-    assert.equal(bell[quoteBar], QUOTE);
-    const hook = notes(HOOK).map(midi);
-    const quote = notes(QUOTE).map(midi);
-    assert.deepEqual(quote.map((m) => m - quote[0]), hook.map((m, i) => m - hook[0] - (i === 2 ? 1 : 0)), 'the hook, its third made minor');
-    assert.equal(quote[1] % 12, 0, 'on C');
+  test(`the ${name} never plays the title hook`, () => {
+    const hook = intervals(notes(HOOK).map(midi)).join();
+    for (const v of VOICE_NAMES) {
+      const line = intervals(notes(def[v].rows).map(midi));
+      const n = hook.split(',').length;
+      for (let i = 0; i + n <= line.length; i++) assert.notEqual(line.slice(i, i + n).join(), hook, `${v} at note ${i}`);
+    }
   });
 
-  test(`the ${name} cue is a whole song and nothing clips`, () => {
+  test(`the ${name} cue is a whole song that loops on a bar line and nothing clips`, () => {
     const song = compileSong(def);
+    assert.equal(song.length, form.length * 16);
+    assert.equal(song.loop % 16, 0);
     const seconds = ((song.length - song.loop) * def.tempo) / 60;
-    assert.ok(seconds >= 110 && seconds <= 190, `${seconds} s`);
+    assert.ok(seconds >= 90 && seconds <= 190, `${seconds} s`);
     const { left, right } = renderSong(def, 12);
     const peak = left.reduce((p, _, i) => Math.max(p, Math.abs(left[i]), Math.abs(right[i])), 0);
     assert.ok(peak > 0.1 && peak < 0.95, `peak ${peak}`);

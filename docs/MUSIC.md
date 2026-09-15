@@ -40,11 +40,16 @@ Checked 2026-09-15 (item 2193) by what each song file imports and quotes.
 | --- | --- | --- |
 | SNES `hold` (pause hold music) | the title hook as its whole eight-bar tune | **rewrite** as its own on-hold tune |
 | NES `stage1 (v1)`, `stage2 (v1)`, `ending (v1)` | the title melody and chords, bar for bar | superseded, sound test only; rewrite only if they come back into play |
-| SNES `seal`, `disposal` | one bar of the hook, in C minor, on the bell | a nod: within the rule |
+| SNES `seal-v1`, `disposal-v1` | the boss and Stage 2 material, plus one bar of the hook on the bell | superseded (item 2197), sound test only |
 | SNES `title`, `title-v1`; NES `title`, `title-v1`, `title-v2`, `scene`, `scene-v1` | the theme itself | title and story scenes: within the rule |
 
-Every other SNES cue (`stage1`, `stage2`, the chase sketches, `boss`, `vellum`, `scene`, `scene3`,
-`ending`, the jingles) is written from scratch.
+Every other SNES cue (`stage1`, `stage2`, the chase sketches, `boss`, `vellum`, `disposal`, `seal`,
+`scene`, `scene3`, `ending`, the jingles) is written from scratch.
+
+| Track | Tempo, key | Groove | Lead | Form (bars) |
+| --- | --- | --- | --- | --- |
+| SNES Disposal Line, the factory floor | 129 BPM, F minor | a 3-3-2 sixteenth string grind, piano hammering the accents, driving synth bass, busy hats | grand piano, a stamping two-hit riff; strings sing in B; no brass | intro 4, A 8, A2 8, B (Db) 8, B2 8, breakdown to the machine 8, A with counter 8, turn 4: 105 s, 97 s loop |
+| SNES Great Seal, the arena | 100 BPM felt half time, C minor | eighth-note string arpeggios, held choir, bell at phrase heads, half-time kick and snare | strings, low, a five-note oath (C G, Eb D C); slow strings in B over chromatic mediants (Ebm, B, Abm, E); no brass | intro 4, A 8, A2 8, B 8, breakdown C against Db with timpani 8, A with counter 8, turn 4: 115 s, 106 s loop |
 
 ## DPCM drums
 

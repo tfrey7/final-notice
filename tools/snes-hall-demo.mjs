@@ -6,7 +6,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import seal, { BAR_ROWS, FORM, QUOTE_BAR } from '../src/snes/audio/songs/seal.mjs';
+import seal, { BAR_ROWS, FORM, QUOTE_BAR } from '../src/snes/audio/songs/seal-v1.mjs';
 import { renderSong } from '../src/snes/audio/player.mjs';
 import { noteToMidi } from '../src/audio/apu.mjs';
 import { wav } from './snes-render.mjs';
