@@ -2,7 +2,7 @@
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
-*`kb_get final-notice-story` · version 1*
+*`kb_get final-notice-story` · version 2*
 
 Agreed live in the room by Tim and Jarvis, 2026-09-15, 12:53-12:59 EDT. This is the story the game
 tells; where another doc or the script disagrees, this one wins. Anything marked *(proposed)* fills a
@@ -73,6 +73,108 @@ as you rise.
 | 4 | The express elevator shaft | escape climb | Backrooms turning wrong | The floors fold in below you. You find Bellwether's signature on the transfers; he cuts your line and turns the agency on you. |
 | 5 | The executive chapel | brawl | gothic | *(proposed: the Master File itself, held by the company's oldest preserved executives; you take it.)* |
 | 6 | The Great Seal | escape climb into the final boss | gothic, the top | The Seal's shadow chases you up to the crown of the tower, where Bellwether is bound to the Seal. |
+
+## Story beats inside the stages *(proposed, item 2292, waiting on Tim's verdict)*
+
+Tim, 2026-09-15 17:20 EDT: "we also need some story rollout in the game sections, especially the
+brawler sections: exposition from bosses, maybe a little cutscene after a miniboss, etc. with more
+voice acting". Built on the roster in `kb_get final-notice-brawl-design` (item 2289) and the intro
+(item 2279). The intro shows the world and Scene 1 sends the partners in, so these beats only move the
+plot up the tower: none repeats the intro, Scenes 1-3, Vellum's memo card ("You're overdue."), the
+Custodian's slip, the Great Seal's card or the partners' fight barks.
+
+**How each beat plays.**
+
+- **Portraits, over play:** a portrait and a one-line box while the fight keeps running; nothing
+  pauses. Every in-fight boss line is this.
+- **Portraits, pad held:** a short exchange as a boss walks on (at most 4 s) or after one falls (at
+  most 6 s), pad back on its last line. Start skips it.
+- **Cutscene:** digitized live-action actors in the 256x144 cinema frame, after a miniboss or boss
+  falls, 8-20 s, one mosaic in and a brightness fade out. Start skips it. Actors only ever appear
+  here, never in a fight.
+- **Solo play:** only the chosen partner speaks, so a "Ward / Mercer" cell is one line or the other,
+  never both. Every line is voiced.
+- **Tuesday** is the man who died on Tuesday, freed after Pruitt and guiding from then on.
+
+### Stage 1, the Service Floor (brawl)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 1.1 | First screen, as the pad comes back | portraits, over play, 3 s | **Ward:** "Service Floor. Every desk occupied, and not one timesheet closed." / **Mercer:** "Full house. Nobody breathing." |
+| 1.2 | Pruitt walks on | portraits, pad held, 4 s | **Pruitt:** "Nine-oh-four. You're late. That's docked." **Ward:** "We don't work here." / **Mercer:** "Take it out of my pension." **Pruitt:** "Everybody works here." |
+| 1.3 | Pruitt's fight | portraits, over play, 1.5 s each | A copier hits him: **Pruitt:** "That is company property!" At half health: **Pruitt:** "No running on my floor!" |
+| 1.4 | Pruitt falls | cutscene, 15 s | Pruitt slumped on the copier, clipboard on the floor. Under the desk behind him, a young clerk bound to his chair in red tape stamped PENDING. **Tuesday:** "You're from the agency? I'm the one they billed. I wrote the billing." **Ward:** "Then you'll know where they keep the books." / **Mercer:** "Then you owe us directions." **Tuesday:** "Up. Everything that matters is up. I'll show you." |
+| 1.5 | Vellum's fight | portraits, over play, 2 s each | At half health: **Vellum:** "Forty years, and not one letter from the agency." At a quarter: **Vellum:** "Please. They let me stay if I stop you." |
+| 1.6 | Vellum falls | cutscene, 16 s | Vellum on his knees in the ash of the burned copies. **Vellum:** "Burn every copy you like. The Master File is upstairs, and it was never mine to give." **Ward:** "You taught me nobody keeps a soul. Not even you." / **Mercer:** "Then we'll take the stairs." **Vellum:** "Find my file. Somebody has to." He fades as company staff drag him off. |
+
+### Stage 2, the Archive (escape climb)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 2.1 | The climb starts | portraits, over play, 2 s | **Tuesday:** "Don't read anything. It gets longer when you read it." |
+| 2.2 | The Custodian's fight | portraits, over play, 1.5 s | At half health: **Custodian:** "Out of order. Back on the shelf." |
+| 2.3 | The Custodian falls, the index open on his desk | portraits, pad held, 6 s | **Tuesday:** "The index. Master File, signed out to the executive chapel. Forty years overdue." **Ward:** "Overdue. Naturally." / **Mercer:** "Somebody owes a late fee." |
+
+### Stage 3, the middle floors (brawl)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 3.1 | First screen | portraits, over play, 4 s | **Tuesday:** "I set these desks up. Row forty. The carpet was new." **Ward:** "The carpet is not the concern." / **Mercer:** "Carpet held up better than they did." |
+| 3.2 | Vellum, Retained walks on, RETAINED stamped on his lapel | portraits, pad held, 4 s | **Vellum:** "They gave me a desk. It never ends. Isn't it wonderful?" **Ward:** "You could have waited for your notice." / **Mercer:** "You took the job." **Vellum:** "Staff! Assist me!" |
+| 3.3 | His fight | portraits, over play, 2 s | Each time he calls Associates: **Vellum:** "I read the rules. Nobody else reads the rules!" |
+| 3.4 | Vellum, Retained falls | cutscene, 20 s | Vellum grey at the edges, holding out one yellow carbon page. **Vellum:** "I kept one page. Look at the initials." **Ward:** "B. Initials only." / **Mercer:** "Could be anybody." **Vellum:** "It's never anybody." The partner hands him a buff envelope. **Ward:** "Your Final Notice, forty years late. I'm sorry." / **Mercer:** "Here. Late, but it's yours." He opens it, and is gone. |
+| 3.5 | Carbon and Copy walk on | portraits, pad held, 4 s | **Carbon:** "I'm the original." **Copy:** "I'm the original." **Ward:** "One of you is redundant." / **Mercer:** "I'll settle it." |
+| 3.6 | Their fight | portraits, over play, 1.5 s each | One hits the other: **Copy:** "You hit me!" **Carbon:** "You were in my margin!" |
+| 3.7 | They fall, at the express elevator doors | portraits, pad held, 6 s | **Carbon:** "Express goes straight to the top." **Copy:** "Straight to the top." **Tuesday:** "That's where the transfers go to be signed." **Ward:** "Then that's where the signature is." / **Mercer:** "Going up." |
+
+### Stage 4, the express elevator shaft (escape climb)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 4.1 | The climb starts, on the partner's radio | portraits, over play, 3 s | **Bellwether:** "Good work down there. Bring me the Master File, and come straight back to me." |
+| 4.2 | Halfway, a transfer binder jammed in the shaft | cutscene, 16 s | The binder open under a work light: page after page, APPROVED, the same signature. **Ward:** "Every transfer. Bellwether's hand." / **Mercer:** "Our boss signs a lot of things." The radio clicks. **Bellwether (cold):** "Approved at the top. Your line is cut." **Tuesday:** "He was always on the phone with the tower. Always." |
+| 4.3 | The agency's own clerks climb in after them | portraits, over play, 2 s | **Ward:** "Those are our own people." / **Mercer:** "Great. Now it's our lot too." |
+
+### Stage 5, the executive chapel (brawl)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 5.1 | First screen | portraits, over play, 3 s | **Tuesday:** "I never came up this far. Executives only." **Ward:** "We have an appointment." / **Mercer:** "Smells like a church and a board meeting." |
+| 5.2 | The Custodian walks on | portraits, pad held, 3 s | **Custodian:** "Two strays. Unindexed. We'll find you a shelf." **Ward:** "We are not staying." / **Mercer:** "We're checked out." |
+| 5.3 | His fight | portraits, over play, 1.5 s | Each call: **Custodian:** "Associates! Reshelve them!" |
+| 5.4 | The Custodian falls | cutscene, 12 s | The Custodian wedged in a card-catalogue drawer, one index card in his fingers. **Custodian:** "Tuesday. Checked in. Never checked out." **Tuesday:** "That's my card." **Ward:** "Keep it. It gets stamped on the way out." / **Mercer:** "Hang on to it. We'll stamp it at the top." |
+| 5.5 | Carbon and Copy, triplicate walk on | portraits, pad held, 3 s | **Pink:** "I agree with him." **Carbon:** "Which him?" **Pink:** "Yes." |
+| 5.6 | Their fight | portraits, over play, 1.5 s | A copy hits a copy: **Pink:** "Good point!" |
+| 5.7 | They fall | cutscene, 8 s | The three copies slump into one sheet on a pew: the chapel's seating plan. **Tuesday:** "The Chairman sits alone at the front. He always sits alone." **Ward:** "Then nobody is in the way." / **Mercer:** "Front row. Figures." |
+| 5.8 | Hargreave rises at his pew | portraits, pad held, 4 s | **Hargreave:** "Kneel. This is a board meeting, and you are not on the agenda." **Ward:** "Agency for the Recently Deceased. We're on it now." / **Mercer:** "We added ourselves." |
+| 5.9 | His fight | portraits, over play, 2 s each | The seal cracks: **Hargreave:** "Order! Relight the censers!" At a quarter: **Hargreave:** "I signed the first soul in eighteen fifty-one. Nobody told me to stop." |
+| 5.10 | Hargreave falls | cutscene, 20 s | The wax slumps; the Master File drops open on the altar steps, names in every hand back to 1851 and Bellwether's signature on the newest pages. **Tuesday:** "It's all here. Everyone. Me." **Ward:** "Every soul, and who signed each one over." / **Mercer:** "Heavier than it looks." Far above, a great stamp comes down and the chapel shakes. **Ward:** "That is the Seal." / **Mercer:** "Somebody's stamping upstairs." |
+
+### Stage 6, the Great Seal (escape climb into the final boss)
+
+| # | Where | Form, length | Lines |
+| --- | --- | --- | --- |
+| 6.1 | The climb starts, the Seal's shadow below | portraits, over play, 2 s | **Tuesday:** "Don't let it stamp you. What it stamps stays stamped." |
+| 6.2 | At the crown, before the Seal's card | portraits, pad held, 4 s | **Bellwether (cold):** "You brought me the Master File. Good. Hand it up." **Ward:** "It's evidence, sir." / **Mercer:** "Come down and get it." |
+| 6.3 | The fight | portraits, over play, 2 s | At half health: **Bellwether (cold):** "I approved all of it. Somebody had to." |
+
+The endings (the choice at the Seal) are the ending's own scene and are not scripted here.
+
+### What it adds up to
+
+- **Lines:** a solo run hears 68 voiced lines across the six stages, most under 3 s; 21 of them are
+  the partner's, so recording is 89 takes (each partner line in Ward's words and in Mercer's).
+  Cutscenes: 7, 8-20 s each, about 1 min 47 s in all. The longest pause before a fight is a 4 s
+  walk-on.
+- **Voices the cast lacks:** Pruitt (a dry old floor manager), Carbon and Copy (one clerk's voice at
+  two pitches, with Pink a third), Chairman Hargreave (very old, slow, papery), and the Custodian as a
+  voiced cast member (he has only a synth line today). Vellum, Bellwether (warm and cold), Tuesday,
+  Ward and Mercer use their existing voices. New cutscene actors: Pruitt, Tuesday, Vellum, the
+  Custodian, the three copies and Hargreave.
+- **Replaces:** Scene 3's "Signed off at the top" and its wall-speaker phone call; Bellwether's
+  signature and cutting the line now happen in the shaft (4.2), as the story above sets out.
+- **Nothing is built or recorded from this yet.** Jarvis files the build and recording cards once
+  Tim approves.
 
 ## The two endings
 
