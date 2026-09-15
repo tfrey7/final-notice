@@ -12,4 +12,7 @@ export const VELLUM_SONG = 'vellum';
 export const VELLUM_PINCH = 'vellum-pinch';
 export const vellumPinch = (hp, maxHp) => hp > 0 && hp * 3 <= maxHp;
 
+// The escape climb up the Archive ahead of the paper flood.
+export const ARCHIVE_CLIMB_SONG = 'archive-climb';
+
 export const stage2Song =(x) => (areaAt(x) >= DISPOSAL_AREA ? 'disposal' : 'stage2');

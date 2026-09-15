@@ -13,6 +13,8 @@ import { TILE } from '../../stage2/physics.mjs';
 import { ARCHIVE, CHECKPOINT_LEDGE, DROP, LEDGES, createArchive, ledgesClimbed, stepArchive } from '../../stage2/climb.mjs';
 import { botButtons, createBot } from '../../stage2/climbbot.mjs';
 import { mountControls } from '../../controls.mjs';
+import { playSong } from '../audio/player.mjs';
+import { ARCHIVE_CLIMB_SONG } from '../audio/cues.mjs';
 
 const GREY = { back: 0x2a2a30, column: 0x303036, tile: 0x6a6a72, edge: 0x8a8a92, flood: 0x9a9aa2, foam: 0xd0d0d6 };
 const WHITE = rgb15(31, 31, 31);
@@ -43,6 +45,13 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     this.s = createArchive(this.who);
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
+    playSong(this.song = ARCHIVE_CLIMB_SONG);
+  }
+
+  // The climb plays until the run ends: the clear gets its fanfare, a lost run the game-over sting.
+  cue() {
+    const song = { clear: 'stageClear', 'game over': 'gameOver' }[this.s.over?.kind] ?? ARCHIVE_CLIMB_SONG;
+    if (song !== this.song) playSong(this.song = song);
   }
 
   botPad() {
@@ -55,6 +64,7 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     const { s } = this;
     if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepArchive(s, this.autoplay ? this.botPad() : pad);
+    this.cue();
     this.draw();
   }
 
