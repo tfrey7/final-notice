@@ -12,6 +12,7 @@ tmp/
 
 # Downloaded or generated assets that are not yet source
 downloads/
+tools/hymnwave/out/
 
 # Other games' screenshots and sheets that compare against them: study only, never shipped
 docs/refs/
