@@ -11,14 +11,15 @@ import { mountTunePanel } from '../tune.mjs';
 import { TILE, solidAt } from './physics.mjs';
 import { drawActors, loadActorArt } from './draw.mjs';
 import { carry, inHand, swapHand } from './pickups.mjs';
-import { createRun, stepRun } from './core.mjs';
 import { drawStage2Hud } from './hud.mjs';
 import { drawRing } from '../hud.mjs';
 import { HITS_PER_SEGMENT, ringShape } from '../injunction.mjs';
+import { createStage, layoutFrom, stepStage } from './areas.mjs';
+import { drawPrompts, drawStageParts } from './areadraw.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp' };
 const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
 
 // The art cards' Stage 2 names, as ward.mjs exports them; an auditor without them is a 16x32 stand-in.
@@ -42,7 +43,8 @@ export class EscapeScene extends Phaser.Scene {
     this.registry.set('flow', flow);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
 
-    this.run = createRun(flow.auditor);
+    const archive = await loadArt('bg-archive').catch(() => null);
+    this.run = createStage(flow.auditor, layoutFrom({ archiveAccess: archive?.areas?.archiveAccess?.solid, retentionOrder: archive?.areas?.retentionOrder?.solid }), flow.checkpoint);
     // ?at=<x> starts the auditor further along the floor, for a quick look at one spot.
     if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
     // ?spell=<name> starts with that enchantment in hand.
@@ -67,10 +69,11 @@ export class EscapeScene extends Phaser.Scene {
     const frame = this.game.loop.frame;
     const pad = pollPad(frame);
     if (this.freezeAt !== null && frame >= this.freezeAt) return;
-    stepRun(this.run, pad);
+    stepStage(this.run, pad);
     let flow = this.registry.get('flow');
     for (const e of this.run.events) {
       if (SOUNDS[e.type]) sfx(SOUNDS[e.type]);
+      if (e.type === 'checkpoint') this.registry.set('flow', flow = next(flow, e));
       if (e.type === 'lifeLost') {
         flow = next(flow, e);
         if (flow.screen !== 'stage2') { showFlow(this, flow); return; }
@@ -124,10 +127,12 @@ export class EscapeScene extends Phaser.Scene {
       sprites.push(...this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip));
     }
     drawActors(run, this.actors, this.fx.clear(), sprites);
+    drawStageParts(this.fx, run);
     this.layer.draw(sprites);
     const hud = this.hud.clear();
     if (run.ring) drawRing(hud, ringShape(run.ring), Math.round(run.ring.x - cx), run.ring.y);
     drawStage2Hud(hud, run, flow);
+    drawPrompts(hud, run);
     if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
   }
 }

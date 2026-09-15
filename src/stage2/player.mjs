@@ -52,7 +52,9 @@ export function stepPlayer(p, pad, area, casts, t = TUNING) {
   if (b && (pad.pressed.has('b') || p.cooldown === 0)) {
     const dir = aim(pad.held, { facing: p.facing, grounded: p.grounded, walking: p.walking && pad.pressed.has('b') });
     const spell = p.spell ?? 'notice';
-    if (spawnSpell(casts, spell, p.auditor, p.x, p.y - (p.crouch ? 10 : 20), dir, p.facing)) {
+    const out = spawnSpell(casts, spell, p.auditor, p.x, p.y - (p.crouch ? 10 : 20), dir, p.facing);
+    if (out) {
+      for (const c of out) c.moving = p.walking || (!p.grounded && Math.abs(p.vx) > 0.5);
       p.cooldown = cooldownOf(spell);
       p.castPose = COOLDOWN + 2;
       p.castDir = dir;

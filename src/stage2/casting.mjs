@@ -73,10 +73,11 @@ const PAD = 3;
 const inBox = (c, t) => c.x > t.x - t.w / 2 - PAD && c.x < t.x + t.w / 2 + PAD && c.y > t.y - t.h - PAD && c.y < t.y + PAD;
 const inBurst = (c, t) => Math.hypot(Math.max(Math.abs(c.x - t.x) - t.w / 2, 0), Math.max(Math.abs(c.y - (t.y - t.h / 2)) - t.h / 2, 0)) <= c.rule.radius;
 
-// A wax lock shrugs off everything but Margin of Error's sigil, which breaks it outright.
+// A wax lock shrugs off everything but Margin of Error's sigil, which breaks it outright; a wax-lock door
+// also gives to any cast thrown on the move.
 function strike(target, events, c) {
   if (target.hp <= 0) return;
-  if (target.lock && !c.rule.breaksLocks) {
+  if (target.lock && !c.rule.breaksLocks && !(target.door && c.moving)) {
     events.push({ type: 'clink', target });
     return;
   }
