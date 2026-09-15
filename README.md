@@ -6,19 +6,25 @@ one beat-'em-up stage, then one ranged-magic escape.
 
 **Play it:** https://tfrey7.github.io/final-notice/
 
-Today it is a title screen and the first lobby, where a stand-in Ward walks, jumps and punches. It is
-built in small pieces, each one visible on the live page.
+It is being rebuilt as an NES game (`docs/NES-PLAN.md`). Today PUSH START walks the whole game's order
+as labelled placeholder screens: title, select, scene 1, stage 1, scene 2, stage 2, scene 3, ending,
+with game over and continue. It is built in small pieces, each one visible on the live page.
 
 ## Controls
 
-| | Keyboard | Gamepad |
-| --- | --- | --- |
-| Start | Enter, Space, Z or X | any face button or Start |
-| Move | arrows or WASD | d-pad or left stick |
-| Jump | X, K or Space | A |
-| Punch (press again to chain three) | Z or J | X or B |
+The game is played on one NES pad; the keyboard and any gamepad both drive it.
 
-`?lobby` skips the title; `?lobby&demo` plays a short loop by itself.
+| NES pad | Keyboard | Gamepad |
+| --- | --- | --- |
+| D-pad | arrows or WASD | d-pad or left stick |
+| B | Z or J | X / left face |
+| A | X or K | A / bottom face |
+| Select | Shift | Back / Select |
+| Start | Enter | Start |
+
+On a placeholder stage, Start clears it, B loses a life and A reaches the next checkpoint.
+`?go=<screen>` starts on any screen (`title`, `select`, `scene1`, `stage1`, `scene2`, `stage2`,
+`scene3`, `ending`, `gameover`); `?demo` presses the buttons by itself.
 
 ## Run it locally
 

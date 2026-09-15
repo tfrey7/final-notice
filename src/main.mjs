@@ -3,15 +3,18 @@ import { WIDTH, HEIGHT, integerZoom } from './nes/screen.mjs';
 import { nes } from './nes/palette.mjs';
 import { NesTestScene } from './nes/testscene.mjs';
 import { ArtScene } from './nes/artscene.mjs';
-import { TitleScene } from './title.mjs';
-import { LobbyScene } from './lobby.mjs';
+import { SCREENS, jumpTo } from './flow.mjs';
+import { PlaceholderScene } from './scenes/placeholder.mjs';
 
-// ?nes is the hardware test screen, ?art=<name> plays an art module, ?lobby skips the title.
+// One scene per screen of the game, keyed by its flow name; a real scene replaces its placeholder here.
+const SCENES = Object.fromEntries(SCREENS.map((key) => [key, new PlaceholderScene(key)]));
+
+// ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen.
 const params = new URLSearchParams(location.search);
-let scene = [TitleScene, LobbyScene];
+const start = jumpTo(params.get('go') ?? 'title');
+let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
 if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
-else if (params.has('lobby')) scene = [LobbyScene, TitleScene];
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -26,9 +29,9 @@ const game = new Phaser.Game({
     zoom: integerZoom(window.innerWidth, window.innerHeight),
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  input: { gamepad: true },
   scene,
 });
+game.registry.set('flow', start);
 window.finalNotice = game;
 
 window.addEventListener('resize', () => {
