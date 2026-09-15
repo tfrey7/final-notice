@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPad, updatePad } from '../src/input.mjs';
-import { HITS_PER_SEGMENT, MAX_HITS, RING, addHits, isFull, restoreAtCheckpoint, ringShape, ringVictims, segments, startRing, stepRing, wantsInjunction } from '../src/injunction.mjs';
+import { COOLDOWN_FRAMES, HITS_PER_SEGMENT, MAX_HITS, RING, addHits, cooldownSegments, fireCooldown, freeInjunction, tickCooldown, wantsFreeInjunction, isFull, restoreAtCheckpoint, ringShape, ringVictims, segments, startRing, stepRing, wantsInjunction } from '../src/injunction.mjs';
 import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { spawnStaff } from '../src/stage1/staff.mjs';
 import { createRun, stepRun } from '../src/stage2/core.mjs';
@@ -83,6 +83,38 @@ test('Stage 1: without a full meter A+B does nothing special', () => {
   stepFloor(world, chord, tune);
   assert.ok(!world.events.includes('injunction'));
   assert.notEqual(foe('associate').state, 'knockdown');
+});
+
+test('the free injunction fires when ready, refuses while cooling and is ready again after its frames', () => {
+  const cd = freeInjunction(90);
+  assert.ok(wantsFreeInjunction(chord, cd));
+  assert.equal(cooldownSegments(cd), 4);
+  fireCooldown(cd);
+  assert.ok(!wantsFreeInjunction(chord, cd));
+  assert.equal(cooldownSegments(cd), 0);
+  for (let i = 0; i < 89; i++) tickCooldown(cd);
+  assert.ok(!wantsFreeInjunction(chord, cd), 'one frame short');
+  assert.equal(cooldownSegments(cd), 3);
+  tickCooldown(cd);
+  assert.ok(wantsFreeInjunction(chord, cd));
+  assert.ok(!wantsFreeInjunction(idle, cd), 'only A+B fires it');
+  assert.equal(COOLDOWN_FRAMES, freeInjunction().frames);
+});
+
+test('SNES Stage 1: the injunction is free with an empty meter, then waits out the cooldown', () => {
+  const { tune, world, foe } = brawl();
+  world.cooldown = freeInjunction(60);
+  stepFloor(world, chord, tune);
+  assert.ok(world.events.includes('injunction'));
+  assert.equal(foe('associate').state, 'knockdown');
+  assert.equal(world.meter, 0, 'the HUD shows it cooling');
+  const fired = () => stepFloor(world, chord, tune).events.includes('injunction');
+  let early = false;
+  for (let i = 0; i < 59; i++) { world.events = []; early ||= fired(); }
+  assert.ok(!early, 'refused while cooling');
+  world.events = [];
+  world.hitStop = 0;
+  assert.ok(fired(), 'ready again after the dial frames');
 });
 
 test('Stage 1: losing a life at a checkpoint gives back a segment', () => {

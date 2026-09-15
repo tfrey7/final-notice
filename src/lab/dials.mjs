@@ -3,19 +3,21 @@
 // Dials change the lab's live tables only; nothing here writes the game's defaults.
 import { TUNING } from '../stage1/moves.mjs';
 import { KINDS } from '../stage1/staff.mjs';
+import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
 // Dials the brawl design will want but the fighting does not have yet; shown and copied, not wired.
 export const PLANNED = {
   parryFrames: [8, 1, 30, 1],
-  injunctionCooldown: [600, 60, 1800, 30],
 };
 
-// Lab-only dials on top of TUNING: enemy speed and wind-up across every kind, and attack turns.
+// Lab-only dials on top of TUNING: enemy speed and wind-up across every kind, attack turns, and the
+// frames the free Emergency Injunction cools down for.
 export const LAB = {
   foeWalkScale: [1, 0.25, 3, 0.125],
   foeWindupAdd: [0, -20, 40, 1],
   maxAttackers: [3, 1, 4, 1],
   meterFull: [0, 0, 1, 1],
+  injunctionCooldown: [COOLDOWN_FRAMES, 60, 1800, 30],
 };
 
 export const MAX_OF_KIND = 6;

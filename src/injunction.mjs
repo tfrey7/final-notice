@@ -16,6 +16,16 @@ export const restoreAtCheckpoint = (hits) => Math.max(hits, HITS_PER_SEGMENT);
 // Pressing A and B together (the second of the two this frame) with a full meter.
 export const wantsInjunction = (pad, hits) => !!pad.chord && isFull(hits);
 
+// The SNES Stage 1 rule: the ring is free, then cools down for `frames` before it fires again.
+export const COOLDOWN_FRAMES = 600;
+export const freeInjunction = (frames = COOLDOWN_FRAMES) => ({ frames, left: 0 });
+export const coolingReady = (cd) => cd.left <= 0;
+export const wantsFreeInjunction = (pad, cd) => !!pad.chord && coolingReady(cd);
+export const fireCooldown = (cd) => { cd.left = cd.frames; return cd; };
+export const tickCooldown = (cd) => { cd.left = Math.max(0, Math.min(cd.left, cd.frames) - 1); return cd; };
+// The HUD's four boxes refill as the cooldown runs out; all four lit means ready.
+export const cooldownSegments = (cd) => (coolingReady(cd) ? SEGMENTS : Math.min(SEGMENTS - 1, Math.floor((SEGMENTS * (cd.frames - cd.left)) / cd.frames)));
+
 // The foes the ring pushes: on screen ([x0, x1)), still standing, never a boss.
 export function ringVictims(foes, view, standing = () => true) {
   return foes.filter((f) => !f.boss && f.x >= view.x0 && f.x < view.x1 && standing(f));

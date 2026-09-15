@@ -3,7 +3,7 @@
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
 import { defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
 import { stepStaff, struggle } from './staff.mjs';
-import { HITS_PER_SEGMENT, RING, SEGMENTS, addHits, pushDir, restoreAtCheckpoint, ringVictims, segments, startRing, stepRing, wantsInjunction, withoutAB } from '../injunction.mjs';
+import { HITS_PER_SEGMENT, RING, SEGMENTS, addHits, cooldownSegments, fireCooldown, pushDir, restoreAtCheckpoint, ringVictims, segments, startRing, stepRing, tickCooldown, wantsFreeInjunction, wantsInjunction, withoutAB } from '../injunction.mjs';
 
 export { HITS_PER_SEGMENT };
 export const SCREEN_W = 256;
@@ -125,11 +125,15 @@ function moveProps(world, tune, events) {
 const foeHp = (world) => world.fighters.filter((f) => f.team !== 'player').reduce((n, f) => n + f.hp, 0);
 
 // The Emergency Injunction: every ordinary foe on screen is thrown back unhurt, red tape snaps, and
-// the fight holds still for a beat. Answers true when it fired.
+// the fight holds still for a beat. Answers true when it fired. A world with a `cooldown` (the SNES
+// Stage 1) fires it free and cools down; without one it spends the full meter.
 function injunction(world, pad, tune, events) {
   const p = player(world);
-  if (world.hitStop > 0 || DOWNED.includes(p.state) || !wantsInjunction(pad, world.meterHits)) return false;
-  world.meterHits = 0;
+  const cd = world.cooldown;
+  const wants = cd ? wantsFreeInjunction(pad, cd) : wantsInjunction(pad, world.meterHits);
+  if (world.hitStop > 0 || DOWNED.includes(p.state) || !wants) return false;
+  if (cd) fireCooldown(cd);
+  else world.meterHits = 0;
   const view = { x0: world.cameraX, x1: world.cameraX + SCREEN_W };
   const standing = (f) => f.team === 'foe' && !DOWNED.includes(f.state) && f.state !== 'held';
   for (const f of ringVictims(world.fighters, view, standing)) {
@@ -150,6 +154,7 @@ function injunction(world, pad, tune, events) {
 export function stepFloor(world, pad, tune) {
   const events = [];
   world.ring = stepRing(world.ring);
+  if (world.cooldown) tickCooldown(world.cooldown);
   if (injunction(world, pad, tune, events)) pad = withoutAB(pad);
   const frozen = world.hitStop > 0;
   const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
@@ -171,7 +176,7 @@ export function stepFloor(world, pad, tune) {
     world.cameraX = Math.max(0, world.checkpointX - SCREEN_W / 2);
   }
   if (!world.think && !world.fighters.some((f) => f.dummy)) world.fighters.push(dummy(tune, 128));
-  world.meter = segments(world.meterHits);
+  world.meter = world.cooldown ? cooldownSegments(world.cooldown) : segments(world.meterHits);
   world.events.push(...events);
   world.cameraX = world.locked ? 0 : cameraX(world.cameraX, p.x);
   return world;

@@ -12,7 +12,7 @@ import { DOWNED, shakeOffset } from '../../stage1/moves.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
 import { KINDS, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
-import { MAX_HITS, RING, SEGMENTS } from '../../injunction.mjs';
+import { MAX_HITS, RING, SEGMENTS, freeInjunction } from '../../injunction.mjs';
 import { scaledTune } from '../stage1/finisher.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { buildDials, labKinds, settingsText, takeTurns, waveKinds } from '../../lab/dials.mjs';
@@ -77,7 +77,7 @@ export class SnesLabScene extends Phaser.Scene {
     const w = newFloor(this.who, this.tune);
     const p = w.fighters.find((f) => f.team === 'player');
     Object.assign(w, {
-      fighters: [p], floor: { ...FLOOR }, locked: true, cameraX: 0, checkpointX: 48, bench: [], tapes: [],
+      fighters: [p], floor: { ...FLOOR }, locked: true, cameraX: 0, checkpointX: 48, bench: [], tapes: [], cooldown: freeInjunction(),
       props: [{ id: 'chair', kind: 'chair', home: { x: 40, y: 204 }, x: 40, y: 204, z: 0, vx: 0, state: 'floor', t: 0 }],
       think: (world, f, tune) => {
         thinkStaff(world, f, tune);
@@ -103,6 +103,7 @@ export class SnesLabScene extends Phaser.Scene {
     const turned = labKinds(this.kinds, { foeWalkScale: this.dial('foeWalkScale'), foeWindupAdd: this.dial('foeWindupAdd') });
     for (const [k, v] of Object.entries(turned)) Object.assign(KINDS[k], v);
     if (this.dial('meterFull')) this.world.meterHits = MAX_HITS;
+    this.world.cooldown.frames = this.dial('injunctionCooldown');
   }
 
   update() {

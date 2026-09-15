@@ -18,6 +18,7 @@ import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { TUNING, shakeOffset } from '../../stage1/moves.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
+import { freeInjunction } from '../../injunction.mjs';
 import { STAGE, areaFor, newStage, stepAreas } from '../../stage1/areas.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { mountTunePanel, registerTuning } from '../../tune.mjs';
@@ -92,6 +93,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     } else {
       this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint));
     }
+    this.world.cooldown = freeInjunction();
 
     await Promise.all([loadArt('ward').catch(() => null), ...(this.office ? [loadArt('vellum').catch(() => null)] : [])]);
     this.ward = artOr(this, 'ward');
