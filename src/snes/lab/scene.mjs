@@ -7,7 +7,8 @@ import { drawString } from '../text.mjs';
 import { hex, rgb15 } from '../color.mjs';
 import { sfx } from '../audio/player.mjs';
 import { brawlSound } from '../audio/brawl.mjs';
-import { pollPad } from '../../input.mjs';
+import { PADS, createPad, pollPad, updatePad } from '../../input.mjs';
+import { airDemoButtons } from './airdemo.mjs';
 import { AUDITORS, stageSelectUrl } from '../../flow.mjs';
 import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
 import { SHAPE, readLook, turnOwners } from '../../stage1/readout.mjs';
@@ -103,6 +104,7 @@ export class SnesLabScene extends Phaser.Scene {
     if (params.get('pose') === 'parry') this.poseParry();
     if (params.get('pose') === 'sheet') this.poseSheet(Number(params.get('n') ?? 0));
     if (params.get('pose') === 'combo') this.poseCombo();
+    if (params.get('pose') === 'air') this.poseAir();
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
@@ -165,6 +167,18 @@ export class SnesLabScene extends Phaser.Scene {
     this.held = true;
   }
 
+  // ?pose=air plays Ward's launcher into his air combo on one foe who never swings; `&hold=<frames>`
+  // freezes it that many frames in.
+  poseAir() {
+    const w = this.world;
+    const p = Object.assign(w.fighters.find((f) => f.team === 'player'), { x: 110, y: 192, facing: 1 });
+    const foe = Object.assign(fighter('dummy', 'foe', p.x + 24, p.y, this.tune), { dummy: true, facing: -1, hp: 30 });
+    w.fighters = [p, foe];
+    w.bench = [];
+    this.demo = { pad: createPad(PADS.snes), t: 0 };
+    this.showRoutes = false;
+  }
+
   dial(key) {
     return this.dials.find((d) => d.key === key).value;
   }
@@ -207,9 +221,16 @@ export class SnesLabScene extends Phaser.Scene {
   }
 
   update() {
-    const pad = pollPad(this.game.loop.frame);
+    let pad = pollPad(this.game.loop.frame);
     if (this.tabbed || pad.pressed.has('select')) this.panel.toggle();
     this.tabbed = false;
+    if (this.demo && !this.held) {
+      const d = this.demo;
+      d.pad = updatePad(d.pad, airDemoButtons(this.world, d.t, this.tune));
+      pad = d.pad;
+      if (this.poseHold && ++d.t > this.poseHold) this.held = true;
+      else if (!this.poseHold) d.t++;
+    }
     if (this.panel.visible) this.drivePanel(pad);
     else if (!this.held) this.play(pad);
     this.draw();
@@ -341,6 +362,7 @@ export class SnesLabScene extends Phaser.Scene {
     drawReadout(g, this.fill, f, { x, top, w: bw, h: bh, feet: f.y, lying }, {
       tune: this.tune, frame: this.game.loop.frame, cooldown: this.world.cooldown, boxes: this.boxes, turn: this.turns.includes(f),
     });
+    if (f.state === 'block') g.fillStyle(0x80b0ff, 0.9).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 4, top + 8, 4, bh - 16);
     if (f.state === 'heavy') g.fillStyle(0xd0d0d0, 0.7).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 14, top + 14, 14, 10);
     if (f.state === 'special') {
       const t = this.tune;

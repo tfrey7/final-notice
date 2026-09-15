@@ -1,7 +1,7 @@
 // The chosen auditor on Stage 1's long test floor: how Ward and Mercer differ, the evasive step,
 // carried props, the practice dummy, the scrolling camera, the injunction meter and lives.
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
-import { defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
+import { breakBlock, defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
 import { stepStaff, struggle } from './staff.mjs';
 import { stepWeapons, weaponPad } from './weapons.mjs';
 import { CLEAR_FRAMES } from '../input.mjs';
@@ -19,9 +19,10 @@ export const START = { x: 48, y: 188 };
 // Ward reaches further and ends on a straight; Mercer is closer, quicker, ends on a shoulder check,
 // and his thrown bodies bowl other foes over (docs/NES-PLAN.md section 5).
 // Each has his own special on the SNES A button: Ward lunges along a line, Mercer sweeps both sides.
+// Ward, the balanced default, blocks on L and launches into an air combo; Mercer parries on L.
 export const AUDITORS = {
-  ward: { finisher: 'straight', special: 'lunge', tune: { punchReach: 26, comboStep: 3, finisherStartup: 5, punchRecovery: 7, launchX: 3, bowl: 0 } },
-  mercer: { finisher: 'shoulder', special: 'sweep', tune: { punchReach: 18, comboStep: 7, finisherStartup: 3, punchRecovery: 5, launchX: 2, bowl: 1 } },
+  ward: { finisher: 'straight', special: 'lunge', guard: 'block', tune: { punchReach: 26, comboStep: 3, finisherStartup: 5, punchRecovery: 7, launchX: 3, bowl: 0, upLauncher: 1 } },
+  mercer: { finisher: 'shoulder', special: 'sweep', guard: 'parry', tune: { punchReach: 18, comboStep: 7, finisherStartup: 3, punchRecovery: 5, launchX: 2, bowl: 1, upLauncher: 0 } },
 };
 
 export const tuneFor = (who, base = defaultTune()) => ({ ...base, ...AUDITORS[who].tune, playerHp: PIPS });
@@ -199,13 +200,28 @@ function openParry(world, pad, tune, frozen, events) {
   events.push('parryTry');
 }
 
+// Holding L raises the block; letting go drops it, and a hold past blockMax breaks it.
+function holdBlock(world, pad, tune, frozen, events) {
+  const p = player(world);
+  if (frozen) return;
+  if (p.blockLock > 0) p.blockLock--;
+  if (p.state === 'block') {
+    if (!pad.block) set(p, 'idle');
+    else if (p.t >= tune.blockMax) breakBlock(world, p, tune, events);
+  } else if (pad.block && FREE.includes(p.state) && !(p.blockLock > 0)) {
+    set(p, 'block');
+    events.push('blockUp');
+  }
+}
+
 export function stepFloor(world, pad, tune) {
   const events = [];
   world.ring = stepRing(world.ring);
   if (world.cooldown) tickCooldown(world.cooldown);
   if (injunction(world, pad, tune, events)) pad = withoutAB(pad);
   const frozen = world.hitStop > 0;
-  openParry(world, pad, tune, frozen, events);
+  if (AUDITORS[world.who]?.guard === 'block') holdBlock(world, pad, tune, frozen, events);
+  else openParry(world, pad, tune, frozen, events);
   if (!frozen) special(world, pad, tune, events);
   const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
     : struggle(world, pad, events) ?? beforeStep(world, weaponPad(world, pad, tune, events), tune, events);
@@ -235,7 +251,7 @@ export function stepFloor(world, pad, tune) {
 
 // Which animation the auditor's art shows for the player's state.
 const WARD_ANIM = {
-  idle: 'idle', walk: 'walk', run: 'walk', jump: 'jump', land: 'step', step: 'step', grab: 'grab', carry: 'grab',
+  idle: 'idle', walk: 'walk', run: 'walk', jump: 'jump', land: 'step', step: 'step', grab: 'grab', carry: 'grab', block: 'idle',
   throw: 'throw', hurt: 'hit', knockdown: 'knockdown', down: 'down', getup: 'step', held: 'hit',
 };
 const MERCER_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', step: 'walk', land: 'idle', getup: 'idle', hurt: 'hurt', knockdown: 'hurt', down: 'hurt', held: 'hurt' };

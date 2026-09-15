@@ -31,7 +31,7 @@ test('V and I are the SNES X button, and the list says what X does on each stage
   assert.equal(x('stage1').does, 'heavy');
   assert.equal(x('stage2').does, 'swap enchantment');
   const row = (pad) => controlsFor('stage1').find((r) => r.pad === pad);
-  assert.deepEqual([row('Y+X').does, row('L').does, row('A').does], ['Injunction', 'Objection parry', 'special']);
+  assert.deepEqual([row('Y+X').does, row('L').does, row('A').does], ['Injunction', 'block (Ward) / parry (Mercer)', 'special']);
   assert.equal(row('Y+X').keys, 'Z / J + V / I');
   const stage1 = controlsFor('stage1').map((r) => r.does).join();
   for (const word of ['light, grab', 'jump', 'Injunction', 'run', 'sidestep']) assert.ok(stage1.includes(word), word);
@@ -52,7 +52,7 @@ test('controller legend labels keys on keyboard and pad buttons on a gamepad', (
   const gp = legendFor('stage1', 'gamepad');
   assert.deepEqual([keys.y.label, keys.x.label, keys.b.label, keys.a.label, keys.l.label, keys.yx.label], ['Z/J', 'V/I', 'X/K', 'C/L', 'Q', 'Z+V']);
   assert.deepEqual([gp.y.label, gp.x.label, gp.b.label, gp.a.label, gp.l.label, gp.yx.label], ['X', 'Y', 'A', 'B', 'LB', 'X+Y']);
-  assert.deepEqual([keys.y.does, keys.x.does, keys.b.does, keys.a.does, keys.l.does, keys.yx.does], ['light, grab', 'heavy', 'jump', 'special', 'Objection parry', 'Injunction']);
+  assert.deepEqual([keys.y.does, keys.x.does, keys.b.does, keys.a.does, keys.l.does, keys.yx.does], ['light, grab', 'heavy', 'jump', 'special', 'block (Ward) / parry (Mercer)', 'Injunction']);
   assert.equal(legendFor('stage2').yx, undefined);
 });
 

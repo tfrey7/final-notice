@@ -78,7 +78,7 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
       taps[dir] = frame;
     }
   }
-  // Stage 1 on the SNES: Y light, X heavy, A the auditor's special, L the parry, R a sidestep back,
+  // Stage 1 on the SNES: Y light, X heavy, A the auditor's special, L Ward's block (held) or Mercer's parry, R a sidestep back,
   // Y and X pressed within CLEAR_FRAMES of each other the room clear. Stage 2 still reads A as
   // `chord` and X as `swap`. The double tap is only a run.
   if (layout.name === 'snes') {
@@ -97,6 +97,7 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
       aim: now.has('r'),
       swap: pressed.has('swap'),
       parry: pressed.has('l'),
+      block: now.has('l'),
     };
   }
   const chord = now.has('a') && now.has('b') && (pressed.has('a') || pressed.has('b'));

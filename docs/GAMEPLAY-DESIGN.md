@@ -4,18 +4,20 @@
 
 ## Final Notice brawl design: Final Fight and Streets of Rage 2 pillars
 
-*`kb_get final-notice-brawl-design` · version 2*
+*`kb_get final-notice-brawl-design` · version 4*
 
 Agreed live in the room by Tim, 2026-09-15, 12:22-13:00 EDT. The brawl stages are 1, 3 and 5; their pillars are *Final Fight* and *Streets of Rage 2*.
 
 - **Moves.** A punch combo with a finisher, a jump kick, grabbing a stunned foe (knee or throw), a sidestep, and a run on a double tap.
-- **Objection parry on X.** Timed to an incoming hit, it deflects it and the attacker staggers open for a free combo.
+- **Two heroes, two playstyles** (Tim, 2026-09-15 17:14 EDT: "both characters get different playstyles"). Every boss must be beatable with either kit.
+  - **Ellis Ward, the balanced default.** Light (Y) and heavy (X) attacks with the light-into-heavy combo routes. **Block on L, held**: a blow from in front costs a quarter of its damage as chip and never the last pip; grabs and binding red tape from in front are stopped too; a blocked light blow rebounds, so its thrower's recovery runs a third of a second longer (a short punish, next to the parry's long reel); a heavy blow, or a hold of about two seconds, breaks the block and leaves him open for a moment. The block covers only his front. **Launcher, up + heavy**: pops the foe into a slow float; jump after him (B, which cancels the launcher's recovery), up to two air lights (Y) keep him up, and the air heavy (X) slams him into the floor. **Room-clear special**: the Emergency Injunction, free on a cooldown, plus his lunge on A. *Built, item 2287.*
+  - **Mercer, the technical one.** **Objection parry on L**: timed to an incoming hit, it deflects it and the attacker staggers open for a free combo; no block. Three attack buttons for longer, more technical combos, no air combo, a **dive kick** instead, and a **single-target special**. *Today he still has Ward's two attacks and the sweep special; the rest is item 2288.*
 - **Office weapons.** Smashed furniture drops short-lived pickups: a stapler, a binder, a fire extinguisher and the red APPROVED stamp.
 - **Emergency Injunction.** Free, on a cooldown.
 - **Enemies.** At SNES size, with readable wind-ups, taking turns to attack and walking on from the screen edges.
-- **Vellum**, the Stage 1 boss, is a parry duel.
+- **Vellum**, the Stage 1 boss, is bait and punish: his rush and sweep break an ordinary block like any heavy blow, but Ward's block from in front turns them aside for chip and drops Vellum straight into his recovery, his opening; Mercer parries them for the long reel. *Built, item 2287.*
 - **Two-player co-op** is designed in and built later.
-- **Tuning** happens in the brawl lab, `?snes&go=lab`.
+- **Tuning** happens in the brawl lab, `?snes&go=lab`; `?snes&go=lab&pose=air` plays Ward's launcher into his air combo.
 
 ## Bosses and minibosses *(proposed, item 2289, waiting on Tim's verdict)*
 
@@ -32,8 +34,8 @@ Tim, 2026-09-15 17:16 EDT: every brawl stage has at least one miniboss and one b
 | 5, executive chapel | **Chairman Hargreave** | boss | The oldest preserved executive, waxed at his pew since 1851, holding the Master File like a hymnal and signing in a hand nobody reads anymore. | Shield down first: a wax seal over him is kept up by three hanging censers, one low, two high; put out all three and the seal cracks open for a while, until his board relights them. | Heavy attack on the low censer; launch up and air-combo the two high ones. | Attack the low censer; jump and dive kick down onto the high ones. |
 
 - **Every gimmick is different:** scenery rammed into him (Pruitt), bait and punish (Vellum), clear the adds (the Custodian), only hurt each other (Carbon and Copy), shield down first (Hargreave). A returning boss keeps his own gimmick with one twist and less health.
-- **Where the built bosses sit.** Vellum stays Stage 1's boss and returns as Stage 3's miniboss; his parry duel becomes bait and punish so Ward, who has no parry, can win it. The Custodian stays the Archive's boss on the Stage 2 climb and returns as a brawl miniboss in Stage 5. Bellwether stays the final boss on the Stage 6 climb, outside this table; his stamp is met with a parry today and needs a block answer for Ward when Stage 6 is revisited.
-- **Nothing is built from this yet.** Jarvis files the prototype cards once Tim approves; art comes later.
+- **Where the built bosses sit.** Vellum stays Stage 1's boss and returns as Stage 3's miniboss; his block answer for Ward is built (item 2287). The Custodian stays the Archive's boss on the Stage 2 climb and returns as a brawl miniboss in Stage 5. Bellwether stays the final boss on the Stage 6 climb, outside this table; his stamp is met with a parry today and needs a block answer for Ward when Stage 6 is revisited.
+- **Nothing else is built from this yet.** Jarvis files the prototype cards once Tim approves; art comes later.
 
 ## Final Notice escape design: a vertical climb with a pursuer rising behind
 

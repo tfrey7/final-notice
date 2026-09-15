@@ -77,6 +77,26 @@ export const TUNING = {
   specialDamage: [3, 0, 8, 1],
   specialReach: [48, 16, 80, 2],
   specialCooldown: [90, 0, 300, 10],
+  // Ward's block (SNES L, held): a blow from in front costs a fraction of its damage as chip, and a
+  // heavy blow or too long a hold breaks it and leaves him open.
+  blockChip: [0.25, 0, 1, 0.05],
+  blockMax: [120, 30, 300, 5],
+  blockStun: [36, 8, 90, 2],
+  blockLock: [30, 0, 90, 2],
+  blockBreakGrace: [12, 0, 40, 1],
+  // A light blow Ward blocks rebounds: its thrower's recovery runs this much longer, a short punish
+  // next to a parry's reel.
+  blockRecoil: [20, 0, 60, 2],
+  // Ward's launcher (up + heavy) and air combo: the launched foe floats, air lights keep him up,
+  // the air heavy slams him down. `upLauncher` at 0 turns the whole kit off (Mercer).
+  upLauncher: [0, 0, 1, 1],
+  juggleUp: [3, 1, 8, 0.25],
+  juggleGravity: [0.5, 0.25, 1, 0.05],
+  juggleFloat: [1.5, 0, 4, 0.25],
+  airLights: [2, 0, 4, 1],
+  airReachZ: [28, 8, 48, 2],
+  airDamage: [1, 0, 4, 1],
+  slamDamage: [3, 0, 8, 1],
   parryFrames: [12, 1, 30, 1],
   parryLockout: [24, 0, 60, 1],
   parryStagger: [48, 16, 120, 2],
@@ -163,6 +183,7 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
     deflect(world, target, from, dir, tune);
     return false;
   }
+  if (target.state === 'block' && !body && dir === -target.facing) return blockHit(world, target, { damage, heavy: heavy || weight === 'heavy', dir, from }, tune);
   const guarding = target.state === 'guard' || target.armoured;
   if (guarding && !body) {
     world.hitStop = tune.hitStop;
@@ -191,7 +212,7 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
   if (target.team === 'player') world.events.push('hurt');
   if (target.target) release(world, target);
   target.hitFlash = tune.hitFlashFrames;
-  world.sparks = [...(world.sparks ?? []), { x: target.x + dir * 6, y: target.y, z: target.z, weight: heavy ? 'finisher' : weight ?? 'light', t: 0 }].slice(-MAX_SPARKS);
+  spark(world, target, dir, heavy ? 'finisher' : weight ?? 'light');
   countCombo(world, target, tune);
   if (heavy) knockDown(target, dir, tune);
   else {
@@ -199,6 +220,57 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
     target.vx = dir * feel.push;
   }
   return true;
+}
+
+function spark(world, target, dir, weight) {
+  world.sparks = [...(world.sparks ?? []), { x: target.x + dir * 6, y: target.y, z: target.z, weight, t: 0 }].slice(-MAX_SPARKS);
+}
+
+// Chip is banked in fractions of a pip and never takes the last one.
+function blockHit(world, p, { damage, heavy, dir, from }, tune) {
+  p.chip = (p.chip ?? 0) + damage * tune.blockChip;
+  const pips = Math.floor(p.chip);
+  p.chip -= pips;
+  p.hp = Math.max(1, p.hp - pips);
+  world.hitStop = tune.hitStop;
+  p.x += dir * tune.knockback;
+  if (heavy) {
+    breakBlock(world, p, tune);
+    return false;
+  }
+  world.events.push('blocked');
+  if (from && !from.boss) {
+    if (from.state === 'charge') set(from, 'punch');
+    from.recoil = tune.blockRecoil;
+  }
+  return false;
+}
+
+export function breakBlock(world, p, tune, events = world.events) {
+  set(p, 'hurt');
+  p.vx = 0;
+  p.stagger = tune.blockStun;
+  p.blockLock = tune.blockLock;
+  // The blow that broke it has spent itself: a rush sweeping on through gets no second hit.
+  p.invuln = Math.max(p.invuln, tune.blockBreakGrace);
+  events.push('guardBreak');
+}
+
+// A blow on a launched foe: a light keeps him floating, the slam drives him into the floor.
+export function juggleHit(world, foe, slam, dir, tune) {
+  foe.hp = Math.max(0, foe.hp - (slam ? tune.slamDamage : tune.airDamage));
+  world.hitStop = slam ? tune.hitStopFinish : tune.hitStop;
+  world.shake = Math.max(world.shake ?? 0, slam ? tune.shakeFrames : 0);
+  foe.hitFlash = tune.hitFlashFrames;
+  spark(world, foe, dir, slam ? 'finisher' : 'light');
+  countCombo(world, foe, tune);
+  if (slam) {
+    Object.assign(foe, { juggle: false, vz: -tune.juggleUp * 2, vx: dir * tune.knockback });
+    world.events.push('heavy', 'slam');
+  } else {
+    Object.assign(foe, { vz: Math.max(foe.vz, tune.juggleFloat), vx: dir * tune.knockback * 0.25 });
+    world.events.push('hit', 'airHit');
+  }
 }
 
 // The Objection: the fight freezes on a flash and the attacker reels open, long enough for a full combo.
@@ -267,7 +339,10 @@ function heavyHit(world, f, foe, tune) {
     heavy: { damage: tune.heavyDamage, heavy: false, weight: 'heavy' },
   }[route];
   if (!landHit(world, foe, { ...hit, dir }, tune)) return false;
-  if (route === 'launcher' && foe.state === 'knockdown') Object.assign(foe, { vx: dir * tune.knockback, vz: tune.launcherUp });
+  if (route === 'launcher' && foe.state === 'knockdown') {
+    const juggle = !!tune.upLauncher;
+    Object.assign(foe, { vx: dir * tune.knockback * (juggle ? 0.25 : 1), vz: juggle ? tune.juggleUp : tune.launcherUp, juggle });
+  }
   if (route === 'knockback' && foe.state === 'knockdown') foe.vx = dir * tune.knockbackX;
   f.route = route;
   if (route !== 'heavy') world.events.push(route);
@@ -293,6 +368,36 @@ function tryGrab(world, f, tune) {
   return true;
 }
 
+function startJump(world, f, input, tune) {
+  const dir = (input.held.has('right') ? 1 : 0) - (input.held.has('left') ? 1 : 0);
+  set(f, 'jump');
+  f.vx = dir * (f.running ? tune.runX : tune.walkX);
+  f.vz = tune.jumpUp;
+  Object.assign(f, { kicked: false, airHits: 0, slammed: false });
+  world.events.push('jump');
+}
+
+// Ward in the air beside a foe he launched: Y keeps the foe up, X slams him down. Answers true when
+// the press was spent on the juggle.
+function airCombo(world, f, tune) {
+  if (!tune.upLauncher || !(f.buffer > 0 || f.heavyBuffer > 0) || f.slammed) return false;
+  const foe = foesOf(world, f).find((o) => o.juggle && o.state === 'knockdown'
+    && Math.abs(o.x - f.x) <= tune.punchReach && Math.abs(o.y - f.y) <= tune.depthReach && Math.abs(o.z - f.z) <= tune.airReachZ);
+  if (!foe) return false;
+  const slam = f.heavyBuffer > 0;
+  if (!slam && f.airHits >= tune.airLights) return false;
+  if (Math.sign(foe.x - f.x)) f.facing = Math.sign(foe.x - f.x);
+  f.buffer = 0;
+  f.heavyBuffer = 0;
+  if (slam) f.slammed = true;
+  else f.airHits++;
+  f.kicked = true;
+  f.landed = true;
+  f.vz = Math.max(f.vz, slam ? 0 : 1);
+  juggleHit(world, foe, slam, f.facing, tune);
+  return true;
+}
+
 function controlFree(world, f, input, tune) {
   // A light press mid-chain continues the combo; walking into a reeling foe, or a fresh press, grabs.
   if (f.buffer > 0) {
@@ -302,16 +407,12 @@ function controlFree(world, f, input, tune) {
     return;
   }
   if (f.heavyBuffer > 0) {
-    startHeavy(f, (f.chain > 0 && heavyRoute(f.lastCombo, tune)) || 'heavy');
+    const up = tune.upLauncher && input.held.has('up');
+    startHeavy(f, up ? 'launcher' : (f.chain > 0 && heavyRoute(f.lastCombo, tune)) || 'heavy');
     return;
   }
   if (input.pressed.has('a')) {
-    const dir = (input.held.has('right') ? 1 : 0) - (input.held.has('left') ? 1 : 0);
-    set(f, 'jump');
-    f.vx = dir * (f.running ? tune.runX : tune.walkX);
-    f.vz = tune.jumpUp;
-    f.kicked = false;
-    world.events.push('jump');
+    startJump(world, f, input, tune);
     return;
   }
   const dx = (input.held.has('right') ? 1 : 0) - (input.held.has('left') ? 1 : 0);
@@ -363,7 +464,9 @@ function updatePlayer(world, f, input, tune) {
         const foe = foesOf(world, f).find((o) => o.state !== 'held' && inReach(f, o, tune.heavyReach, tune) && o.z < 16);
         if (foe) f.landed = heavyHit(world, f, foe, tune);
       }
-      if (f.t >= startup + active + recovery) {
+      // A landed launcher cancels its recovery into the jump that chases the foe up.
+      if (f.landed && f.route === 'launcher' && tune.upLauncher && f.t > startup + active && input.pressed.has('a')) startJump(world, f, input, tune);
+      else if (f.t >= startup + active + recovery) {
         f.lastCombo = 0;
         f.chain = 0;
         set(f, 'idle');
@@ -374,6 +477,7 @@ function updatePlayer(world, f, input, tune) {
       f.x += f.vx;
       f.z += f.vz;
       f.vz -= tune.gravity;
+      if (airCombo(world, f, tune)) break;
       if (f.buffer > 0 && !f.kicked) {
         f.kicked = true;
         f.kickT = 0;
@@ -447,7 +551,7 @@ export function updateCommon(world, f, tune) {
     case 'knockdown': {
       f.x += f.vx;
       f.z += f.vz;
-      f.vz -= tune.gravity;
+      f.vz -= tune.gravity * (f.juggle ? tune.juggleGravity : 1);
       // A body flying through the fight bowls over any other foe it touches.
       const bowled = world.fighters.find((o) => o !== f && o.team === f.team && Math.abs(o.x - f.x) < 12
         && Math.abs(o.y - f.y) <= tune.depthReach && !DOWNED.includes(o.state));
@@ -456,6 +560,7 @@ export function updateCommon(world, f, tune) {
       }
       if (f.z <= 0) {
         f.z = 0;
+        f.juggle = false;
         set(f, 'down');
         world.events.push('down');
       }

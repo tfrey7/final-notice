@@ -66,9 +66,15 @@ function wantsSummon(world, v) {
 }
 
 // His blow goes through the parry like anyone's: met inside the window, it sends him reeling.
+// Blocked from in front it is turned aside for chip, and he drops straight into his recovery (the bait).
 function hitsPlayer(world, v, p, tune) {
   if (p.z >= 16 || DOWNED.includes(p.state) || p.invuln > 0) return false;
-  return landHit(world, p, { damage: VELLUM.damage, heavy: true, dir: v.facing, from: v }, tune);
+  const blocked = p.state === 'block' && p.facing === -v.facing;
+  const landed = landHit(world, p, { damage: VELLUM.damage, heavy: !blocked, dir: v.facing, from: v }, tune);
+  if (!blocked) return landed;
+  v.vx = 0;
+  set(v, 'recover');
+  return true;
 }
 
 export function thinkVellum(world, v, tune) {

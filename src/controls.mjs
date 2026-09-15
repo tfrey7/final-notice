@@ -20,7 +20,7 @@ export function keysFor(button, layout = PADS.snes) {
 
 const PAD = { y: 'X / left', b: 'A / bottom', a: 'B / right', x: 'Y / top', l: 'LB / LT', r: 'RB / RT', start: 'Start' };
 const DOES = {
-  stage1: { y: 'light, grab', b: 'jump', a: 'special', x: 'heavy', yx: 'Injunction', l: 'Objection parry', r: 'sidestep back', start: 'pause' },
+  stage1: { y: 'light, grab', b: 'jump', a: 'special', x: 'heavy', yx: 'Injunction', l: 'block (Ward) / parry (Mercer)', r: 'sidestep back', start: 'pause' },
   stage2: { y: 'cast', b: 'jump', a: 'Injunction', x: 'swap enchantment', l: 'Objection parry (boss)', r: 'hold: stand and aim', start: 'pause' },
 };
 

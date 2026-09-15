@@ -6,10 +6,10 @@ import { PADS, createPad, updatePad } from '../src/input.mjs';
 
 const pad = (parry = false) => ({ held: new Set(), pressed: new Set(), parry, step: 0 });
 
-// The auditor alone with one Associate squared up, `lead` frames from his blow landing.
+// Mercer, who parries (Ward blocks instead), alone with one Associate squared up, `lead` frames from his blow landing.
 function squaredUp(lead) {
-  const tune = tuneFor('ward');
-  const world = newFloor('ward', tune);
+  const tune = tuneFor('mercer');
+  const world = newFloor('mercer', tune);
   world.fighters = [world.fighters.find((f) => f.team === 'player')];
   Object.assign(world, { bench: [], tapes: [] });
   const p = world.fighters[0];
@@ -79,5 +79,5 @@ test('the SNES L shoulder is the parry, X is not; the NES pad has none', () => {
 });
 
 function tune0() {
-  return tuneFor('ward');
+  return tuneFor('mercer');
 }

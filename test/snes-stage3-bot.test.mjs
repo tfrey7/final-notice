@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { player } from '../src/stage1/moves.mjs';
-import { PIPS, SCREEN_W, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
+import { AUDITORS, PIPS, SCREEN_W, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { HEAL, areaFor, layout, newStage, stepAreas } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { freeInjunction } from '../src/injunction.mjs';
@@ -39,12 +39,12 @@ function bot(i, world, tune) {
   if (p.state === 'grab') return { held: [f.x >= p.x ? 'right' : 'left'], b: true };
   const tape = world.tapes.some((o) => Math.abs(o.y - p.y) <= tune.depthReach && (p.x - o.x) * Math.sign(o.vx) > 0 && Math.abs(p.x - o.x) < 8 + Math.abs(o.vx) * 5);
   const staffBlow = foes.some((o) => o.state === 'windup' && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - 5 && Math.abs(o.x - p.x) < 80);
-  const open = OPEN.includes(f.state) && !f.armoured;
+  const open = (OPEN.includes(f.state) || (AUDITORS[world.who].guard === 'block' && f.state === 'punch')) && !f.armoured;
   const inReach = Math.abs(f.x - p.x) <= tune.punchReach - 2 && Math.abs(f.y - p.y) <= tune.depthReach;
   return { held: approach(p, f, tune.punchReach - 6), b: open && inReach && i % 4 === 0, parry: !p.parry && (tape || staffBlow) };
 }
 
-const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held), pressed: new Set(b ? ['b'] : []), parry, step: 0, dash: null });
+const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held), pressed: new Set(b ? ['b'] : []), parry, block: parry, step: 0, dash: null });
 
 // Plays Stage 3 the way the scene does: checkpoints, lives, a continue back at the last checkpoint,
 // the corridor's folds, and the far door into stage clear.

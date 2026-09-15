@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { player } from '../src/stage1/moves.mjs';
-import { PIPS, SCREEN_W, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
+import { AUDITORS, PIPS, SCREEN_W, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { HEAL, areaFor, layout, newStage, stepAreas } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { freeInjunction } from '../src/injunction.mjs';
@@ -49,12 +49,12 @@ function bot(i, world, tune) {
   if (box && (!f || Math.abs(f.x - p.x) > 60)) return { held: approach(p, box, 4) };
   if (!f) return { held: ['right'] };
   if (p.state === 'grab') return { held: [f.x >= p.x ? 'right' : 'left'], b: true };
-  const open = OPEN.includes(f.state) && !f.armoured;
+  const open = (OPEN.includes(f.state) || (AUDITORS[world.who].guard === 'block' && f.state === 'punch')) && !f.armoured;
   const inReach = Math.abs(f.x - p.x) <= tune.punchReach - 2 && Math.abs(f.y - p.y) <= tune.depthReach;
   return { held: approach(p, f, tune.punchReach - 6), b: open && inReach && i % 4 === 0, parry };
 }
 
-const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held), pressed: new Set(b ? ['b'] : []), parry, step: 0, dash: null });
+const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held), pressed: new Set(b ? ['b'] : []), parry, block: parry, step: 0, dash: null });
 
 // Plays Stage 5 the way the scene does: checkpoints, lives, a continue back at the last checkpoint,
 // the two rituals, and the sanctum's far side into stage clear.

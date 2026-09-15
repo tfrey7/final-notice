@@ -386,7 +386,8 @@ export function thinkStaff(world, f, tune) {
       break;
     }
     case 'punch':
-      if (f.t >= (f.attack?.punch ?? k.punch)) {
+      if (f.t >= (f.attack?.punch ?? k.punch) + (f.recoil ?? 0)) {
+        f.recoil = 0;
         f.cooldown = k.cooldown;
         f.attack = null;
         set(f, 'idle');
@@ -427,6 +428,11 @@ function strike(world, f, p, m, tune) {
   if (p.invuln > 0 || ['bound', ...DOWNED].includes(p.state)) return;
   if (p.parry > 0) {
     deflect(world, p, f, f.facing, tune);
+    return;
+  }
+  if (p.state === 'block' && f.facing === -p.facing) {
+    world.hitStop = tune.hitStop;
+    world.events.push('blocked');
     return;
   }
   Object.assign(p, { heldBy: f.id, mash: m.mash, x: f.x + f.facing * 14, y: f.y, facing: -f.facing });
@@ -500,6 +506,10 @@ export function stepStaff(world, tune, events) {
       tape.t = TAPE.life;
       if (p.parry > 0) {
         deflect(world, p, world.fighters.find((f) => f.id === tape.from && !DOWNED.includes(f.state)), Math.sign(tape.vx), tune);
+        continue;
+      }
+      if (p.state === 'block' && Math.sign(tape.vx) === -p.facing && !(tape.shot && tape.shot !== 'tape')) {
+        events.push('blocked');
         continue;
       }
       if (tape.shot && tape.shot !== 'tape') {

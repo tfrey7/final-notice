@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { player } from '../src/stage1/moves.mjs';
-import { PIPS, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
+import { AUDITORS, PIPS, newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { HEAL, areaFor, newStage, stepAreas } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { enterOffice, vellum } from '../src/stage1/vellum.mjs';
@@ -43,29 +43,55 @@ function bot(i, world, tune) {
   const box = p.hp <= PIPS - HEAL && world.firstAid?.find((o) => !o.taken && o.x >= world.floor.left && o.x <= world.floor.right);
   if (box && (!f || Math.abs(f.x - p.x) > 60)) return { held: approach(p, box, 4), b: false, parry: false };
   if (!f) return { held: ['right'], b: false, parry: false };
-  if (p.state === 'grab') return { held: [f.x >= p.x ? 'right' : 'left'], b: true, parry: false };
+  if (p.state === 'grab' || p.state === 'carry') return { held: [f.x >= p.x ? 'right' : 'left'], b: true, parry: false };
   const v = vellum(world);
   const tape = world.tapes.some((o) => Math.abs(o.y - p.y) <= tune.depthReach && (p.x - o.x) * Math.sign(o.vx) > 0 && Math.abs(p.x - o.x) < 8 + Math.abs(o.vx) * 5);
-  const staffBlow = foes.some((o) => o.kind !== 'vellum' && ((o.state === 'windup' && !o.attack?.rush && !o.attack?.shot && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - 5 && Math.abs(o.x - p.x) < 80)
-    || (o.state === 'charge' && Math.abs(o.y - p.y) <= tune.depthReach && Math.abs(o.x - p.x) - 12 <= o.attack.rush * 5)));
+  const blocks = AUDITORS[world.who].guard === 'block';
+  const staffBlow = foes.some((o) => o.kind !== 'vellum' && ((o.state === 'windup' && !o.attack?.rush && !o.attack?.shot && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - (blocks ? 8 : 5) && Math.abs(o.x - p.x) < 80)
+    || (o.state === 'charge' && Math.abs(o.y - p.y) <= tune.depthReach && Math.abs(o.x - p.x) - 12 <= o.attack.rush * (blocks ? 8 : 5))));
   let bossTell = false;
   if (v) {
     const t = v.vellum ?? tune.vellum;
     const windup = v.fangs ? t.windup[1] : t.windup[0];
     const rushGap = Math.abs(v.x - p.x) - t.rushReach;
-    bossTell = (v.state === 'windup' && v.attack === 'sweep' && v.t === windup - 3)
-      || (v.state === 'rush' && rushGap > 0 && rushGap <= (Math.abs(v.vx) || 1) * 5);
+    // A parry is one timed press; Ward's block is held through the whole tell and the blow.
+    bossTell = (v.state === 'windup' && v.attack === 'sweep' && (blocks ? v.t >= windup - 5 : v.t === windup - 3))
+      || (v.state === 'rush' && rushGap > 0 && rushGap <= (Math.abs(v.vx) || 1) * 5)
+      || (blocks && ['rush', 'sweep'].includes(v.state) && Math.abs(v.x - p.x) < 80);
   }
   const parry = !p.parry && (tape || staffBlow || bossTell);
-  const open = OPEN.includes(f.state) && !f.armoured && !(f.kind === 'vellum' && f.state === 'guard');
+  // A heavy staff blow breaks Ward's block, so he steps back out of it instead.
+  const heavy = blocks && foes.find((o) => o.kind !== 'vellum' && o.attack?.heavy && !o.attack.shot && Math.abs(o.y - p.y) <= tune.depthReach * 2
+    && ((o.state === 'windup' && o.t >= o.attack.windup - 4 && Math.abs(o.x - p.x) < (o.attack.reach ?? tune.kinds[o.kind].reach) + 24)
+      || (o.state === 'charge' && Math.abs(o.x - p.x) - 12 <= o.attack.rush * 4)));
+  if (heavy) return { held: [], b: false, parry: false, step: -1 };
+  // Ward blocks rather than parries, so his opening is a foe recovering from a blow he blocked.
+  const open = (OPEN.includes(f.state) || (blocks && f.state === 'punch')) && !f.armoured && !(f.kind === 'vellum' && f.state === 'guard');
   const threat = v && ['windup', 'rush', 'sweep'].includes(v.state);
   const held = !threat || open ? approach(p, f, tune.punchReach - 6) : [];
+  // The block only covers his front, so he lets it drop for a frame to turn to a swing at his back.
+  const swinger = blocks && parry && foes.filter((o) => ['windup', 'charge', 'rush', 'sweep'].includes(o.state)).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  const side = swinger && Math.sign(swinger.x - p.x);
+  if (side) return { held: [side > 0 ? 'right' : 'left'], b: false, parry: side === p.facing };
   // Swinging from outside the real reach roots him in the punch, and a foe backed on the wall is never closed on.
   const inReach = Math.abs(f.x - p.x) <= tune.punchReach - 2 && Math.abs(f.y - p.y) <= tune.depthReach;
-  return { held, b: open && inReach && i % 4 === 0, parry };
+  // A punch roots him, so Ward holds it while a blow is due before the punch would end.
+  const due = blocks && (['windup', 'rush', 'sweep'].includes(v?.state) || foes.some((o) => o.kind !== 'vellum' && !o.attack?.shot && Math.abs(o.y - p.y) <= tune.depthReach * 2
+    && Math.abs(o.x - p.x) < (o.attack?.rush ? o.attack.to + 24 : 64)
+    && (o.state === 'charge' || (o.state === 'windup' && (o.attack?.windup ?? tune.kinds[o.kind].windup) - o.t <= 24))));
+  // Ward's punish is his launcher: up + heavy, jump after it, two air lights and the slam.
+  const juggled = blocks && foes.find((o) => o.juggle && Math.abs(o.x - p.x) < 60);
+  if (juggled && p.state === 'heavy') return { held: [], a: p.landed };
+  if (juggled && p.state === 'jump') {
+    const press = i % 4 === 0;
+    return { held: [juggled.x > p.x ? 'right' : 'left'], b: press && p.airHits < tune.airLights, heavy: press && p.airHits >= tune.airLights };
+  }
+  const launchable = Math.abs(f.x - p.x) <= tune.heavyReach - 2 && Math.abs(f.y - p.y) <= tune.depthReach && (f.state !== 'punch' || f.recoil > 0);
+  if (blocks && open && launchable && !due && !f.boss && ['idle', 'walk'].includes(p.state) && i % 4 === 0) return { held: ['up'], heavy: true };
+  return { held, b: open && inReach && !due && i % 4 === 0, parry };
 }
 
-const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held), pressed: new Set(b ? ['b'] : []), parry, step: 0, dash: null });
+const pad = ({ held = [], b = false, a = false, heavy = false, parry = false, step = 0 }) => ({ held: new Set(held), pressed: new Set([...(b ? ['b'] : []), ...(a ? ['a'] : [])]), heavy, parry, block: parry, step, dash: null });
 
 // Plays Stage 1 from the first screen the way the scene does: checkpoints, lives, a continue on game
 // over back at the last checkpoint, the door to Vellum's office, and his slump into stage clear.
@@ -115,7 +141,9 @@ for (const who of ['ward', 'mercer']) {
     console.log(`${who}: ${log.cleared ? 'cleared' : 'not cleared'} in ${minutes} min (${log.frames} frames), office at ${(log.office / 3600).toFixed(1)} min, ${log.locks} locks, ${log.waves} waves, ${log.heals} heals, ${log.lives} lives lost, ${log.continues} continues`);
     assert.ok(log.cleared, `stuck after ${log.frames} frames: ${JSON.stringify(log.end)}`);
     assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 5, 'a clean run takes minutes, not seconds; a human takes longer');
-    assert.ok(log.heals <= 1, `the bot needs at most one of the two first-aid boxes, took ${log.heals}`);
+    // Ward's block still takes chip and opens a foe for less time than a parry, so he may need both boxes.
+    const boxes = AUDITORS[who].guard === 'block' ? 2 : 1;
+    assert.ok(log.heals <= boxes, `the bot needs at most ${boxes} of the two first-aid boxes, took ${log.heals}`);
     assert.equal(log.lives, 0, 'a bot that reads tells loses no life');
     assert.ok(log.locks >= 5 && log.locks <= 7 + log.continues * 7, `${log.locks} locks`);
     assert.ok(log.checkpoints.includes('stage1-area3'), 'passes the mid-stage checkpoint');

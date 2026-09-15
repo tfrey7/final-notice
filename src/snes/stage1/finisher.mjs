@@ -6,7 +6,7 @@ import { VELLUM } from '../../stage1/vellum.mjs';
 import { STAFF_WEIGHT, VELLUM_WEIGHT, weighed } from '../weight.mjs';
 
 // Every tuning number measured in pixels; times and damage keep their values.
-export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp'];
+export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp', 'juggleUp', 'juggleFloat', 'airReachZ'];
 export const STAFF_SCALED = ['speed', 'reach', 'stand', 'flank', 'keep', 'near'];
 export const MOVE_SCALED = ['reach', 'rush', 'from', 'to', 'speed'];
 

@@ -10,12 +10,13 @@ import { BRAWL_WEIGHT, VELLUM_WEIGHT, weighShared, weighed } from '../src/snes/w
 import { buildDials } from '../src/lab/dials.mjs';
 
 // The tune exactly as the SNES office builds it.
-function snesTune(who = 'ward') {
+function snesTune(who = 'mercer') {
   weighShared();
   return scaledTune(weighed(tuneFor(who), BRAWL_WEIGHT), STAGE1.scale);
 }
 
-function office(who = 'ward', tune = snesTune(who)) {
+// Mercer duels him with the parry; Ward blocks instead.
+function office(who = 'mercer', tune = snesTune(who)) {
   const world = enterOffice(newFloor(who, tune), tune);
   return { world, tune, p: player(world), v: vellum(world) };
 }
@@ -40,7 +41,8 @@ const throwToward = (p, v) => ({ held: [v.x >= p.x ? 'right' : 'left'], b: true 
 // A duel to the finish (or `cap` frames): frames taken, pips lost, blocked punches and frames spent
 // in punch reach of his guard.
 function duel(brain, cap = 12000) {
-  const { world, tune, p, v } = office();
+  // The duel as it was balanced: a parrying auditor at Ward's reach.
+  const { world, tune, p, v } = office('mercer', snesTune('ward'));
   const stats = { frames: 0, pipsLost: 0, blocked: 0, facingGuard: 0, parries: 0, beaten: false };
   let hp = p.hp;
   for (let i = 0; i < cap; i++) {
