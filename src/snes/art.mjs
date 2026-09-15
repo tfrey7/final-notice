@@ -114,7 +114,11 @@ export function registerArt(name, def) {
   return def;
 }
 
+// The modules in src/snes/art/, so a name with no art fails here instead of as a 404 in the console.
+export const ART_MODULES = ['test', 'ward'];
+
 export async function loadArt(name) {
+  if (!registry.has(name) && !ART_MODULES.includes(name)) throw new Error(`no SNES art "${name}"`);
   if (!registry.has(name)) registerArt(name, (await import(`./art/${name}.mjs`)).default);
   return registry.get(name);
 }
