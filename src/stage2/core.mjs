@@ -8,6 +8,8 @@ import { RING, addHits, pushDir, restoreAtCheckpoint, ringVictims, startRing, st
 
 export const SCREEN_W = 256;
 export const KNOCK_FRAMES = 20;
+// Frames the run holds still after a cast lands on an Associate or a Custodian, and after the blow that drops one.
+export const HIT_STOP = { hit: 3, drop: 6 };
 
 // Until the archive art lands: 48x15 tiles, a HUD band on top, three pits, ledges and boxes to break.
 // C, T and M float a Carbon Copy, Red Tape or Margin of Error ledger; A is an Associate; W a wax lock.
@@ -73,6 +75,9 @@ export function stepRun(w, pad) {
   w.frame += 1;
   w.ring = stepRing(w.ring);
   if (injunction(w, pad)) pad = withoutAB(pad);
+  // A blow's stop starts the frame after it, so the stage finishes the frame the cast landed on.
+  w.hitStop = Math.max(w.hitStop, w.blowStop ?? 0);
+  w.blowStop = 0;
   if (w.hitStop > 0) {
     w.hitStop -= 1;
     return w;
@@ -90,6 +95,8 @@ export function stepRun(w, pad) {
   w.events.push(...stepGlyphs(w.glyphs, w.player, w.area));
   const landed = w.events.filter((e) => ['hit', 'break'].includes(e.type) && !e.target?.glyph && !e.target?.lock && !e.target?.seal).length;
   w.meterHits = addHits(w.meterHits, landed);
+  const blows = w.events.filter((e) => ['hit', 'break'].includes(e.type) && ['associate', 'custodian'].includes(e.target?.kind));
+  if (blows.length) w.blowStop = blows.some((e) => e.type === 'break') ? HIT_STOP.drop : HIT_STOP.hit;
   if (w.events.some((e) => e.type === 'lifeLost')) {
     dropExtra(w);
     w.meterHits = restoreAtCheckpoint(w.meterHits);

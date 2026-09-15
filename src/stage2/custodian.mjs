@@ -1,5 +1,6 @@
 // Original Copy's mid-boss, the Records Custodian: directs two casting Associates, flashes, then lunges along
 // the floor; beaten, the original ledger lifts from its stand into the auditor's hands. Pure.
+import { stagger } from './casting.mjs';
 import { createAssociate } from './foes.mjs';
 import { HEALTH, INVULN } from './player.mjs';
 
@@ -39,6 +40,7 @@ export function stepCustodian(c, player, foes) {
     return events;
   }
   const hw = c.w / 2;
+  stagger(c, (x) => x >= c.arena.x0 + hw && x <= c.arena.x1 - hw);
   if (c.phase === 'direct') {
     if (c.timer === CUSTODIAN.direct && !foes.some((f) => f.called && f.hp > 0)) {
       for (const spot of c.spots) foes.push({ ...createAssociate(spot), called: true, rest: 40 });

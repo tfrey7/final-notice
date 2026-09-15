@@ -1,4 +1,5 @@
 // Stage 2's Associates: walk a ledge, stop, wind up and cast a slow seal glyph at the auditor. Pure.
+import { stagger } from './casting.mjs';
 import { solidPoint } from './physics.mjs';
 import { INVULN, HEALTH } from './player.mjs';
 
@@ -8,6 +9,12 @@ export const createAssociate = ({ x, y }) => ({
   kind: 'associate', x, y, w: ASSOCIATE.w, h: ASSOCIATE.h, hp: ASSOCIATE.hp, facing: -1, vx: 0,
   windUp: 0, rest: 60, frozen: 0, flash: 0, down: 0,
 });
+
+// Whether an Associate may stand at x: no wall ahead and floor still under its leading edge.
+const onLedge = (f, x, dir, area) => {
+  const edge = x + dir * (f.w / 2);
+  return !solidPoint(area, edge, f.y - 8) && solidPoint(area, edge, f.y + 1);
+};
 
 // One frame of every Associate. Answers the events; new glyphs go on `glyphs`.
 export function stepFoes(foes, glyphs, player, area) {
@@ -20,8 +27,13 @@ export function stepFoes(foes, glyphs, player, area) {
       f.knock -= 1;
       f.windUp = 0;
       const nx = f.x + f.knockDir * (1 + f.knock * 0.25);
-      const edge = nx + f.knockDir * (f.w / 2);
-      if (!solidPoint(area, edge, f.y - 8) && solidPoint(area, edge, f.y + 1)) f.x = nx;
+      if (onLedge(f, nx, f.knockDir, area)) f.x = nx;
+      return true;
+    }
+    // Staggered by a cast: the wind-up is lost.
+    if (stagger(f, (x) => onLedge(f, x, f.staggerDir, area))) {
+      f.windUp = 0;
+      f.frozen = Math.max(0, f.frozen - 1);
       return true;
     }
     if (f.frozen > 0) {

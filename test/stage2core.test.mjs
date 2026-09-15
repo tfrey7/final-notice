@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPad, updatePad } from '../src/input.mjs';
-import { AUDITORS, DIRS, MAX_CASTS, aim, spawnCast, stepCasts } from '../src/stage2/casting.mjs';
+import { AUDITORS, DIRS, MAX_CASTS, STAGGER, aim, spawnCast, stepCasts } from '../src/stage2/casting.mjs';
 import { TILE, moveBody, parseArea, solidAt } from '../src/stage2/physics.mjs';
 import { HEALTH, PIT_DAMAGE, createPlayer, stepPlayer } from '../src/stage2/player.mjs';
-import { TEST_MAP, createRun, stepRun } from '../src/stage2/core.mjs';
-
+import { HIT_STOP, TEST_MAP, createRun, stepRun } from '../src/stage2/core.mjs';
 const aimOf = (held, o = {}) => aim(new Set(held), { facing: 1, grounded: true, walking: false, ...o });
 
 test('standing still, the d-pad aims in all eight directions', () => {
@@ -122,6 +121,33 @@ test('a lost life when the pit takes the last pips', () => {
   const events = stepPlayer(p, updatePad(createPad(), new Set()), parseArea(TEST_MAP), []);
   assert.deepEqual(events.map((e) => e.type), ['pit', 'lifeLost']);
   assert.equal(p.health, HEALTH);
+});
+
+test('a cast landing mid-wind-up stops the run, staggers the Associate away and cancels its glyph', () => {
+  const map = [...Array(12).fill(''), '..P.....A', '####################'].map((r) => r.padEnd(20, '.'));
+  const w = createRun('ward', map);
+  const [f] = w.foes;
+  const x0 = f.x;
+  Object.assign(f, { rest: 0, windUp: 3 });
+  spawnCast(w.casts, 'ward', f.x - 20, f.y - 16, 'right');
+  const idle = updatePad(createPad(), new Set());
+  const run = (n) => Array.from({ length: n }, () => {
+    stepRun(w, idle);
+    return { events: w.events, stop: w.hitStop };
+  });
+  const frames = run(30);
+  const events = frames.flatMap((r) => r.events);
+  const stops = frames.map((r) => r.stop);
+  assert.equal(f.hp, 2, 'the cast landed');
+  assert.ok(!events.some((e) => e.type === 'glyph'), 'the wind-up was cancelled');
+  assert.ok(f.x > x0 && f.x - x0 <= STAGGER.slide, `knocked a few px away from the cast (${f.x - x0})`);
+  assert.equal(Math.max(...stops), HIT_STOP.hit - 1, 'a short hit-stop');
+
+  spawnCast(w.casts, 'ward', f.x - 20, f.y - 16, 'right');
+  f.hp = 1;
+  const drop = run(12).map((r) => r.stop);
+  assert.equal(f.hp, 0);
+  assert.equal(Math.max(...drop), HIT_STOP.drop - 1, 'a heavier stop on the blow that drops it');
 });
 
 test('holding B plants the feet and aims diagonally; a walking press casts on the move', () => {

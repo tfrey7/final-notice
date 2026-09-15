@@ -4,6 +4,7 @@
 // the cart charge runs the arena and is jumped; the paper storm drops sheets that are dodged or cut down.
 // He is guarded (seals clink) while he winds up, attacks or roars. At half health he roars and fights
 // faster from a longer loop. Beaten, the stage is clear.
+import { stagger } from './casting.mjs';
 import { HEALTH, INVULN } from './player.mjs';
 
 // Pairs are [first half, second half]; times are frames.
@@ -115,6 +116,7 @@ export function stepCustodian(b, run, t = CUSTODIAN) {
   stepPapers(b, p, t, events);
   const { x0, x1 } = b.arena;
   const hw = b.w / 2;
+  stagger(b, (x) => x >= x0 + hw && x <= x1 - hw);
 
   if (b.phase === 1 && b.hp <= t.phaseAt && !['tell', 'sweep', 'charge'].includes(b.state)) {
     Object.assign(b, { phase: 2, loop: 0, vx: 0, papers: [] });

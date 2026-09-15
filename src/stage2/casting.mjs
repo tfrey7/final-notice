@@ -69,6 +69,18 @@ export function spawnSpell(casts, spell, auditor, x, y, dir, facing = 1) {
   return out;
 }
 
+// A cast landing on a foe or a boss staggers it, sliding it a px a frame away from the blow at first.
+export const STAGGER = { frames: 12, slide: 4 };
+
+// One frame of `t`'s stagger; `ok(x)` says whether it may slide to x. Answers whether it is still staggered.
+export function stagger(t, ok = () => true) {
+  if (!(t.stagger > 0)) return false;
+  t.stagger -= 1;
+  const x = t.x + t.staggerDir;
+  if (t.stagger >= STAGGER.frames - STAGGER.slide && ok(x)) t.x = x;
+  return true;
+}
+
 const PAD = 3;
 const inBox = (c, t) => c.x > t.x - t.w / 2 - PAD && c.x < t.x + t.w / 2 + PAD && c.y > t.y - t.h - PAD && c.y < t.y + PAD;
 const inBurst = (c, t) => Math.hypot(Math.max(Math.abs(c.x - t.x) - t.w / 2, 0), Math.max(Math.abs(c.y - (t.y - t.h / 2)) - t.h / 2, 0)) <= c.rule.radius;
@@ -83,6 +95,9 @@ function strike(target, events, c) {
   }
   target.hp = target.lock ? 0 : target.hp - 1;
   target.flash = 6;
+  if (target.kind === 'associate' || target.boss) {
+    Object.assign(target, { stagger: STAGGER.frames, staggerDir: Math.sign(c.vx) || Math.sign(target.x - c.x) || 1 });
+  }
   events.push({ type: target.hp <= 0 ? 'break' : 'hit', target });
 }
 
