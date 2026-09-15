@@ -28,7 +28,7 @@ const NO_PORTRAIT = new Set(['retention-button', 'ledger-page']);
 // `wrapper(text)` answers pages of lines: the NES font's columns by default, the SNES its pixel widths.
 export function cinemaPages(sceneId, auditor, wrapper = wrap) {
   const out = [];
-  for (const beat of SCENES[sceneId].beats) {
+  for (const [n, beat] of SCENES[sceneId].beats.entries()) {
     const who = beat.speaker === 'auditor' ? auditor : beat.speaker;
     const text = beat.speaker === 'auditor' ? beat[auditor] : beat.line;
     wrapper(text).forEach((lines, i) => out.push({
@@ -37,6 +37,8 @@ export function cinemaPages(sceneId, auditor, wrapper = wrap) {
       speaker: who,
       lines,
       sound: i === 0 ? beat.sound ?? null : null,
+      beat: n,
+      part: i,
     }));
   }
   return out;

@@ -8,7 +8,7 @@ import { drawTextBox } from '../text.mjs';
 import { loadArt } from '../art.mjs';
 import { bakeScene, composeFrame } from '../layers.mjs';
 import { screens } from '../bg/ui.mjs';
-import { playSong, sfx } from '../audio/player.mjs';
+import { currentSong, playSong, sfx, soloSong, stopSong } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { SPEAKERS } from '../../story/script.mjs';
@@ -17,6 +17,7 @@ import { FrontScreen, IN_FRAMES, bufferFill, inStep } from './front.mjs';
 import {
   ADVANCE, ALARM_FLASH, SPIN_CENTRE, changeStep, fadeOutStep, paintPicture, pictureId, snesWrap, spinStep, spinTexture,
 } from '../cinema.mjs';
+import { PAD_VOICES, stageFrame, stagePages } from '../staging.mjs';
 
 export class SnesCinemaScene extends Phaser.Scene {
   constructor(key) {
@@ -29,7 +30,11 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.registry.set('flow', state);
     const params = new URLSearchParams(location.search);
     this.pinned = params.has('t') ? Number(params.get('t')) : null;
-    this.player = startPlayer(SCENE_IDS[this.scene.key], state.auditor, snesWrap);
+    const sceneId = SCENE_IDS[this.scene.key];
+    this.player = startPlayer(sceneId, state.auditor, snesWrap);
+    this.player = { ...this.player, pages: stagePages(sceneId, this.player.pages, state.auditor) };
+    this.clock = 0;
+    this.held = 0;
     const open = Number(params.get('page'));
     if (open > 0) this.player = { ...this.player, page: Math.min(open, this.player.pages.length - 1) };
     this.art = null;
@@ -64,6 +69,7 @@ export class SnesCinemaScene extends Phaser.Scene {
   pin(t) {
     const page = this.page();
     this.intro = this.player.page === 0 ? t : IN_FRAMES;
+    this.clock = t;
     this.player = { ...this.player, typed: Math.min(letters(page), Math.floor(t / FRAMES_PER_LETTER)) };
     if (page.sound === 'alarm') this.spin = t;
   }
@@ -92,7 +98,14 @@ export class SnesCinemaScene extends Phaser.Scene {
       this.arrive();
     }
     if (live) {
-      if (ADVANCE.some((b) => pad.pressed.has(b))) {
+      const page = this.page();
+      const typedOut = this.player.typed >= letters(page);
+      if (page.fadeAfter != null && typedOut && this.held++ >= page.fadeAfter) {
+        this.leaving = 0;
+        return this.render(15);
+      }
+      const acted = page.acting && this.clock >= page.frames;
+      if (acted || ADVANCE.some((b) => pad.pressed.has(b))) {
         const before = this.player;
         this.player = press(before, 'a');
         if (this.player.done) {
@@ -116,11 +129,20 @@ export class SnesCinemaScene extends Phaser.Scene {
     if (pictureId(prev) === pictureId(page)) return this.arrive();
     this.old.set(this.pic);
     this.paint(this.pic, page);
+    if (page.cut) return this.arrive();
     this.change = 0;
   }
 
   arrive() {
     const page = this.page();
+    this.clock = 0;
+    this.held = 0;
+    if (page.music === 'cut') stopSong();
+    else if (page.music === 'pad') soloSong(PAD_VOICES);
+    else if (page.music) {
+      if (currentSong() === page.music) soloSong(null);
+      else playSong(page.music);
+    }
     if (page.sound) sfx(page.sound);
     if (page.sound === 'alarm') this.spin = 0;
   }
@@ -137,6 +159,9 @@ export class SnesCinemaScene extends Phaser.Scene {
       frame.set(this.pic);
     }
     const page = this.page();
+    stageFrame(frame, page, this.clock);
+    if (this.pinned == null) this.clock++;
+    if (page.acting) return this.view.show(frame, { level });
     drawTextBox(bufferFill(frame), {
       speaker: SPEAKERS[page.speaker],
       lines: page.lines,

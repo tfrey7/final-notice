@@ -120,11 +120,18 @@ export function createSequencer(dsp = createDsp()) {
   let carry = 0;
   const keyed = new Array(VOICES).fill(null);
   const owners = new Array(VOICES).fill(null);
+  let solo = null;
+
+  // Only these song voices sound (a set of indices), or every voice when null.
+  function setSolo(voices) {
+    solo = voices ? new Set(voices) : null;
+  }
 
   function play(compiled) {
     song = compiled;
     pos = 0;
     pass = 0;
+    solo = null;
     dsp.setEcho(compiled.echo);
     for (let i = 0; i < VOICES; i++) if (!owners[i]) release(i);
   }
@@ -177,6 +184,10 @@ export function createSequencer(dsp = createDsp()) {
     const row = Math.floor(pos / song.tempo);
     for (let i = 0; i < VOICES; i++) {
       if (owners[i]) continue;
+      if (solo && !solo.has(i)) {
+        if (keyed[i]) release(i);
+        continue;
+      }
       const note = song.voices[i][row];
       const id = note ? `${pass}:${note.start}` : null;
       const inst = note && song.instruments[note.inst];
@@ -212,7 +223,7 @@ export function createSequencer(dsp = createDsp()) {
 
   const playing = () => !!song;
   const owner = (i) => (owners[i] ? 'sfx' : song ? 'song' : 'idle');
-  return { dsp, play, stop, sfx, render, playing, owner };
+  return { dsp, play, stop, sfx, render, playing, owner, setSolo };
 }
 
 // A whole song, rendered with no browser: what the sound test plays, sample for sample.
@@ -332,6 +343,11 @@ export function stopSong() {
 }
 
 export const currentSong = () => (seq?.playing() ? songName : null);
+
+// Drop the song to these voices (indices) without losing its place; null brings every voice back.
+export function soloSong(voices) {
+  seq?.setSolo(voices);
+}
 
 export function sfx(name) {
   if (SFX[name] && seq) seq.sfx(SFX[name]);
