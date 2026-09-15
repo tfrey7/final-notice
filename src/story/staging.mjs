@@ -5,6 +5,8 @@
 // `fromPlay` opens on the fight's last frame with no mosaic in, the acting page fading the HUD out over
 // `hud` frames; a beat's `spin` follows its page with a wordless Mode 7 page after `silence` frames;
 // `sound` and `backdrop` apply to every page of the beat; `mosaicOut` leaves by mosaic.
+// A beat's own `cut: false` mosaics instead; `keepFx` holds the fx on every page of the beat; `endCut`
+// leaves the last page on a hard cut instead of a fade.
 export const STAGING = {
   assignment: {
     cuts: true,
@@ -52,6 +54,33 @@ export const STAGING = {
       { sound: 'click', spin: { silence: 12 } },
       { music: 'scene', fx: 'ledger', backdrop: 'grille', portrait: null },
       { backdrop: 'break-room', portrait: 'radio', sound: 'click' },
+    ],
+  },
+  documents: {
+    cuts: true,
+    fadeAfter: 60,
+    endCut: true,
+    acting: {
+      backdrop: 'break-room',
+      frames: 300,
+      music: 'cut',
+      sound: 'buzz',
+      fx: 'table',
+      actors: [{ who: 'auditor', keys: [[0, 60, 142, 'sit']] }],
+    },
+    beats: [
+      { music: 'scene', fx: 'ledgerScroll' },
+      { music: 'cut', fx: 'dim', keepFx: true },
+      { music: 'pad', fx: 'table', keepFx: true, actors: [{ who: 'auditor', keys: [[0, 60, 142, 'sit']] }] },
+      { music: 'scene', sound: 'phone', backdrop: 'bellwether-office', cut: false },
+      {
+        music: 'cut',
+        sound: 'bassNote',
+        fx: 'table',
+        portrait: null,
+        cut: false,
+        actors: [{ who: 'auditor', keys: [[0, 60, 142, 'sit'], [30, 60, 142, 'sit'], [50, 60, 142, 'hold']] }],
+      },
     ],
   },
 };

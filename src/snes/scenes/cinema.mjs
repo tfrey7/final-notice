@@ -19,6 +19,9 @@ import {
 } from '../cinema.mjs';
 import { PAD_VOICES, mosaicOutStep, stageFrame, stagePages } from '../staging.mjs';
 
+// The fluorescent buzz is a 56-frame effect, played again while its page lasts.
+const BUZZ_FRAMES = 56;
+
 export class SnesCinemaScene extends Phaser.Scene {
   constructor(key) {
     super(key);
@@ -55,7 +58,7 @@ export class SnesCinemaScene extends Phaser.Scene {
     if (this.page().fromPlay) {
       this.intro = IN_FRAMES;
       this.arrive();
-    } else playSong(SONGS[this.scene.key]);
+    } else if (this.page().music !== 'cut') playSong(SONGS[this.scene.key]);
     if (this.pinned != null) this.pin(this.pinned);
   }
 
@@ -110,6 +113,7 @@ export class SnesCinemaScene extends Phaser.Scene {
       const page = this.page();
       const typedOut = this.player.typed >= letters(page);
       if (page.fadeAfter != null && typedOut && this.held++ >= page.fadeAfter) {
+        if (page.endCut) return this.finish();
         this.leaving = 0;
         return this.render(15);
       }
@@ -118,6 +122,7 @@ export class SnesCinemaScene extends Phaser.Scene {
         const before = this.player;
         this.player = press(before, 'a');
         if (this.player.done) {
+          if (page.endCut) return this.finish();
           this.leaving = 0;
           return this.render(15);
         }
@@ -126,6 +131,7 @@ export class SnesCinemaScene extends Phaser.Scene {
           if (this.change != null) return this.view.show(this.old, { mosaic: 1 });
         }
       }
+      if (page.sound === 'buzz' && this.clock > 0 && this.clock % BUZZ_FRAMES === 0) sfx('buzz');
       const typed = tick(this.player);
       this.player = typed.player;
       if (typed.blip) sfx('blip');
@@ -147,7 +153,10 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.clock = 0;
     this.held = 0;
     if (page.music === 'cut') stopSong();
-    else if (page.music === 'pad') soloSong(PAD_VOICES);
+    else if (page.music === 'pad') {
+      if (currentSong()) soloSong(PAD_VOICES);
+      else playSong(SONGS[this.scene.key]).then(() => soloSong(PAD_VOICES));
+    }
     else if (page.music) {
       if (currentSong() === page.music) soloSong(null);
       else playSong(page.music);

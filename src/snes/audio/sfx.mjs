@@ -287,6 +287,10 @@ export const SFX = {
   pause: fx(layer(holdChime), layer(echoOf(holdChime, I.bellEcho), 6)),
   alarm: fx(layer(ring), layer(ring.map(([i, m, f]) => [i && { ...I.ring, vol: 40, pan: -30 }, m - 3, f]))),
   stamp: fx(layer(run(I.stamp, [[60, 15]])), layer([[I.bass, 52, 10, 33]])),
+  // Scene 3's break room: the tubes' buzz under five seconds of silence, the desk phone, one bass note.
+  buzz: fx(layer([[{ ...I.lead, vol: 14 }, 30, 28], [null, 0, 2], [{ ...I.lead, vol: 14 }, 30, 26]]), layer([[{ ...I.lead, vol: 8, pan: -30 }, 49, 56]])),
+  phone: fx(layer(ring.map(([i, m, f]) => [i && { ...I.ring, vol: 50 }, m + 5, f]))),
+  bassNote: fx(layer(run(I.bass, [[34, 50]]))),
   // Menus: the cursor, confirm and cancel.
   pencil: fx(layer(run(I.pencil, [[60, 5]]))),
   stampOk: fx(layer(run(I.stamp, [[65, 12]])), layer(run(I.click, [[50, 3]]))),

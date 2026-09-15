@@ -5,9 +5,66 @@ import { isRgb15 } from '../src/snes/color.mjs';
 import { screen } from '../src/snes/fx.mjs';
 import { cinemaPages } from '../src/story/cinema.mjs';
 import { paintPicture, snesWrap } from '../src/snes/cinema.mjs';
-import { BILL_FRAMES, actorAt, billStep, stageFrame, stagePages } from '../src/snes/staging.mjs';
+import { BILL_FRAMES, LEDGER_SCROLL, actorAt, billStep, ledgerOffset, stageFrame, stagePages } from '../src/snes/staging.mjs';
+import { SFX } from '../src/snes/audio/sfx.mjs';
 
 const scene1 = (who) => stagePages('assignment', cinemaPages('assignment', who, snesWrap), who);
+const scene3 = (who) => stagePages('documents', cinemaPages('documents', who, snesWrap), who);
+
+test('Scene 3 opens on 5 s of silence in the break room with only the buzz, then the script word for word', () => {
+  const raw = cinemaPages('documents', 'mercer', snesWrap);
+  const staged = scene3('mercer');
+  const [sit] = staged;
+  assert.ok(sit.acting);
+  assert.equal(sit.frames, 300);
+  assert.equal(sit.backdrop, 'break-room');
+  assert.equal(sit.music, 'cut');
+  assert.equal(sit.sound, 'buzz');
+  assert.equal(sit.fx, 'table');
+  assert.deepEqual(sit.actors.map((a) => [a.who, a.keys[0][3]]), [['mercer', 'sit']]);
+  assert.deepEqual(staged.slice(1).map((p) => p.lines), raw.map((p) => p.lines));
+  for (const name of ['buzz', 'phone', 'bassNote']) assert.ok(SFX[name], name);
+});
+
+test('Scene 3: ledger scroll, the speaker under a cut and a dim, the phone whole, a hard cut out', () => {
+  const staged = scene3('ward');
+  const beat = (n) => staged.filter((p) => p.beat === n);
+  assert.equal(beat(0)[0].fx, 'ledgerScroll');
+  assert.equal(beat(0)[0].music, 'scene');
+  assert.equal(beat(1)[0].music, 'cut');
+  assert.ok(beat(1).every((p) => p.fx === 'dim' && p.portrait === 'speaker'));
+  assert.equal(beat(2)[0].music, 'pad');
+  const phone = beat(3)[0];
+  assert.deepEqual([phone.backdrop, phone.portrait, phone.music, phone.sound, phone.cut], ['bellwether-office', 'bellwether', 'scene', 'phone', false]);
+  const last = staged.at(-1);
+  assert.equal(last.portrait, null);
+  assert.equal(last.cut, false);
+  assert.ok(last.endCut && last.fadeAfter > 0);
+  assert.equal(actorAt(last.actors[0].keys, 0).pose, 'sit');
+  assert.equal(actorAt(last.actors[0].keys, 60).pose, 'hold');
+  assert.equal(scene1('ward').at(-1).endCut, undefined);
+});
+
+test('the ledger page scrolls a pixel a frame and stops on ACCOUNT ZERO', () => {
+  assert.equal(ledgerOffset(0), 0);
+  assert.equal(ledgerOffset(40), 40);
+  assert.equal(ledgerOffset(10_000), LEDGER_SCROLL);
+  const page = scene3('ward').find((p) => p.fx === 'ledgerScroll');
+  const top = stageFrame(paintPicture(screen(), page), page, 0);
+  const foot = stageFrame(paintPicture(screen(), page), page, LEDGER_SCROLL);
+  assert.ok(foot.every(isRgb15));
+  const i = (y, x) => y * WIDTH + x;
+  assert.deepEqual(foot.subarray(i(0, 0), i(144 - LEDGER_SCROLL, 0)), top.subarray(i(LEDGER_SCROLL, 0), i(144, 0)));
+});
+
+test('the speaker dims the picture by colour subtract and leaves the text box alone', () => {
+  const page = scene3('ward').find((p) => p.fx === 'dim');
+  const plain = paintPicture(screen(), page);
+  const dim = stageFrame(paintPicture(screen(), page), page, 0);
+  const i = (y, x) => y * WIDTH + x;
+  assert.ok(dim[i(60, 20)] < plain[i(60, 20)]);
+  assert.equal(dim[i(180, 20)], plain[i(180, 20)]);
+});
 
 test('Scene 1 opens on a wordless 4 s acting page, then the script word for word', () => {
   const raw = cinemaPages('assignment', 'ward', snesWrap);
@@ -33,7 +90,6 @@ test('the music drops to the pad under the auditor line and comes back with the 
   const last = staged[staged.length - 1];
   assert.equal(last.portrait, null);
   assert.ok(last.fadeAfter > 0);
-  assert.equal(stagePages('documents', cinemaPages('documents', 'ward', snesWrap), 'ward')[0].acting, undefined);
 });
 
 test('actors ease between keyframes and take the pose of the last key passed', () => {

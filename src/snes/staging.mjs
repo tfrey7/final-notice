@@ -1,6 +1,7 @@
 // The SNES cinema's acting, without Phaser: a scene's pages with src/story/staging.mjs laid over them,
 // the stand-in play sprites on their keyframes, the bill sliding across the desk and the lamp's
 // stepped colour-math glow.
+import { WIDTH } from './screen.mjs';
 import { rgb15 } from './color.mjs';
 import { MAX_MOSAIC, brightness, screen, mathPass } from './fx.mjs';
 import { drawString } from './text.mjs';
@@ -23,10 +24,11 @@ export function stagePages(sceneId, pages, auditor) {
   const out = [];
   pages.forEach((page, i) => {
     const beat = plan.beats[page.beat] ?? {};
-    const staged = { ...page, cut: !!plan.cuts, actors: cast(beat.actors) ?? null };
+    const staged = { ...page, cut: beat.cut ?? !!plan.cuts, actors: cast(beat.actors) ?? null };
     if ('portrait' in beat) staged.portrait = beat.portrait;
     if (beat.backdrop) staged.backdrop = beat.backdrop;
     if ('sound' in beat) staged.sound = beat.sound;
+    if (beat.keepFx) staged.fx = beat.fx;
     if (page.part === 0) Object.assign(staged, { music: beat.music ?? null, fx: beat.fx ?? null });
     out.push(staged);
     if (beat.spin && pages[i + 1]?.beat !== page.beat) {
@@ -37,9 +39,10 @@ export function stagePages(sceneId, pages, auditor) {
   const last = out.at(-1);
   if (last && plan.fadeAfter != null) last.fadeAfter = plan.fadeAfter;
   if (last && plan.mosaicOut) last.mosaicOut = true;
+  if (last && plan.endCut) last.endCut = true;
   if (!plan.acting) return out;
-  const { backdrop, frames, actors, music = null, hud = null } = plan.acting;
-  return [{ acting: true, fromPlay: !!plan.fromPlay, hud, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors), music, fx: null }, ...out];
+  const { backdrop, frames, actors, music = null, hud = null, sound = null, fx = null } = plan.acting;
+  return [{ acting: true, fromPlay: !!plan.fromPlay, hud, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors), music, sound, fx }, ...out];
 }
 
 const HOME = { assignment: 'bellwether-office', incident: 'vellum-desk', documents: 'break-room' };
@@ -81,8 +84,28 @@ const COLOURS = {
 const OUTLINE = rgb15(3, 2, 4);
 const SHIRT = rgb15(27, 27, 26);
 
+const CHAIR = rgb15(9, 6, 5);
+const BOOK = { cover: rgb15(6, 10, 7), edge: rgb15(26, 24, 18) };
+
+function paintLedger(fill, x, y) {
+  fill(x - 1, y - 1, 26, 10, OUTLINE);
+  fill(x, y, 24, 8, BOOK.cover);
+  fill(x, y + 6, 24, 2, BOOK.edge);
+}
+
 // A stand-in play sprite, 60 px tall, feet at `feet`: the back of the head and no tie when turned away.
+// 'sit' is the same auditor on a chair, a third shorter; 'hold' stands with the ledger at the chest.
 export function paintActor(fill, who, x, feet, pose = 'front', h = 60) {
+  if (pose === 'sit') {
+    fill(x - 12, feet - 22, 26, 4, CHAIR);
+    fill(x - 12, feet - 18, 3, 18, CHAIR);
+    fill(x + 11, feet - 18, 3, 18, CHAIR);
+    return paintActor(fill, who, x, feet - 4, 'front', h - 20);
+  }
+  if (pose === 'hold') {
+    paintActor(fill, who, x, feet, 'front', h);
+    return paintLedger(fill, x - 8, feet - h + 18);
+  }
   const { skin, hair, suit, tie } = COLOURS[who] ?? COLOURS.ward;
   const back = pose === 'back';
   if (pose === 'slump') h -= 10;
@@ -145,13 +168,67 @@ export function lampGlow() {
 }
 const inLamp = (x, y) => x >= LAMP.x0 && y < PICTURE.h;
 
+// The ledger page as one tall BG1 strip: YEARS at the top, a column of approved transfers, ACCOUNT
+// ZERO and the seal at the foot. It scrolls up a pixel a frame until the seal is in the picture.
+export const LEDGER_SCROLL = 120;
+export const ledgerOffset = (t) => Math.min(LEDGER_SCROLL, Math.max(0, Math.floor(t)));
+const STRIP_H = PICTURE.h + LEDGER_SCROLL;
+let ledgerStrip = null;
+export function ledgerPage() {
+  if (ledgerStrip) return ledgerStrip;
+  ledgerStrip = new Uint16Array(WIDTH * STRIP_H);
+  const fill = (x, y, w, h, c) => {
+    for (let yy = Math.max(0, y); yy < Math.min(STRIP_H, y + h); yy++) {
+      for (let xx = Math.max(0, x); xx < Math.min(WIDTH, x + w); xx++) ledgerStrip[yy * WIDTH + xx] = c;
+    }
+  };
+  const ink = rgb15(4, 4, 8);
+  const red = rgb15(27, 4, 5);
+  for (let y = 0; y < STRIP_H; y++) fill(0, y, WIDTH, 1, rgb15(29 - Math.round((5 * y) / STRIP_H), 27 - Math.round((5 * y) / STRIP_H), 21 - Math.round((5 * y) / STRIP_H)));
+  for (let y = 22; y < STRIP_H; y += 14) fill(0, y, WIDTH, 1, rgb15(18, 22, 28));
+  fill(36, 0, 1, STRIP_H, rgb15(26, 10, 10));
+  drawString(fill, 'YEARS', 44, 8, ink, null);
+  drawString(fill, 'TRANSFER', 150, 8, ink, null);
+  ['1647', '1712', '1788', '1851', '1903', '1929', '1966', '1987'].forEach((year, i) => {
+    const y = 26 + i * 14;
+    drawString(fill, year, 44, y, ink, null);
+    for (let x = 84; x < 140 + ((i * 17) % 30); x += 7) fill(x, y + 3, 5 - ((x + i) % 3), 2, ink);
+    drawString(fill, 'APPROVED', 170, y, red, null);
+  });
+  fill(40, 222, 200, 1, ink);
+  drawString(fill, 'ACCOUNT ZERO', 44, 230, ink, null);
+  for (let dy = -14; dy <= 14; dy++) {
+    const half = Math.floor(Math.sqrt(196 - dy * dy));
+    fill(206 - half, 238 + dy, 2 * half, 1, dy * dy + half * half > 120 ? red : rgb15(22, 3, 4));
+  }
+  drawString(fill, 'B', 203, 234, rgb15(31, 24, 20), null);
+  return ledgerStrip;
+}
+
+// The wall speaker talks with the room dimmed: a fixed colour subtracted over the picture, not the box.
+const DIM = rgb15(7, 7, 6);
+let dimSub = null;
+const inPicture = (x, y) => y < PICTURE.h;
+
+const TABLE = { x: 84, y: 116, w: 96 };
+
 // One frame of a staged page over its painted picture: the actors on page clock t, then its fx.
 export function stageFrame(buf, page, t) {
   const fill = bufferFill(buf);
-  for (const actor of page.actors ?? []) {
-    const { x, feet, pose } = actorAt(actor.keys, t);
-    paintActor(fill, actor.who, x, feet, pose);
+  if (page.fx === 'ledgerScroll') {
+    const src = ledgerPage();
+    const off = ledgerOffset(t);
+    for (let y = 0; y < PICTURE.h; y++) buf.set(src.subarray((y + off) * WIDTH, (y + off + 1) * WIDTH), y * WIDTH);
   }
+  const poses = (page.actors ?? []).map((actor) => ({ who: actor.who, ...actorAt(actor.keys, t) }));
+  if (page.fx === 'table') {
+    fill(TABLE.x, TABLE.y, TABLE.w, 6, rgb15(17, 15, 12));
+    fill(TABLE.x, TABLE.y + 6, TABLE.w, 2, rgb15(8, 7, 6));
+    fill(TABLE.x + 6, TABLE.y + 8, 3, 20, rgb15(8, 7, 6));
+    fill(TABLE.x + TABLE.w - 9, TABLE.y + 8, 3, 20, rgb15(8, 7, 6));
+    if (!poses.some((p) => p.pose === 'hold')) paintLedger(fill, TABLE.x + 10, TABLE.y - 8);
+  }
+  for (const { who, x, feet, pose } of poses) paintActor(fill, who, x, feet, pose);
   if (page.fx === 'bill') {
     const b = billStep(t);
     fill(b.x, b.y, b.w, b.h, rgb15(28, 28, 23));
@@ -161,5 +238,6 @@ export function stageFrame(buf, page, t) {
   if (page.fx === 'lamp') mathPass(buf, lampGlow(), { op: 'add', where: inLamp }, buf);
   if (page.fx === 'ledger') mathPass(buf, ledgerGlow(), { op: 'add', where: inGrille }, buf);
   if (page.hud) hudPass(buf, page.actors?.at(-1)?.who ?? 'ward', hudLevel(t, page.hud));
+  if (page.fx === 'dim') mathPass(buf, (dimSub ??= screen(DIM)), { op: 'sub', where: inPicture }, buf);
   return buf;
 }
