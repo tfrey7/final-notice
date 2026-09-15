@@ -17,6 +17,7 @@ import { SnesSelectScene } from './snes/scenes/select.mjs';
 import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 import { SnesStage1Scene } from './snes/stage1/scene.mjs';
+import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -27,7 +28,8 @@ const SCENES = {
   title: snes ? new SnesTitleScene() : new TitleScene(),
   select: snes ? new SnesSelectScene() : new SelectScene(),
   stage1: snes ? new SnesStage1Scene() : new Stage1Scene(),
-  stage2: new EscapeScene(),
+  // The SNES Stage 2 plays areas 1-4; the Great Seal's room stays the NES one until card 1932.
+  stage2: snes && params.get('go') !== 'greatseal' ? new SnesStage2Scene() : new EscapeScene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: new EndingScene(),
 };
