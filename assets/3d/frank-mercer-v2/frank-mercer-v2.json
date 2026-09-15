@@ -1,0 +1,106 @@
+{
+  "materials": {
+    "suit": 1,
+    "shirt": 2,
+    "tie": 3,
+    "skin": 4,
+    "hair": 5,
+    "shoe": 6,
+    "trousers": 7,
+    "eye": 8
+  },
+  "colours": {
+    "suit": [
+      74,
+      84,
+      116
+    ],
+    "shirt": [
+      214,
+      210,
+      206
+    ],
+    "tie": [
+      168,
+      64,
+      44
+    ],
+    "skin": [
+      232,
+      176,
+      136
+    ],
+    "hair": [
+      88,
+      56,
+      34
+    ],
+    "shoe": [
+      20,
+      18,
+      20
+    ],
+    "trousers": [
+      58,
+      64,
+      92
+    ],
+    "eye": [
+      40,
+      28,
+      20
+    ]
+  },
+  "macros": {
+    "gender": 1.0,
+    "age": 0.5,
+    "muscle": 1.0,
+    "weight": 0.45,
+    "proportions": 1.0,
+    "height": 0.7,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+      "asian": 0.0,
+      "caucasian": 1.0,
+      "african": 0.0
+    }
+  },
+  "targets": {
+    "measure-shoulder-dist-incr": 0.9,
+    "torso-vshape-incr": 0.8,
+    "measure-waist-circ-decr": 0.5,
+    "l-upperarm-shoulder-muscle-incr": 0.6,
+    "r-upperarm-shoulder-muscle-incr": 0.6,
+    "neck-scale-horiz-incr": 0.3,
+    "head-age-decr": 0.4,
+    "head-square": 0.5,
+    "chin-width-incr": 0.5,
+    "chin-prominent-incr": 0.5,
+    "chin-height-incr": 0.2,
+    "eyebrows-trans-down": 0.4,
+    "nose-trans-forward": 0.2
+  },
+  "assets": [
+    "eyes/low-poly/low-poly.mhclo",
+    "eyebrows/eyebrow010/eyebrow010.mhclo",
+    "hair/short02/short02.mhclo",
+    "clothes/male_elegantsuit01/male_elegantsuit01.mhclo",
+    "clothes/shoes02/shoes02.mhclo"
+  ],
+  "licences": {
+    "MPFB 2 add-on": "GPL-3.0 (the tool only)",
+    "MakeHuman base mesh, targets, rig": "CC0",
+    "MakeHuman system assets (hair, eyes, eyebrows, suit, shoes)": "CC0"
+  },
+  "suit_faces": {
+    "clothes/male_elegantsuit01/male_elegantsuit01.mhclo": {
+      "trousers": 1274,
+      "suit": 5287,
+      "tie": 265,
+      "shirt": 652,
+      "removed past the cuff": 1374,
+      "tie vertices loosened": 320
+    }
+  }
+}
