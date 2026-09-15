@@ -1,5 +1,5 @@
 // Stage 1 on the SNES: the shared brawler logic (src/stage1) drawn at 56-64 px over each area's Mode 1
-// background (parallax and the hdma floor), the SNES HUD fading when idle, and the throw-into-camera
+// background (parallax and the hdma floor), the always-on SNES HUD, and the throw-into-camera
 // finisher on an area's last foe. Area 5 is Vellum's locked office: his memo title card and voice
 // line, the boss bar, his fangs as a colour-math red flash, and his slump into Scene 2.
 /* global Phaser */
@@ -8,7 +8,7 @@ import { hex, rgb15 } from '../color.mjs';
 import { colorMath, fromRgba, screen, toRgba } from '../fx.mjs';
 import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
-import { drainStep, drawHud, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
+import { drainStep, drawHud, hudLayout, postReceipt } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
 import { bark, barkFrames, endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { brawlSound } from '../audio/brawl.mjs';
@@ -155,7 +155,6 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.overlay = new PauseOverlay(this);
     this.menu = null;
     this.fill = (x, y, w, h, c, step = 15) => this.g.fillStyle(hex(c), step / 15).fillRect(x, y, w, h);
-    this.groups = hudGroups();
     this.receipt = null;
     this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
@@ -450,18 +449,17 @@ export class SnesStage1Scene extends Phaser.Scene {
     const boss = v && !this.card && !this.entrance ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
     if (!this.paused && !this.card) this.drain = drainStep(this.drain, p.hp);
     const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
-    const steps = this.groups.see(state, time, Boolean(this.paused || w.run?.prompt));
     const layout = hudLayout({ ...state, pale: this.drain?.pale ?? p.hp, receipt: this.receipt, now: time });
     const dim = this.paused ? 0.5 : 1;
     this.g.clear();
     // A parry's flash: the whole screen washed white for a few frames while the fight holds still.
     if (w.flash > 0) this.fill(0, 0, WIDTH, HEIGHT, WHITE, Math.ceil(10 * w.flash / (this.tune.parryFlash || 1)));
-    drawHud(this.fill, layout, steps);
+    drawHud(this.fill, layout);
     if (!this.paused && !this.card) drawCombo(this.g, this.fill, w.combo, this.tune, { right: WIDTH - 10, top: 44 });
     const { portrait } = layout;
-    this.hudSprites.draw(steps.health ? artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
-      .frame('stand', 0, portrait.x + 2, portrait.y + 2) : []);
-    this.hudSprites.pool.forEach((img) => img.setAlpha(dim * steps.health / 15).setScrollFactor(0));
+    this.hudSprites.draw(artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
+      .frame('stand', 0, portrait.x + 2, portrait.y + 2));
+    this.hudSprites.pool.forEach((img) => img.setAlpha(dim).setScrollFactor(0));
     this.g.setAlpha(dim);
 
     const run = w.run;

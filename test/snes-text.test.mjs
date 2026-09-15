@@ -7,8 +7,8 @@ import {
   FONT_H, BOX, BG3_PALETTE, glyph, measure, wrapText, typed, pageLength, windowGradient, drawTextBox, drawString, inkRamp,
 } from '../src/snes/text.mjs';
 import {
-  hudLayout, hudBoxes, inScreen, overlaps, fadeStep, hudGroups, drainStep, blend15, fadeFill,
-  HOLD_MS, FADE_MS, PALE_FRAMES, DRAIN_PER_FRAME, HUD_COLOURS, drawHud,
+  hudLayout, hudBoxes, inScreen, overlaps, drainStep, blend15, fadeFill,
+  PALE_FRAMES, DRAIN_PER_FRAME, HUD_COLOURS, drawHud,
 } from '../src/snes/hud.mjs';
 
 const inner = BOX.w - 2 * BOX.pad;
@@ -114,31 +114,11 @@ test('the enchantments and boss bar appear only when there are some', () => {
   assert.deepEqual(hudLayout(play).enchant.map((e) => e.held), [false, true]);
 });
 
-test('a group holds 2.5 s, then steps its colours to clear', () => {
-  assert.equal(fadeStep(0), 15);
-  assert.equal(fadeStep(HOLD_MS), 15);
-  const mid = fadeStep(HOLD_MS + FADE_MS / 2);
-  assert.ok(mid > 0 && mid < 15);
-  assert.equal(fadeStep(HOLD_MS + FADE_MS), 0);
-});
-
-test('each HUD group lights on its own trigger and fades on its own clock', () => {
-  const groups = hudGroups();
-  const base = { hp: 8, lives: 3, meter: 1, carried: ['notice', 'redTape'], hand: 0, boss: null };
-  assert.deepEqual(groups.see(base, 0), { health: 15, meter: 15, enchant: 15, boss: 15 });
-  const quiet = groups.see(base, 4000);
-  assert.deepEqual(quiet, { health: 0, meter: 0, enchant: 0, boss: 0 });
-  const hit = groups.see({ ...base, hp: 6 }, 5000);
-  assert.deepEqual(hit, { health: 15, meter: 0, enchant: 0, boss: 0 });
-  assert.equal(groups.see({ ...base, hp: 6, meter: 2 }, 6000).meter, 15);
-  assert.equal(groups.see({ ...base, hp: 6, meter: 1 }, 9000).meter, 0, 'spending the meter does not light it');
-  const swap = groups.see({ ...base, hp: 6, hand: 1 }, 9100);
-  assert.deepEqual([swap.enchant, swap.health], [15, 0]);
-  const boss = { ...base, hp: 6, hand: 1, boss: { name: 'Vellum', hp: 9, maxHp: 12 } };
-  assert.equal(groups.see(boss, 20000).boss, 15);
-  assert.equal(groups.see(boss, 60000).boss, 15, 'the boss group stays up while the boss is');
-  assert.equal(groups.see({ ...boss, boss: null }, 60000 + HOLD_MS + FADE_MS).boss, 0);
-  assert.deepEqual(groups.see({ ...boss, boss: null }, 90000, true), { health: 15, meter: 15, enchant: 15, boss: 15 });
+test('the HUD never fades: every part draws at full strength', () => {
+  const steps = new Set();
+  drawHud((x, y, w, h, c, step = 15) => steps.add(step), hudLayout({ ...play, receipt: { count: 2, ms: 0 }, now: 1000 }));
+  assert.ok(steps.size > 0);
+  assert.ok([...steps].every((s) => s >= 7), [...steps].join());
 });
 
 test('a hit leaves the lost slice pale for 20 frames, then it drains', () => {

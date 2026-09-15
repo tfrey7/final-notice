@@ -1,16 +1,12 @@
 // The SNES HUD on BG3, over play with no strip behind it: portrait slot, health bar, lives, the
-// injunction meter, Stage 2's two enchantments and a boss bar. Each group shows and hides on its own,
-// the Donkey Kong Country way: it lights when its value changes, holds, then its BG3 colours step to
-// clear (never master brightness, which dims the whole screen). hudLayout, hudGroups and drainStep are pure.
+// injunction meter, Stage 2's two enchantments and a boss bar. It is always on screen, as in Final
+// Fight: nothing fades or hides it. hudLayout and drainStep are pure.
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { channels, rgb15 } from './color.mjs';
 import { BG3_PALETTE, drawString, measure } from './text.mjs';
 
-export const HOLD_MS = 2500;
-export const FADE_MS = 500;
 export const PALE_FRAMES = 20;
 export const DRAIN_PER_FRAME = 1 / 8;
-export const GROUPS = ['health', 'meter', 'enchant', 'boss'];
 
 export const HUD_COLOURS = {
   edge: BG3_PALETTE[1],
@@ -124,35 +120,6 @@ export function hudBoxes(layout) {
 
 export const inScreen = (b) => b.x >= 0 && b.y >= 0 && b.x + b.w <= WIDTH && b.y + b.h <= HEIGHT;
 export const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
-// A group's palette step 0-15, given how long since it last lit.
-export function fadeStep(idleMs, hold = HOLD_MS, fade = FADE_MS) {
-  if (idleMs <= hold) return 15;
-  return Math.max(0, 15 - Math.ceil(((idleMs - hold) * 15) / fade));
-}
-
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const LIGHTS = {
-  health: (was, now) => was.hp !== now.hp || was.lives !== now.lives,
-  meter: (was, now) => (now.meter ?? 0) > (was.meter ?? 0),
-  enchant: (was, now) => !same([was.carried, was.hand], [now.carried, now.hand]),
-  boss: () => false,
-};
-
-// Which groups are lit: every group shows at the start, then each on its own trigger; the boss
-// group stays lit while a boss is up. see() answers each group's step; `all` holds every group up.
-export function hudGroups() {
-  let was = null;
-  const since = {};
-  return {
-    see(state, ms, all = false) {
-      for (const g of GROUPS) if (!was || LIGHTS[g](was, state)) since[g] = ms;
-      if (state.boss) since.boss = ms;
-      was = state;
-      return Object.fromEntries(GROUPS.map((g) => [g, all ? 15 : fadeStep(ms - since[g])]));
-    },
-  };
-}
 
 // One frame of the health bar's loss: a hit leaves the old value pale for PALE_FRAMES, then it drains.
 export function drainStep(d, hp) {
