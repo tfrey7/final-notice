@@ -23,7 +23,12 @@ export const lead = (rows, inst, shift = 0) => rows.split(' ').map((t) => {
   return [`${nameOf(noteToMidi(name) + shift)}:${inst}`, ...marks].join('/');
 }).join(' ');
 
-export const INTRO_CHORDS = ['Em', 'Em', 'C', 'B7'];
+// A section in a new key: only the chord roots move here, since section() would push the lead through
+// kit.transpose, which mangles marked notes, and lead() shifts it again in arrange().
+export const keyed = (part, chords, leads, shift) =>
+  section(part, chords, leads).map((b) => ({ ...b, c: { ...b.c, root: b.c.root + shift }, shift }));
+
+export const INTRO_CHORDS =['Em', 'Em', 'C', 'B7'];
 export const INTRO_LEAD = [R, R, 'C6/v - - - - - - - - - - - - - - -', 'B5/v - - - - - - - A5 - F#5 - D#5 - B4 -'];
 
 export const A_CHORDS = ['Em', 'C', 'Am', 'B7', 'Em', 'C', 'F', 'B7'];
@@ -80,8 +85,8 @@ export const FORM = [
   ...section('B', B_CHORDS, B_LEAD),
   ...section('B2', B_CHORDS, B_LEAD_2),
   ...section('break', BREAK_CHORDS, BREAK_LEAD),
-  ...section('A', A_CHORDS, A_LEAD, 1),
-  ...section('A2', A_CHORDS, A_LEAD_2, 1),
+  ...keyed('A', A_CHORDS, A_LEAD, 1),
+  ...keyed('A2', A_CHORDS, A_LEAD_2, 1),
   ...section('turn', TURN_CHORDS, TURN_LEAD),
 ];
 

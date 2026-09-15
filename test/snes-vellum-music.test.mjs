@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import vellum, { BAR_ROWS, FORM, LOOP_BAR } from '../src/snes/audio/songs/vellum.mjs';
+import vellum, { A_CHORDS, A_LEAD, A_LEAD_2, B_CHORDS, B_LEAD_2, BAR_ROWS, FORM, LOOP_BAR, arrange } from '../src/snes/audio/songs/vellum.mjs';
+import { triad } from '../src/snes/audio/songs/chase-kit.mjs';
+import { noteToMidi } from '../src/audio/apu.mjs';
 import pinch, { FORM as PINCH_FORM } from '../src/snes/audio/songs/vellum-pinch.mjs';
 import { compileSong, renderSong, SAMPLES, VOICE_NAMES } from '../src/snes/audio/player.mjs';
 import { sampleBytes } from '../src/snes/audio/bank.mjs';
@@ -51,6 +53,44 @@ test('the duel loop seam holds its level on the second pass, nothing clipped', (
   assert.ok(Math.abs(first - second) / first < 0.1, `loop bar rms ${first} then ${second}`);
   const peak = out.left.reduce((p, _, i) => Math.max(p, Math.abs(out.left[i]), Math.abs(out.right[i])), 0);
   assert.ok(peak < 0.95, `peak ${peak}`);
+});
+
+const note = (t) => {
+  const [head, ...marks] = t.split('/');
+  const [name, inst] = head.split(':');
+  return { name, inst, marks: marks.join('/') };
+};
+
+for (const [name, form, pinched, sources] of [
+  ['vellum', FORM, false, { A: [A_CHORDS, A_LEAD], A2: [A_CHORDS, A_LEAD_2] }],
+  ['vellum-pinch', PINCH_FORM, true, { A: [A_CHORDS, A_LEAD], B: [B_CHORDS, B_LEAD_2] }],
+]) {
+  test(`${name}'s key-changed lead moves once with the harmony, marks kept`, () => {
+    const v1 = arrange(form, { pinch: pinched }).v1;
+    const moved = form.filter((b) => b.shift !== 0);
+    assert.ok(moved.length);
+    for (const b of moved) {
+      const i = form.indexOf(b);
+      const [chords, leads] = sources[b.part];
+      assert.equal(b.c.root, triad(chords[b.bar]).root + b.shift);
+      const src = leads[b.bar].split(' ');
+      const out = v1[i].split(' ');
+      assert.equal(out.length, src.length);
+      src.forEach((t, j) => {
+        if (!/^[A-G]/.test(t)) return assert.equal(out[j], t);
+        const [a, z] = [note(t), note(out[j])];
+        assert.match(z.name, /^[A-G][#b]?[2-7]$/, `${b.part} bar ${b.bar}: ${out[j]}`);
+        assert.equal(noteToMidi(z.name) - noteToMidi(a.name), b.shift - 12, `${b.part} bar ${b.bar}: ${t} -> ${out[j]}`);
+        assert.equal(z.marks, a.marks, `${b.part} bar ${b.bar}: ${t} -> ${out[j]}`);
+      });
+    }
+  });
+}
+
+test('the duel\'s first A+1 lead note is a semitone above the first A note', () => {
+  const v1 = arrange(FORM).v1;
+  const first = (part, shift) => note(v1[FORM.findIndex((b) => b.part === part && b.shift === shift)].split(' ')[0]);
+  assert.equal(noteToMidi(first('A', 1).name) - noteToMidi(first('A', 0).name), 1);
 });
 
 test('the pinch starts at a third of Vellum\'s health, never once he is down', () => {
