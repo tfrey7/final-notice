@@ -25,6 +25,8 @@ import { PROFILES } from '../../platform.mjs';
 import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
+import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
+import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
@@ -37,6 +39,7 @@ const SOUND = {
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
   fangs: 'alarm', telegraph: 'blip',
 };
+const MENU_SOUNDS = { move: 'blip', thud: 'stamp' };
 const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
 const MEMO = { paper: rgb15(29, 28, 23), rule: rgb15(18, 16, 12), ink: rgb15(3, 3, 6), stamp: rgb15(26, 3, 3) };
 const BODY_H = 60;
@@ -64,6 +67,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.fast = fastOn();
     const params = new URLSearchParams(location.search);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
+    // ?paused opens Form 13-B on the first frame, for a screenshot.
+    this.openOnReady = params.has('paused');
     this.office = state.checkpoint === OFFICE;
     playSong('stageStart');
     this.time.delayedCall(STAGE_START_MS, () => { if (this.paused) this.resume = SONGS.stage1; else playSong(SONGS.stage1); });
@@ -93,6 +98,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.finImages = [];
     this.g = this.add.graphics().setDepth(20).setScrollFactor(0);
     this.hudSprites = new SpriteLayer(this, 21);
+    this.overlay = new PauseOverlay(this);
+    this.menu = null;
     this.fill = (x, y, w, h, c) => this.g.fillStyle(hex(c)).fillRect(x, y, w, h);
     this.watch = hudWatch();
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
@@ -105,7 +112,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     const loopFrame = this.game.loop.frame;
     if (this.freezeAt !== null && loopFrame >= this.freezeAt) return;
     const pad = pollPad(loopFrame);
-    if (pad.pressed.has('start')) this.togglePause();
+    if (pad.pressed.has('start') || this.openOnReady) this.togglePause(), this.openOnReady = false;
+    else if (this.paused) this.stepMenu(pad);
     if (this.paused) { this.draw(time); return; }
     Object.assign(this.tune, scaledTune(this.base, STAGE1.scale));
     if (this.fast) cheapen(this.world.fighters);
@@ -167,9 +175,20 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.paused) {
       this.resume = currentSong() === 'stageStart' ? SONGS.stage1 : currentSong() ?? this.resume;
       stopSong();
-    } else if (this.resume) {
-      playSong(this.resume);
+      const rows = holdings({ lives: this.registry.get('flow').lives, meter: this.world.meter });
+      this.menu = openPause(performance.now(), this.menu, { rows });
+    } else {
+      this.menu = closePause(this.menu, performance.now());
+      if (this.resume) playSong(this.resume);
     }
+  }
+
+  // Stage 1 carries no enchantments, so the attachments row holds Seal of Notice and an empty slot.
+  stepMenu(pad) {
+    const { menu, action } = stepPause(this.menu, pad);
+    this.menu = menu;
+    if (action === 'close') this.togglePause();
+    if (MENU_SOUNDS[action]) sfx(MENU_SOUNDS[action]);
   }
 
   // Vellum stands in until his art lands: a taller dark suit, flashing white on a telegraph and
@@ -227,6 +246,15 @@ export class SnesStage1Scene extends Phaser.Scene {
       const area = Math.max(0, STAGE.starts.findLastIndex((s) => cam + WIDTH / 2 >= s));
       composeFrame(BACKGROUNDS[area], this.baked[area], cam - STAGE.starts[area] + shake.x, 0, this.pixels.data);
     }
+    const paused = this.paused && this.menu;
+    if (paused) {
+      const buf = drawPause(fromRgba(this.pixels.data, this.buf15), this.menu, this.game.loop.frame);
+      toRgba(buf, this.pixels.data);
+      this.overlay.show(buf);
+    } else {
+      this.overlay.hide();
+    }
+    [this.layer, this.hudSprites].forEach((l) => l.pool.forEach((img) => img.setTint(paused ? DIM_TINT : 0xffffff)));
     this.tex.context.putImageData(this.pixels, 0, 0);
     this.tex.refresh();
     this.cameras.main.setScroll(0, shake.y);
@@ -277,7 +305,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const boss = v && !this.card ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
     const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
     const layout = hudLayout(state);
-    const alpha = this.paused || w.run?.prompt || boss ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
+    const alpha = this.paused ? 0.5 : w.run?.prompt || boss ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
     this.g.clear();
     drawHud(this.fill, layout);
     const { portrait } = layout;
@@ -294,7 +322,6 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.g.fillStyle(hex(rgb15(31, 26, 8))).fillTriangle(WIDTH - 22, 63, WIDTH - 22, 73, WIDTH - 14, 68);
     }
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
-    if (this.paused) centred('PAUSE', 100);
     if (this.card) this.drawCard(cardFrame(this.card.t));
   }
 

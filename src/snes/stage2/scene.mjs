@@ -25,6 +25,8 @@ import { DIRECTOR, FLOOR_Y, SEAL, createArena, enterExit, poseArena, reachedAren
 import { BOSS_AREA, areaAt, arenaLocked, createStage, frontsOf, layoutFrom, promptsFor, stepStage } from '../../stage2/areas.mjs';
 import { BELT } from '../../stage2/conveyor.mjs';
 import { STAGE2, backdropFor, bodySize, camera, hudState, onScreen } from './view.mjs';
+import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
+import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { PRESS_H, RAIL, burstSize, headY, mosaicRect, pressTexture, shadowHalf, stampScale, titleCard } from './seal.mjs';
 
 const MS = 1000 / 60;
@@ -38,6 +40,7 @@ const C = {
   ink: rgb15(6, 8, 22), inkLit: rgb15(14, 18, 31), tape: rgb15(24, 4, 4), glyph: rgb15(20, 6, 22), burst: rgb15(31, 26, 10),
   brass: rgb15(22, 16, 5), brassDark: rgb15(12, 8, 3), gold: rgb15(31, 26, 12), memo: rgb15(3, 3, 7), sign: rgb15(4, 16, 6),
 };
+const MENU_SOUNDS = { move: 'blip', swap: 'pickup', thud: 'stamp' };
 const TABS = { carbonCopy: C.flash, redTape: C.tape, margin: C.inkLit };
 const SPRITE_CAST = { seal: 'notice', paper: 'carbonCopy', page: 'margin' };
 const WAX_TOP = 24;
@@ -66,6 +69,8 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
     if (params.has('spell')) carry(this.run, params.get('spell')), swapHand(this.run);
     if (params.has('meter')) this.run.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
+    // ?paused opens Form 13-B on the first frame, for a screenshot.
+    if (params.has('paused')) this.run.paused = true;
     window.finalNoticeStage2 = this.run;
 
     this.buf = screen();
@@ -74,6 +79,8 @@ export class SnesStage2Scene extends Phaser.Scene {
     this.press = pressTexture();
     this.view = new FrontScreen(this, 'snes-stage2');
     this.layer = new SpriteLayer(this, 10);
+    this.overlay = new PauseOverlay(this);
+    this.menu = null;
     this.backs = new Map();
     if (flow.checkpoint === BOSS_AREA.id) {
       this.enterArena();
@@ -137,8 +144,20 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (run.paused !== this.paused) {
       this.paused = run.paused;
       sfx('pause');
-      if (this.paused) stopSong();
-      else playSong(this.song);
+      if (this.paused) {
+        stopSong();
+        const hud = hudState(run, this.registry.get('flow'));
+        this.menu = openPause(performance.now(), this.menu, { rows: holdings(hud), carried: hud.carried, hand: hud.hand });
+      } else {
+        this.menu = closePause(this.menu, performance.now());
+        playSong(this.song);
+      }
+    } else if (this.paused) {
+      const { menu, action } = stepPause(this.menu, pad);
+      this.menu = menu;
+      if (action === 'close') run.paused = false;
+      if (action === 'swap') { swapHand(run); menu.hand = run.hand; }
+      if (MENU_SOUNDS[action]) sfx(MENU_SOUNDS[action]);
     }
     let flow = this.registry.get('flow');
     for (const e of run.events) {
@@ -254,10 +273,14 @@ export class SnesStage2Scene extends Phaser.Scene {
       });
     }
     if (run.boss && !run.exit && !this.cardOff) drawCard(fill, titleCard(run.frame));
-    if (run.paused) drawString(fill, 'PAUSE', (WIDTH - measure('PAUSE')) >> 1, HEIGHT >> 1);
 
     this.layer.draw(sprites);
+    const paused = run.paused && this.menu;
+    if (paused) drawPause(buf, this.menu, this.game.loop.frame);
+    this.layer.pool.forEach((img) => img.setTint(paused ? DIM_TINT : 0xffffff));
     this.view.show(buf);
+    if (paused) this.overlay.show(buf);
+    else this.overlay.hide();
   }
 
   // The arena under the sprites: rail, bindings, the contract seal, tape and shots, the shadow taken out
