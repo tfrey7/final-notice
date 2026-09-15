@@ -36,6 +36,21 @@ export function drawRing(g, shape, x, y) {
   dots(shape.radius * 0.45, 16, 3, nes(0x06));
 }
 
+// The boss's bar, under the strip on the right while a boss fights: his name, then one pip per point.
+export function bossBarLayout({ name, hp, maxHp }) {
+  const x = WIDTH - 8 - maxHp * 7;
+  const y = SAFE + HUD_HEIGHT + 3;
+  return {
+    name: { text: name.toUpperCase(), x, y },
+    pips: Array.from({ length: maxHp }, (_, i) => ({ x: x + i * 7, y: y + 10, w: 5, h: 6, full: i < hp })),
+  };
+}
+
+export function drawBossBar(g, layout, drawText) {
+  for (const p of layout.pips) g.fillStyle(nes(p.full ? 0x27 : 0x00)).fillRect(p.x, p.y, p.w, p.h);
+  drawText(g, layout.name.text, layout.name.x, layout.name.y, nes(0x30));
+}
+
 export function drawHud(g, layout, drawText) {
   const { strip } = layout;
   g.fillStyle(nes(0x0f)).fillRect(strip.x, strip.y, strip.w, strip.h);

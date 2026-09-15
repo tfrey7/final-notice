@@ -171,7 +171,7 @@ export function stepFloor(world, pad, tune) {
   if (!world.think && !world.fighters.some((f) => f.dummy)) world.fighters.push(dummy(tune, 128));
   world.meter = segments(world.meterHits);
   world.events.push(...events);
-  world.cameraX = cameraX(world.cameraX, p.x);
+  world.cameraX = world.locked ? 0 : cameraX(world.cameraX, p.x);
   return world;
 }
 

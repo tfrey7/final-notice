@@ -11,8 +11,9 @@ import { FLOOR_W, HITS_PER_SEGMENT, PIPS, animFor, newFloor, stepFloor, tuneFor 
 import { ringShape } from '../injunction.mjs';
 import { registerTuning, mountTunePanel } from '../tune.mjs';
 import { drawText, showFlow } from '../scenes/placeholder.mjs';
-import { HUD_HEIGHT, drawHud, drawRing, hudLayout } from '../hud.mjs';
+import { HUD_HEIGHT, bossBarLayout, drawBossBar, drawHud, drawRing, hudLayout } from '../hud.mjs';
 import { pose, spawnStaff } from './staff.mjs';
+import { enterOffice, poseOffice, vellum } from './vellum.mjs';
 import { bindSprites, foeSprites, tapeSprites } from './foe-actors.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
@@ -20,7 +21,9 @@ const MS = 1000 / 60;
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction',
+  fangs: 'alarm', bossDown: 'stageClear',
 };
+export const OFFICE = 'stage1-area5';
 const FOE = { idle: 'idle', walk: 'walk', windup: 'punch', punch: 'punch', hurt: 'hurt', held: 'hurt', knockdown: 'hurt', down: 'hurt', getup: 'hurt', ko: 'hurt' };
 
 export class Stage1Scene extends Phaser.Scene {
@@ -33,7 +36,9 @@ export class Stage1Scene extends Phaser.Scene {
     if (!state || state.screen !== 'stage1') state = jumpTo('stage1');
     this.registry.set('flow', state);
     this.ready = false;
-    playSong(SONGS.stage1);
+    // The boss room's checkpoint is Vellum's locked office.
+    this.office = state.checkpoint === OFFICE;
+    playSong(this.office ? 'boss' : SONGS.stage1);
     this.cameras.main.setBackgroundColor(nes(0x0f));
     const params = new URLSearchParams(location.search);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
@@ -49,13 +54,19 @@ export class Stage1Scene extends Phaser.Scene {
     }
     // ?meter=<segments> starts with that much of the injunction meter filled.
     if (params.has('meter')) this.world.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
-    await Promise.all([loadArt('ward'), loadArt('cast')]);
+    if (this.office) {
+      enterOffice(this.world, this.tune);
+      poseOffice(this.world, params.get('pose'));
+    }
+    const optional = (name) => loadArt(name).catch(() => null);
+    await Promise.all([loadArt('ward'), loadArt('cast'), ...(this.office ? [optional('vellum'), optional('bg-claims')] : [])]);
     this.body = this.who === 'ward' ? artOr(this, 'ward') : artOr(this, 'cast');
     this.cast = artOr(this, 'cast');
     this.dummyArt = artOr(this, 'dummy', { w: 16, h: 32, palette: [0x0f, 0x07, 0x27] });
     this.props = artOr(this, 'spells', { w: 16, h: 16, palette: [0x0f, 0x00, 0x2d] });
 
-    this.drawFloor(this.add.graphics());
+    if (this.office) this.drawOffice(this.add.graphics());
+    else this.drawFloor(this.add.graphics());
     this.hud = this.add.graphics().setDepth(20).setScrollFactor(0);
     this.layout = hudLayout({ name: this.who, hp: PIPS, lives: state.lives, meter: 0 });
     const { x, y } = this.layout.portrait;
@@ -82,6 +93,34 @@ export class Stage1Scene extends Phaser.Scene {
     for (let y = top - 16; y < bottom + 8; y += 16) g.fillRect(0, y, FLOOR_W, 1);
   }
 
+  // Vellum's office on one screen: the vellumOffice background when its art has landed, else his
+  // panelled wall, bookcase, desk and lamp in flat colours.
+  drawOffice(g) {
+    let key = null;
+    try { key = artOr(this, 'bg-claims').background('vellumOffice'); } catch { key = null; }
+    if (key) { this.add.image(0, SAFE + HUD_HEIGHT, key).setOrigin(0); return; }
+    const { top, bottom } = this.world.floor;
+    const wallTop = SAFE + HUD_HEIGHT;
+    g.fillStyle(nes(0x07)).fillRect(0, wallTop, FLOOR_W, top - 40 - wallTop);
+    for (let x = 0; x < 300; x += 40) g.fillStyle(nes(0x0f)).fillRect(x, wallTop, 2, top - 40 - wallTop);
+    g.fillStyle(nes(0x17)).fillRect(24, wallTop + 12, 64, top - 52 - wallTop);
+    for (let shelf = 0; shelf < 4; shelf++) {
+      const y = wallTop + 16 + shelf * 20;
+      for (let i = 0; i < 14; i++) g.fillStyle(nes([0x16, 0x28, 0x1a, 0x00][(i + shelf) % 4])).fillRect(28 + i * 4, y, 3, 14);
+      g.fillStyle(nes(0x07)).fillRect(24, y + 14, 64, 4);
+    }
+    g.fillStyle(nes(0x01)).fillRect(128, wallTop + 16, 64, 48);
+    g.fillStyle(nes(0x30)).fillRect(150, wallTop + 26, 2, 2).fillRect(170, wallTop + 40, 2, 2);
+    g.fillStyle(nes(0x08)).fillRect(206, top - 60, 72, 28);
+    g.fillStyle(nes(0x18)).fillRect(206, top - 60, 72, 3);
+    g.fillStyle(nes(0x28)).fillRect(260, top - 76, 10, 8);
+    g.fillStyle(nes(0x38)).fillRect(264, top - 68, 2, 8);
+    g.fillStyle(nes(0x28)).fillRect(0, top - 40, FLOOR_W, 8);
+    g.fillStyle(nes(0x06)).fillRect(0, top - 32, FLOOR_W, bottom - top + 40);
+    g.fillStyle(nes(0x16));
+    for (let y = top - 16; y < bottom + 8; y += 16) g.fillRect(0, y, FLOOR_W, 1);
+  }
+
   update() {
     if (!this.ready) return;
     const loopFrame = this.game.loop.frame;
@@ -93,6 +132,8 @@ export class Stage1Scene extends Phaser.Scene {
     stepFloor(this.world, pad, this.tune);
     for (const e of this.world.events) {
       if (SOUND[e]) sfx(SOUND[e]);
+      if (e === 'bossDown') playSong('stageClear');
+      if (e === 'bossBeaten') { showFlow(this, next(flow, { type: 'stageClear' })); return; }
       if (e === 'lifeLost') {
         const after = next(flow, { type: 'lifeLost' });
         if (after.screen !== 'stage1') { showFlow(this, after); return; }
@@ -133,6 +174,8 @@ export class Stage1Scene extends Phaser.Scene {
     const g = this.hud.clear();
     if (w.ring) drawRing(g, ringShape(w.ring), Math.round(w.ring.x - w.cameraX), w.ring.y);
     drawHud(g, hudLayout({ name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter }), drawText);
+    const boss = this.office && vellum(w);
+    if (boss) drawBossBar(g, bossBarLayout({ name: 'vellum', hp: boss.hp, maxHp: boss.maxHp }), drawText);
     if (p.state === 'bound') drawText(g, 'MASH!', Math.round(p.x - w.cameraX) - 20, p.y - 56, nes(0x30));
     if (this.freezeAt !== null) {
       const foes = w.fighters.filter((f) => f.team === 'foe')

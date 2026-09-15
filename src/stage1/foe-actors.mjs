@@ -15,7 +15,34 @@ const ANIM = {
 // The cast sheet already has the Associate's walk, punch and hurt.
 const CAST = { idle: 'idle', walk: 'walk', guard: 'idle', windup: 'punch', punch: 'punch', dazed: 'hurt', down: 'hurt' };
 
+// Vellum is 24x48; his fangs are a palette swap, and a wind-up flashes white.
+export const VELLUM_PALETTES = { vellum: [0x0f, 0x08, 0x27], vellumFangs: [0x0f, 0x16, 0x30] };
+const VELLUM_ANIM = {
+  guard: 'guard', idle: 'idle', walk: 'idle', summon: 'idle', recover: 'idle', rush: 'rush', sweep: 'sweep',
+  hurt: 'hit', knockdown: 'hit', getup: 'hit', fangs: 'hit', down: 'slumped', slumped: 'slumped',
+};
+
+export function vellumSprites(scene, f, ms) {
+  if (f.invuln > 0 && f.invuln % 4 < 2 && f.state !== 'fangs') return [];
+  const anim = f.state === 'windup' ? f.attack === 'tape' ? 'tape' : f.attack : VELLUM_ANIM[f.state] ?? 'idle';
+  const pal = f.fangs ? 'vellumFangs' : 'vellum';
+  const flash = f.state === 'windup' && f.t % 8 < 4;
+  const sink = anim === 'slumped' ? 12 : 0;
+  const x = f.x - 12;
+  const top = f.y - 48 - f.z + sink;
+  const flip = f.facing < 0;
+  const art = artOr(scene, 'vellum');
+  if (!art.standIn) {
+    if (flash) return [];
+    const name = art.animations.includes(`${pal}.${anim}`) ? `${pal}.${anim}` : anim;
+    return art.frame(name, ms, x, top, flip);
+  }
+  const palette = flash ? [0x0f, 0x30, 0x30] : VELLUM_PALETTES[pal];
+  return artOr(scene, `vellum.${anim}:${flash ? 'flash' : pal}`, { w: 24, h: 48 - sink, palette }).frame(anim, ms, x, top, flip);
+}
+
 export function foeSprites(scene, cast, f, ms) {
+  if (f.kind === 'vellum') return vellumSprites(scene, f, ms);
   // Knocked out: sits dazed, then blinks away.
   if (f.state === 'ko' && f.t > 16 && Math.floor(f.t / 3) % 2) return [];
   if (f.invuln > 0 && f.invuln % 4 < 2) return [];

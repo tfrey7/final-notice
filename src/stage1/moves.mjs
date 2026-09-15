@@ -95,16 +95,19 @@ export function inReach(a, b, reach, tune) {
 }
 
 // Lands a hit: hit-stop for everyone, knockback or a knockdown. Answers false when it cannot land.
-// A guard stops every blow but a body thrown into it (`body`), which breaks the guard instead.
+// A guard (or a boss's armoured wind-up) stops every blow but a body thrown into it (`body`),
+// which breaks the guard instead.
 export function landHit(world, target, { damage, heavy, dir, body }, tune) {
   if (target.invuln > 0 || DOWNED.includes(target.state)) return false;
-  if (target.state === 'guard' && !body) {
+  const guarding = target.state === 'guard' || target.armoured;
+  if (guarding && !body) {
     world.hitStop = tune.hitStop;
     world.events.push('blocked');
     target.x += dir * tune.knockback;
     return false;
   }
-  if (target.state === 'guard') {
+  if (guarding) {
+    target.armoured = false;
     target.guardDown = target.guardBreakFrames;
     world.events.push('guardBreak');
   }
@@ -296,7 +299,7 @@ export function updateCommon(world, f, tune) {
       // A body flying through the fight bowls over any other foe it touches.
       const bowled = world.fighters.find((o) => o !== f && o.team === f.team && Math.abs(o.x - f.x) < 12
         && Math.abs(o.y - f.y) <= tune.depthReach && !DOWNED.includes(o.state));
-      if (bowled && Math.abs(f.vx) > 1 && (tune.bowl || bowled.state === 'guard')) {
+      if (bowled && Math.abs(f.vx) > 1 && (tune.bowl || bowled.state === 'guard' || bowled.armoured)) {
         landHit(world, bowled, { damage: tune.throwDamage, heavy: true, dir: Math.sign(f.vx), body: true }, tune);
       }
       if (f.z <= 0) {

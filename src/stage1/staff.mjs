@@ -19,7 +19,7 @@ export const TAPE = { speed: 2, life: 120, mash: 8, maxFrames: 150, afterInvuln:
 export const rowHit = inReach;
 
 export function spawnStaff(world, kinds, tune) {
-  world.think = thinkStaff;
+  world.think ??= thinkStaff;
   world.tapes ??= [];
   world.bench = [...(world.bench ?? []), ...kinds.filter((k) => KINDS[k])];
   fillSeats(world, tune);

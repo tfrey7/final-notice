@@ -1,0 +1,171 @@
+// Deputy Director Vellum, Stage 1's boss, on the moves.mjs floor (docs/NES-PLAN.md section 6).
+// Pure rules: he guards, telegraphs one of three attacks, and is open only in the recovery after
+// one (the bait) or when a thrown Associate breaks his guard. Below half he bares his fangs.
+import { DOWNED, fighter, landHit, player, set, updateCommon } from './moves.mjs';
+import { TAPE, spawnStaff, thinkStaff } from './staff.mjs';
+
+// Pairs are [normal, fangs]; times are frames. Each telegraph is held about half a second (L8).
+export const VELLUM = {
+  hp: 16, fangsAt: 8, damage: 2, speed: [0.5, 0.75],
+  guard: [80, 44], windup: [30, 18], recover: [44, 28],
+  rushSpeed: [3, 4], rushFrames: 70, rushReach: 14,
+  sweepReach: 38, sweepActive: 4, sweepFrames: 18,
+  summonFrames: 30, fangsFrames: 40, guardBreak: 150, slumpFrames: 120,
+};
+
+export const LOOPS = { 1: ['rush', 'sweep', 'tape'], 2: ['rush', 'sweep', 'rush', 'tape'] };
+
+export const ARENA = { left: 16, right: 282, top: 160, bottom: 216 };
+
+const pick = (v, key) => VELLUM[key][v.fangs ? 1 : 0];
+export const windupFor = (v) => pick(v, 'windup');
+export const guardFor = (v) => pick(v, 'guard');
+
+export const vellum = (world) => world.fighters.find((f) => f.kind === 'vellum');
+
+// The locked one-screen office: only the auditor and Vellum, no props, no camera scroll.
+export function enterOffice(world, tune) {
+  world.floor = { ...ARENA };
+  world.locked = true;
+  world.cameraX = 0;
+  world.props = [];
+  world.fighters = world.fighters.filter((f) => f.team === 'player');
+  Object.assign(player(world), { x: 56, y: 188 });
+  spawnStaff(world, [], tune);
+  world.think = thinkOffice;
+  world.fighters.push({
+    ...fighter('vellum', 'foe', 232, 188, tune),
+    kind: 'vellum', boss: true, hp: VELLUM.hp, maxHp: VELLUM.hp, hitsToFall: 0, taken: 0,
+    state: 'guard', facing: -1, wait: 0, loop: 0, attacks: 0, summoned: 0, fangs: false,
+    attack: null, armoured: false, guardDown: 0, guardBreakFrames: VELLUM.guardBreak,
+  });
+  return world;
+}
+
+export function thinkOffice(world, f, tune) {
+  return f.kind === 'vellum' ? thinkVellum(world, f, tune) : thinkStaff(world, f, tune);
+}
+
+// He calls one Associate after his first attack and one more once his fangs are out.
+function wantsSummon(world, v) {
+  if (v.summoned >= 2 || world.fighters.some((f) => f.kind === 'associate') || world.bench.length) return false;
+  return v.summoned === 0 ? v.attacks >= 1 : v.fangs;
+}
+
+function hitsPlayer(world, v, p, tune) {
+  if (p.z >= 16 || DOWNED.includes(p.state) || p.invuln > 0) return false;
+  return landHit(world, p, { damage: VELLUM.damage, heavy: true, dir: v.facing }, tune);
+}
+
+export function thinkVellum(world, v, tune) {
+  const p = player(world);
+  if (v.invuln > 0) v.invuln--;
+  if (v.guardDown > 0) v.guardDown--;
+  v.t++;
+  v.armoured = v.state === 'windup';
+  switch (v.state) {
+    case 'held':
+      set(v, 'hurt');
+      break;
+    case 'idle': case 'walk': case 'guard': {
+      const stance = v.guardDown > 0 ? 'idle' : 'guard';
+      if (v.state !== stance) set(v, stance);
+      const side = Math.sign(v.x - p.x) || 1;
+      const dx = p.x + side * 28 - v.x;
+      const dy = p.y - v.y;
+      const speed = pick(v, 'speed');
+      v.x += Math.sign(dx) * Math.min(Math.abs(dx), speed);
+      v.y += Math.sign(dy) * Math.min(Math.abs(dy), speed * 0.75);
+      v.facing = Math.sign(p.x - v.x) || v.facing;
+      if (++v.wait < guardFor(v) || DOWNED.includes(p.state)) break;
+      v.wait = 0;
+      if (wantsSummon(world, v)) {
+        v.summoned++;
+        world.bench.push('associate');
+        world.events.push('summon');
+        set(v, 'summon');
+        break;
+      }
+      const loop = LOOPS[v.fangs ? 2 : 1];
+      v.attack = loop[v.loop++ % loop.length];
+      if (v.attack === 'tape' && p.state === 'bound') v.attack = 'sweep';
+      v.armoured = true;
+      world.events.push('telegraph');
+      set(v, 'windup');
+      break;
+    }
+    case 'summon':
+      if (v.t >= VELLUM.summonFrames) set(v, 'guard');
+      break;
+    case 'windup':
+      if (v.attack !== 'tape') v.y += Math.sign(p.y - v.y) * Math.min(Math.abs(p.y - v.y), 0.5);
+      if (v.t < windupFor(v)) break;
+      v.attacks++;
+      v.armoured = false;
+      v.facing = Math.sign(p.x - v.x) || v.facing;
+      if (v.attack === 'rush') {
+        v.vx = v.facing * pick(v, 'rushSpeed');
+        v.landed = false;
+        set(v, 'rush');
+      } else if (v.attack === 'sweep') {
+        set(v, 'sweep');
+      } else {
+        world.tapes.push({ x: v.x + v.facing * 12, y: v.y, vx: v.facing * TAPE.speed, t: 0, from: v.id });
+        world.events.push('redTape');
+        set(v, 'recover');
+      }
+      break;
+    case 'rush':
+      v.x += v.vx;
+      if (!v.landed && Math.abs(p.x - v.x) < VELLUM.rushReach && Math.abs(p.y - v.y) <= tune.depthReach) {
+        v.landed = hitsPlayer(world, v, p, tune);
+      }
+      if (v.x <= world.floor.left + 8 || v.x >= world.floor.right - 8 || v.t >= VELLUM.rushFrames) set(v, 'recover');
+      break;
+    case 'sweep': {
+      const ahead = (p.x - v.x) * v.facing;
+      if (v.t === VELLUM.sweepActive && ahead >= -8 && ahead <= VELLUM.sweepReach && Math.abs(p.y - v.y) <= tune.depthReach * 2) {
+        hitsPlayer(world, v, p, tune);
+      }
+      if (v.t >= VELLUM.sweepFrames) set(v, 'recover');
+      break;
+    }
+    case 'recover':
+      if (v.t >= pick(v, 'recover')) set(v, 'guard');
+      break;
+    case 'fangs':
+      if (v.t >= VELLUM.fangsFrames) set(v, 'guard');
+      break;
+    case 'down':
+      if (v.hp > 0) { updateCommon(world, v, tune); break; }
+      set(v, 'slumped');
+      world.events.push('bossDown');
+      break;
+    case 'slumped':
+      if (v.t === VELLUM.slumpFrames) world.events.push('bossBeaten');
+      break;
+    default:
+      updateCommon(world, v, tune);
+  }
+  if (!v.fangs && v.hp > 0 && v.hp <= VELLUM.fangsAt && ['idle', 'guard', 'hurt', 'recover'].includes(v.state)) {
+    v.fangs = true;
+    v.loop = 0;
+    v.wait = 0;
+    v.invuln = VELLUM.fangsFrames;
+    world.events.push('fangs');
+    set(v, 'fangs');
+  }
+}
+
+export const bossBar = (v) => Array.from({ length: VELLUM.hp }, (_, i) => i < v.hp);
+
+// Office stagings for screenshots: the rush mid-telegraph, and the fangs just out.
+export function poseOffice(world, name) {
+  const v = vellum(world);
+  const p = player(world);
+  if (name === 'rush') Object.assign(v, { x: p.x + 120, y: p.y, state: 'windup', t: 0, attack: 'rush', wait: 0, armoured: true });
+  if (name === 'fangs') {
+    Object.assign(v, { x: p.x + 60, y: p.y, hp: VELLUM.fangsAt, state: 'hurt', t: 0 });
+  }
+  return world;
+}
