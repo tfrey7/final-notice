@@ -112,6 +112,8 @@ export function stealVoice(owners) {
 // A step's pitch on frame f of n: straight, or bent toward `to` fast at first and settling.
 const bendAt = (midi, to, f, n) => (to === undefined ? midi : to + (midi - to) * Math.exp((-4 * f) / Math.max(1, n - 1)));
 
+export const DUCK_FRAMES = 12;
+
 // The frame clock: song rows and effect steps key the DSP on 60 Hz frames, and render() fills samples between.
 export function createSequencer(dsp = createDsp()) {
   let song = null;
@@ -121,19 +123,57 @@ export function createSequencer(dsp = createDsp()) {
   const keyed = new Array(VOICES).fill(null);
   const owners = new Array(VOICES).fill(null);
   let solo = null;
+  // Hold music: `held` is the song it replaced, `ramp` a master-volume fade over DUCK_FRAMES.
+  let held = null;
+  let ramp = null;
+  const fade = (to, then, back) => { ramp = { from: dsp.reg.mvol, to, f: 0, then, back }; };
 
   // Only these song voices sound (a set of indices), or every voice when null.
   function setSolo(voices) {
     solo = voices ? new Set(voices) : null;
   }
 
-  function play(compiled) {
+  function start(compiled) {
     song = compiled;
     pos = 0;
     pass = 0;
     solo = null;
     dsp.setEcho(compiled.echo);
     for (let i = 0; i < VOICES; i++) if (!owners[i]) release(i);
+  }
+
+  function play(compiled) {
+    if (held || ramp) dsp.reg.mvol = held?.mvol ?? ramp.back ?? ramp.to;
+    held = null;
+    ramp = null;
+    start(compiled);
+  }
+
+  // The song fades out, `compiled` fades in over it; endHold brings the song back at the row it left.
+  function hold(compiled) {
+    if (held || (ramp && ramp.to === 0)) return;
+    const mvol = ramp?.to ?? dsp.reg.mvol;
+    fade(0, () => {
+      held = { song, pos, pass, mvol };
+      start(compiled);
+      const level = dsp.reg.mvol;
+      dsp.reg.mvol = 0;
+      fade(level);
+    }, mvol);
+  }
+
+  function endHold() {
+    if (!held) {
+      if (ramp?.to === 0) fade(ramp.back);
+      return;
+    }
+    ({ song, pos, pass } = held);
+    const { mvol } = held;
+    held = null;
+    for (let i = 0; i < VOICES; i++) if (!owners[i]) release(i);
+    if (song) dsp.setEcho(song.echo);
+    dsp.reg.mvol = 0;
+    fade(mvol);
   }
 
   function release(i) {
@@ -162,6 +202,15 @@ export function createSequencer(dsp = createDsp()) {
   }
 
   function frame() {
+    if (ramp) {
+      ramp.f++;
+      dsp.reg.mvol = Math.round(ramp.from + ((ramp.to - ramp.from) * ramp.f) / DUCK_FRAMES);
+      if (ramp.f >= DUCK_FRAMES) {
+        const { then } = ramp;
+        ramp = null;
+        then?.();
+      }
+    }
     for (let i = 0; i < VOICES; i++) {
       const own = owners[i];
       if (!own) continue;
@@ -223,7 +272,9 @@ export function createSequencer(dsp = createDsp()) {
 
   const playing = () => !!song;
   const owner = (i) => (owners[i] ? 'sfx' : song ? 'song' : 'idle');
-  return { dsp, play, stop, sfx, render, playing, owner, setSolo };
+  const holding = () => !!held;
+  const at = () => ({ song, pos, pass });
+  return { dsp, play, stop, sfx, render, playing, owner, setSolo, hold, endHold, holding, at };
 }
 
 // A whole song, rendered with no browser: what the sound test plays, sample for sample.
@@ -353,6 +404,27 @@ export function stopSong() {
   pending = null;
   songName = null;
   seq?.stop();
+}
+
+// Pause's hold music: ducks whatever is playing and loops `name` until endHold puts it back.
+let holdWanted = false;
+let beforeHold;
+
+export async function holdMusic(name = 'hold') {
+  holdWanted = true;
+  const compiled = seq && (await loadSong(name));
+  if (!compiled || !holdWanted || beforeHold !== undefined) return;
+  beforeHold = songName;
+  seq.hold(compiled);
+  songName = name;
+}
+
+export function endHold() {
+  holdWanted = false;
+  if (beforeHold === undefined) return;
+  seq.endHold();
+  songName = beforeHold;
+  beforeHold = undefined;
 }
 
 export const currentSong = () => (seq?.playing() ? songName : null);

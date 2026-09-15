@@ -164,6 +164,44 @@ export const FX_SAMPLES = {
       post: highpass(0.5),
     });
   })(),
+  // The menu's paperwork: a pencil ticking a ledger row, and a sheet slid back across the desk.
+  pencil: (() => {
+    const n = noise(157);
+    return hit({
+      rate: 16000, seconds: 0.07,
+      fn: (t) => n() * decay(t, 70) * (0.55 + 0.45 * Math.sin(TAU * 210 * t)) + 0.5 * Math.sin(TAU * 1900 * t) * decay(t, 260),
+      post: highpass(0.6),
+    });
+  })(),
+  paperSlide: (() => {
+    const n = noise(163);
+    const grain = noise(167);
+    let band = 0;
+    let lo = 0;
+    let rub = 1;
+    return hit({
+      rate: 12000, seconds: 0.4,
+      fn: (t) => {
+        const env = Math.min(1, t / 0.05) * Math.min(1, (0.4 - t) / 0.16);
+        if ((grain() + 1) / 2 < 0.004) rub = 0.4;
+        rub += 0.01 * (1 - rub);
+        band += (0.12 + 0.3 * env) * (n() - band);
+        lo += 0.03 * (band - lo);
+        return (band - lo) * env * rub;
+      },
+    });
+  })(),
+  // The hold music's phone-line voice: a narrow pulse with its fundamental thinned and its top cut,
+  // stepped to 32 levels.
+  phone: (() => {
+    const len = 64;
+    const wave = Array.from({ length: len }, (_, i) => {
+      let s = 0;
+      for (let k = 1; k <= 7; k++) s += ((k === 1 ? 0.4 : 1) * Math.sin(Math.PI * k * 0.3) * Math.cos((TAU * k * i) / len)) / k;
+      return Math.round(s * 16) * 1000;
+    });
+    return { ...makeSample(wave, 0), rootHz: DSP_HZ / len };
+  })(),
 
   // Deputy Director Vellum, low and pleased with himself: "You're overdue."
   vellumLine: speak({
@@ -193,6 +231,8 @@ const I = {
   ring: { sample: 'ring', adsr: [15, 7, 7, 0], vol: 70, pan: 20 },
   click: { sample: 'click', adsr: [15, 7, 7, 0], vol: 100 },
   paper: { sample: 'paper', adsr: [15, 7, 7, 0], vol: 110, pan: -20 },
+  pencil: { sample: 'pencil', adsr: [15, 7, 7, 0], vol: 96, pan: 12 },
+  slide: { sample: 'paperSlide', adsr: [15, 7, 7, 0], vol: 120, pan: -12 },
   lead: { sample: 'rec-sqlead', adsr: [15, 7, 7, 0], vol: 60, echo: true },
   leadEcho: { sample: 'rec-sqlead', adsr: [15, 7, 7, 0], vol: 28, pan: 40, echo: true },
   bell: { sample: 'rec-bell', adsr: [15, 5, 3, 16], vol: 100, echo: true },
@@ -247,6 +287,10 @@ export const SFX = {
   pause: fx(layer(holdChime), layer(echoOf(holdChime, I.bellEcho), 6)),
   alarm: fx(layer(ring), layer(ring.map(([i, m, f]) => [i && { ...I.ring, vol: 40, pan: -30 }, m - 3, f]))),
   stamp: fx(layer(run(I.stamp, [[60, 15]])), layer([[I.bass, 52, 10, 33]])),
+  // Menus: the cursor, confirm and cancel.
+  pencil: fx(layer(run(I.pencil, [[60, 5]]))),
+  stampOk: fx(layer(run(I.stamp, [[65, 12]])), layer(run(I.click, [[50, 3]]))),
+  paperSlide: fx(layer(run(I.slide, [[60, 26]]))),
   conveyor: fx(layer(run(I.click, [[40, 3], [0, 3], [40, 3], [0, 3]]).map((s, i) => (i % 2 ? [null, 0, 3] : s))), layer(run(I.bass, [[36, 4], [36, 4], [37, 4]]))),
   vellumLine: line('vellumLine'),
   custodianLine: line('custodianLine'),

@@ -8,7 +8,7 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { screen, fromRgba, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
 import { screens, logo } from '../bg/ui.mjs';
 import { measure, drawString, setWindowColours } from '../text.mjs';
-import { playSong, setMono } from '../audio/player.mjs';
+import { playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
 import { pollPad } from '../../input.mjs';
@@ -20,6 +20,8 @@ const PAN = 20 / 60;
 const LOGO_CENTRE = [WIDTH >> 1, 76];
 const PROMPT = 'PUSH START';
 const PROMPT_Y = 150;
+
+const MEMO_SOUNDS = { move: 'pencil', new: 'stampOk', continue: 'stampOk', open: 'stampOk', change: 'stampOk', back: 'paperSlide', done: 'paperSlide' };
 
 const storage = () => { try { return localStorage; } catch { return null; } };
 
@@ -61,6 +63,7 @@ export class SnesTitleScene extends Phaser.Scene {
   stepMemo(pad) {
     this.memo = memoStep(this.memo, pad);
     const { event, settings } = this.memo;
+    if (MEMO_SOUNDS[event]) sfx(MEMO_SOUNDS[event]);
     if (event === 'new' || event === 'continue') this.leaving = 0;
     if (event === 'back') { this.memo = null; this.t = { idle: 0, demo: false }; }
     if (event === 'change') {

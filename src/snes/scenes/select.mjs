@@ -73,10 +73,10 @@ export class SnesSelectScene extends Phaser.Scene {
     if (this.pinned == null && this.leaving == null) {
       const pad = pollPad(this.game.loop.frame);
       const step = selectStep(this.choice, pad);
-      if (step.moved) sfx('menu');
+      if (step.moved) sfx('pencil');
       this.choice = step.choice;
       if (step.confirm || confirmed(pad)) {
-        sfx('menu');
+        sfx('stampOk');
         this.leaving = 0;
       }
     }

@@ -10,7 +10,7 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
 import { drawHud, hudBrightness, hudLayout, hudWatch } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
-import { currentSong, playSong, sfx, stopSong } from '../audio/player.mjs';
+import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
 import { pollPad } from '../../input.mjs';
@@ -39,7 +39,7 @@ const SOUND = {
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
   fangs: 'alarm', telegraph: 'blip',
 };
-const MENU_SOUNDS = { move: 'blip', thud: 'stamp' };
+const MENU_SOUNDS = { move: 'pencil', swap: 'stampOk', close: 'paperSlide', thud: 'stamp' };
 const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
 const MEMO = { paper: rgb15(29, 28, 23), rule: rgb15(18, 16, 12), ink: rgb15(3, 3, 6), stamp: rgb15(26, 3, 3) };
 const BODY_H = 60;
@@ -173,13 +173,14 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.paused = !this.paused;
     sfx('pause');
     if (this.paused) {
-      this.resume = currentSong() === 'stageStart' ? SONGS.stage1 : currentSong() ?? this.resume;
-      stopSong();
+      holdMusic();
       const rows = holdings({ lives: this.registry.get('flow').lives, meter: this.world.meter });
       this.menu = openPause(performance.now(), this.menu, { rows });
     } else {
       this.menu = closePause(this.menu, performance.now());
+      endHold();
       if (this.resume) playSong(this.resume);
+      this.resume = null;
     }
   }
 

@@ -10,7 +10,7 @@ import { artOr, loadArt, SpriteLayer } from '../art.mjs';
 import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
 import { hudLayout, drawHud } from '../hud.mjs';
-import { playSong, sfx, stopSong } from '../audio/player.mjs';
+import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { FrontScreen, bufferFill } from '../scenes/front.mjs';
 import { pollPad } from '../../input.mjs';
 import { cheapen, fastOn } from '../../fast.mjs';
@@ -40,7 +40,7 @@ const C = {
   ink: rgb15(6, 8, 22), inkLit: rgb15(14, 18, 31), tape: rgb15(24, 4, 4), glyph: rgb15(20, 6, 22), burst: rgb15(31, 26, 10),
   brass: rgb15(22, 16, 5), brassDark: rgb15(12, 8, 3), gold: rgb15(31, 26, 12), memo: rgb15(3, 3, 7), sign: rgb15(4, 16, 6),
 };
-const MENU_SOUNDS = { move: 'blip', swap: 'pickup', thud: 'stamp' };
+const MENU_SOUNDS = { move: 'pencil', swap: 'stampOk', close: 'paperSlide', thud: 'stamp' };
 const TABS = { carbonCopy: C.flash, redTape: C.tape, margin: C.inkLit };
 const SPRITE_CAST = { seal: 'notice', paper: 'carbonCopy', page: 'margin' };
 const WAX_TOP = 24;
@@ -145,12 +145,12 @@ export class SnesStage2Scene extends Phaser.Scene {
       this.paused = run.paused;
       sfx('pause');
       if (this.paused) {
-        stopSong();
+        holdMusic();
         const hud = hudState(run, this.registry.get('flow'));
         this.menu = openPause(performance.now(), this.menu, { rows: holdings(hud), carried: hud.carried, hand: hud.hand });
       } else {
         this.menu = closePause(this.menu, performance.now());
-        playSong(this.song);
+        endHold();
       }
     } else if (this.paused) {
       const { menu, action } = stepPause(this.menu, pad);
