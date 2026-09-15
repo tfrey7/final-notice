@@ -2,7 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import ward from '../src/snes/art/ward.mjs';
 
-const STAGE1 = ['idle', 'walk1', 'walk2', 'walk3', 'walk4', 'punch1', 'punch2', 'punch3', 'hit'];
+const STAGE1 = ['idle', 'idle2', 'walk1', 'walk2', 'walk3', 'walk4', 'punch1', 'wind', 'punch2', 'impact', 'punch3', 'hit', 'recoil'];
+
+// The hand-drawn head, as the frames hold it: hair 7-8, skin 9-B, eyes and mouth 1; '.' is anything.
+const HEAD = [
+  '..88888..', '.88888877', '888877777', '877BBBB77', '77B77A77A', '7BB1AA1AA',
+  '79B1AA1A9', '9BAAAAAAA', '.9AAAAA9.', '..9A119..', '...999...',
+];
+
+function hasHead({ w, h, pixels }) {
+  for (let y = 0; y + HEAD.length <= h; y++) {
+    for (let x = 0; x + 9 <= w; x++) {
+      if (HEAD.every((row, r) => [...row].every((c, i) => c === '.' || pixels[y + r][x + i] === c))) return true;
+    }
+  }
+  return false;
+}
 
 // Greedy cover of a frame's opaque pixels by 32x32 and 16x16 entries, as the SNES would need.
 function oamEntries({ w, h, pixels }) {
@@ -47,5 +62,14 @@ test('Ward SNES Stage 1 frames are 56-64 px tall, within the palette and 10 OAM 
     for (const row of f.pixels) assert.match(row, new RegExp(`^[0-9A-F]{${f.w}}$`));
     assert.ok(oamEntries(f) <= 10, `${name} needs ${oamEntries(f)} entries`);
     assert.equal(f.origin.length, 2);
+  }
+});
+
+test('Ward SNES frames all carry the one locked head, and every animation names real frames', () => {
+  for (const name of STAGE1) assert.ok(hasHead(ward.frames[name]), `${name} lost the locked head`);
+  for (const a of ['idle', 'walk', 'jab', 'uppercut', 'hit']) {
+    const anim = ward.animations[a];
+    assert.ok(anim && anim.frames.length >= 2, a);
+    for (const f of anim.frames) assert.ok(ward.frames[f], `${a} names ${f}`);
   }
 });

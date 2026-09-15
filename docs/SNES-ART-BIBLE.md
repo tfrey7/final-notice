@@ -49,6 +49,24 @@ A foe changes these slots, never their order, so palette swaps line up.
 8. **Judge on a plain canvas**, never the game viewer: a 1x strip and 3x frames on black, salmon and
    burgundy floors, with the model painting and the NES sprite beside them.
 
+## Polish pass (item 1972)
+
+- **Map folds by region, never by nearest colour.** The cleaner put Ward's hair browns in the suit's
+  darkest folds, which is what turned him to mud on the burgundy carpet. Outside the head, hair
+  indices become suit darks, and the bottom rows become shoe black.
+- **A cool suit ramp with a rim.** Charcoal needs a blue lean (deepest fold 6,6,9, suit 9,10,14 up
+  to rim 20,22,27) to part from warm floors. Lift the dark end of the ramp, never the folds into
+  the next step: the figure's commonest colour must reach luma 48 on a black floor (spritesmith
+  `bible-check`'s contrast rule), and remapping the folds up flattened the suit. The rim goes on suit pixels whose left neighbour is open, plus the top
+  edge of the shoulders, only where it runs two pixels or more, so it reads as a line, not dots.
+- **Hands are drawn, never shrunk.** Each skin blob outside the head is cleared and replaced by a
+  hand grid: a 4x4 guard fist, a 5x5 punching fist with a knuckle row, creases and a thumb, a
+  wider impact fist, and a 5x5 open hand on hit.
+- **The head carries brows and a mouth**: a hair-coloured pixel over each eye, two dark mouth pixels.
+- **In-between frames move rows, not the head.** Breathing drops the rows above the chest by one;
+  the wind-up leans the upper body back three and down one; impact lunges it forward two; recoil
+  throws it back three. The head moves whole, so it stays identical.
+
 ## What the model does not give
 
 - **Walk cycles.** Its four walk paintings are near the same stride; a real cycle needs contact,
