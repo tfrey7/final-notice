@@ -6,6 +6,7 @@ build/
 
 # Caches, logs and scratch
 .cache/
+__pycache__/
 *.log
 tmp/
 *.tmp
