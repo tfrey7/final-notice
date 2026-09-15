@@ -111,7 +111,7 @@ test('the bill slides toward the camera in 8 frames, growing', () => {
 });
 
 test('staged frames paint SNES colours; the lamp only brightens its own side', () => {
-  const page = scene1('ward').find((p) => p.fx === 'lamp');
+  const page = { ...scene1('ward').find((p) => p.fx === 'lamp'), still: null };
   const plain = paintPicture(screen(), page);
   const lit = stageFrame(paintPicture(screen(), page), page, 0);
   assert.ok(lit.every(isRgb15));

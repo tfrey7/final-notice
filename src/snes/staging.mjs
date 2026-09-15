@@ -26,6 +26,7 @@ export function stagePages(sceneId, pages, auditor) {
     const beat = plan.beats[page.beat] ?? {};
     const staged = { ...page, cut: beat.cut ?? !!plan.cuts, actors: cast(beat.actors) ?? null };
     if ('portrait' in beat) staged.portrait = beat.portrait;
+    if (beat.still && (!beat.stillFor || beat.stillFor === auditor)) staged.still = beat.still;
     if (beat.backdrop) staged.backdrop = beat.backdrop;
     if ('sound' in beat) staged.sound = beat.sound;
     if (beat.keepFx) staged.fx = beat.fx;
@@ -213,7 +214,8 @@ const inPicture = (x, y) => y < PICTURE.h;
 const TABLE = { x: 84, y: 116, w: 96 };
 
 // One frame of a staged page over its painted picture: the actors on page clock t, then its fx.
-export function stageFrame(buf, page, t) {
+export function stageFrame(buf, staged, t) {
+  const page = staged.still ? { ...staged, fx: null } : staged;
   const fill = bufferFill(buf);
   if (page.fx === 'ledgerScroll') {
     const src = ledgerPage();

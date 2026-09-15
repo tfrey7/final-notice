@@ -6,6 +6,7 @@ import { rgb15, channels } from './color.mjs';
 import { mosaicSize, MAX_MOSAIC, LEVELS } from './fx.mjs';
 import { wrapText, drawString } from './text.mjs';
 import { bufferFill } from './scenes/front.mjs';
+import { STILLS } from './stills.mjs';
 
 export const PICTURE = { x: 0, y: 0, w: WIDTH, h: 144 };
 export const PORTRAIT = { x: 96, y: 40, w: 64, h: 96 };
@@ -20,7 +21,7 @@ export const ADVANCE = ['a', 'b', 'injunction'];
 
 export const snesWrap = (text) => wrapText(text);
 
-export const pictureId = (page) => `${page.backdrop}|${page.portrait}`;
+export const pictureId = (page) => `${page.backdrop}|${page.portrait}|${page.still ?? ''}`;
 
 // Between two pictures: the mosaic grows to 16 px on the old one, and shrinks back on the new.
 export function changeStep(frame) {
@@ -202,10 +203,25 @@ export function paintPortrait(buf, who, art = null) {
   return paintSpeaker(fill, PORTRAIT.x, PORTRAIT.y);
 }
 
-// One page's picture: the backdrop on BG2 (or `backdrop`, a buffer the backdrop art composed), the
-// portrait on BG1.
+// A digitized still: each 8x8 tile draws its pixels through the one BG palette it chose.
+export function paintStill(buf, still) {
+  const palettes = still.palettes.map((pal) => pal.map(([r, g, b]) => rgb15(r, g, b)));
+  const tilesWide = still.w >> 3;
+  for (let y = 0; y < Math.min(still.h, PICTURE.h); y++) {
+    const row = still.pixels[y];
+    for (let x = 0; x < Math.min(still.w, WIDTH); x++) {
+      const pal = palettes[parseInt(still.tiles[(y >> 3) * tilesWide + (x >> 3)], 16)];
+      buf[y * WIDTH + x] = pal[parseInt(row[x], 16)];
+    }
+  }
+  return buf;
+}
+
+// One page's picture: a digitized still when the page has one, else the backdrop on BG2 (or
+// `backdrop`, a buffer the backdrop art composed) and the portrait on BG1.
 export function paintPicture(buf, page, { art = null, backdrop = null } = {}) {
   buf.fill(0);
+  if (page.still && STILLS[page.still]) return paintStill(buf, STILLS[page.still]);
   if (backdrop) buf.set(backdrop.subarray(0, PICTURE.w * PICTURE.h));
   else paintBackdrop(bufferFill(buf), page.backdrop);
   if (page.portrait) paintPortrait(buf, page.portrait, art);

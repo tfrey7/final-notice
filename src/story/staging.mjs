@@ -20,10 +20,10 @@ export const STAGING = {
       ],
     },
     beats: [
-      {},
-      { music: 'pad' },
-      { music: 'scene', fx: 'bill', portrait: null },
-      { fx: 'lamp' },
+      { still: 'window' },
+      { music: 'pad', still: 'closeup', stillFor: 'ward' },
+      { music: 'scene', fx: 'bill', portrait: null, still: 'bill' },
+      { fx: 'lamp', still: 'desk' },
       {
         portrait: null,
         actors: [
