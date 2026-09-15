@@ -27,6 +27,12 @@ export const TUNING = {
   kickActive: [12, 2, 30, 1],
   hitStop: [3, 0, 8, 1],
   hitStopHeavy: [4, 0, 10, 1],
+  hitStopFinish: [4, 0, 12, 1],
+  hitFlashFrames: [0, 0, 16, 1],
+  sparkFrames: [8, 0, 20, 1],
+  heavyShakeFrames: [0, 0, 20, 1],
+  clearShakeFrames: [14, 0, 30, 1],
+  comboDrop: [90, 20, 240, 5],
   hitstun: [16, 4, 40, 1],
   knockback: [1, 0, 4, 0.25],
   launchX: [2, 0, 5, 0.25],
@@ -127,10 +133,30 @@ export function inReach(a, b, reach, tune) {
   return ahead >= 0 && ahead <= reach && Math.abs(b.y - a.y) <= tune.depthReach;
 }
 
+// How a hit of each weight lands: the freeze, the screen shake and the push. A `finisher` knocks down.
+export function hitFeel(weight, tune) {
+  if (weight === 'finisher') return { stop: tune.hitStopFinish, shake: tune.shakeFrames, push: tune.launchX };
+  if (weight === 'heavy') return { stop: tune.hitStopHeavy, shake: tune.heavyShakeFrames, push: tune.heavyPush };
+  return { stop: tune.hitStop, shake: 0, push: tune.knockback };
+}
+
+const MAX_SPARKS = 6;
+
+// The auditor's run of landed blows: each resets the drop timer, a blow taken ends it.
+function countCombo(world, target, tune) {
+  const c = world.combo ?? { hits: 0, t: 0, pop: 0, best: 0 };
+  if (target.team === 'player') world.combo = { ...c, hits: 0, t: 0 };
+  else {
+    const hits = c.hits + 1;
+    world.combo = { hits, t: tune.comboDrop, pop: 0, best: Math.max(c.best, hits) };
+  }
+}
+
 // Lands a hit: hit-stop for everyone, knockback or a knockdown. Answers false when it cannot land.
 // A guard (or a boss's armoured wind-up) stops every blow but a body thrown into it (`body`),
 // which breaks the guard instead. A foe's blow (`from`) met inside the auditor's parry window is deflected.
-export function landHit(world, target, { damage, heavy, dir, body, from }, tune) {
+// `heavy` knocks down; `weight: 'heavy'` is a heavy blow that only staggers.
+export function landHit(world, target, { damage, heavy, weight, dir, body, from }, tune) {
   // A slumped boss is beaten: a punch that knocked him down again would restart his slump forever.
   if (target.invuln > 0 || DOWNED.includes(target.state) || target.state === 'slumped') return false;
   if (from && target.parry > 0 && !body) {
@@ -156,15 +182,18 @@ export function landHit(world, target, { damage, heavy, dir, body, from }, tune)
   if (target.hp === 0) heavy = true;
   if (heavy) target.taken = 0;
   target.stagger = 0;
-  world.hitStop = heavy ? tune.hitStopHeavy : tune.hitStop;
+  const feel = hitFeel(heavy ? 'finisher' : weight, tune);
+  world.hitStop = feel.stop;
+  world.shake = Math.max(world.shake ?? 0, feel.shake);
   world.events.push(heavy ? 'heavy' : 'hit');
   if (target.target) release(world, target);
-  if (heavy) {
-    world.shake = tune.shakeFrames;
-    knockDown(target, dir, tune);
-  } else {
+  target.hitFlash = tune.hitFlashFrames;
+  world.sparks = [...(world.sparks ?? []), { x: target.x + dir * 6, y: target.y, z: target.z, weight: heavy ? 'finisher' : weight ?? 'light', t: 0 }].slice(-MAX_SPARKS);
+  countCombo(world, target, tune);
+  if (heavy) knockDown(target, dir, tune);
+  else {
     set(target, 'hurt');
-    target.vx = dir * tune.knockback;
+    target.vx = dir * feel.push;
   }
   return true;
 }
@@ -232,12 +261,11 @@ function heavyHit(world, f, foe, tune) {
     crush: { damage: tune.dazedDamage, heavy: true },
     launcher: { damage: tune.launcherDamage, heavy: true },
     knockback: { damage: tune.knockbackDamage, heavy: true },
-    heavy: { damage: tune.heavyDamage, heavy: false },
+    heavy: { damage: tune.heavyDamage, heavy: false, weight: 'heavy' },
   }[route];
   if (!landHit(world, foe, { ...hit, dir }, tune)) return false;
   if (route === 'launcher' && foe.state === 'knockdown') Object.assign(foe, { vx: dir * tune.knockback, vz: tune.launcherUp });
   if (route === 'knockback' && foe.state === 'knockdown') foe.vx = dir * tune.knockbackX;
-  if (route === 'heavy' && foe.state === 'hurt') foe.vx = dir * tune.heavyPush;
   f.route = route;
   if (route !== 'heavy') world.events.push(route);
   return true;
@@ -501,6 +529,7 @@ export function step(world, input, tune = defaultTune()) {
   world.events = [];
   if (world.shake > 0) world.shake--;
   if (world.flash > 0) world.flash--;
+  tickFeel(world, tune);
   const p = player(world);
   if (world.hitStop > 0) {
     world.hitStop--;
@@ -522,6 +551,16 @@ export function step(world, input, tune = defaultTune()) {
     }
   }
   return world;
+}
+
+// Sparks age through the freeze, so they burst while the fight holds; a foe's hit flash and the
+// combo's drop timer only run once it moves again.
+function tickFeel(world, tune) {
+  if (world.sparks?.length) world.sparks = world.sparks.filter((s) => ++s.t < tune.sparkFrames);
+  if (world.combo) world.combo.pop++;
+  if (world.hitStop > 0) return;
+  for (const f of world.fighters) if (f.hitFlash > 0) f.hitFlash--;
+  if (world.combo?.t > 0 && --world.combo.t === 0) world.combo.hits = 0;
 }
 
 // The screen offset this frame: a small alternating shake after a heavy hit.

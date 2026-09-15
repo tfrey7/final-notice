@@ -4,7 +4,7 @@
 import { PADS } from './input.mjs';
 
 // KeyboardEvent.code of every page shortcut outside the pads.
-export const SHORTCUTS = { Backquote: 'display', F2: 'display', Tab: 'dials', KeyH: 'boxes', KeyG: 'lines' };
+export const SHORTCUTS = { Backquote: 'display', F2: 'display', Tab: 'dials', KeyH: 'boxes', KeyG: 'lines', KeyM: 'routes' };
 
 export const isShortcut = (code, action) => SHORTCUTS[code] === action;
 

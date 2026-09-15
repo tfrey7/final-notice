@@ -23,6 +23,7 @@ import { isShortcut, mountControls } from '../../controls.mjs';
 import { armWorld, scaledWeapons } from '../../stage1/weapons.mjs';
 import { MAX_PER_LINE, boxEntries, frameEntries } from '../limits.mjs';
 import { thingPriority } from '../stage1/priority.mjs';
+import { drawCombo, drawRouteMap, drawSparks } from '../hitfx.mjs';
 
 // One piece of furniture per weapon, along the back wall; a respawn stands them all back up.
 const SMASH = [
@@ -83,9 +84,12 @@ export class SnesLabScene extends Phaser.Scene {
     // G (or ?lines) shows each scanline's sprite count at Stage 1's limits: green drawn, red dropped.
     // Not L, which is the pad's A button.
     this.showLines = params.has('lines');
+    // M (or ?routes) shows the combo-route map, lighting the route the auditor's chain is on.
+    this.showRoutes = params.has('routes');
     const onKey = (e) => {
       if (isShortcut(e.code, 'dials')) { e.preventDefault(); this.tabbed = true; }
       if (isShortcut(e.code, 'boxes')) this.boxes = !this.boxes;
+      if (isShortcut(e.code, 'routes')) this.showRoutes = !this.showRoutes;
       if (isShortcut(e.code, 'lines')) this.showLines = !this.showLines;
     };
     window.addEventListener('keydown', onKey);
@@ -96,6 +100,7 @@ export class SnesLabScene extends Phaser.Scene {
     this.poseHold = Number(params.get('hold') ?? 0);
     if (params.get('pose') === 'parry') this.poseParry();
     if (params.get('pose') === 'sheet') this.poseSheet(Number(params.get('n') ?? 0));
+    if (params.get('pose') === 'combo') this.poseCombo();
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
@@ -136,6 +141,20 @@ export class SnesLabScene extends Phaser.Scene {
     w.fighters = [p, ...sheets[n % sheets.length]()];
     w.bench = [];
     this.sheet = SHEETS[n % SHEETS.length];
+    this.held = true;
+  }
+
+  // ?pose=combo holds a six-hit chain mid-blow: a struck foe flashing, sparks bursting, the counter
+  // popping and the route map lit on the two-light chain.
+  poseCombo() {
+    const w = this.world;
+    const p = Object.assign(w.fighters.find((f) => f.team === 'player'), { x: 110, y: 192, facing: 1, state: 'punch', combo: 2, t: 2 });
+    const [a, b] = w.fighters.filter((f) => f.team === 'foe');
+    Object.assign(a, { x: p.x + 26, y: p.y, state: 'hurt', t: 1, hitFlash: 4, cooldown: 999 });
+    if (b) Object.assign(b, { x: 230, y: 176, state: 'knockdown', z: 12, cooldown: 999 });
+    w.sparks = [{ x: a.x - 6, y: a.y, z: 0, weight: 'light', t: 2 }, ...(b ? [{ x: b.x, y: b.y, z: b.z, weight: 'finisher', t: 3 }] : [])];
+    w.combo = { hits: 6, t: Math.round(this.tune.comboDrop * 0.7), pop: 2, best: 6 };
+    this.showRoutes = true;
     this.held = true;
   }
 
@@ -236,6 +255,7 @@ export class SnesLabScene extends Phaser.Scene {
       else if (t) g.fillStyle(0xc03030).fillRect(Math.round(t.x - 10), t.y - 36, 20, 4);
       else this.drawFighter(f);
     }
+    drawSparks(g, w.sparks, 0, this.tune);
     if (w.ring) {
       const k = w.ring.t / RING.frames;
       g.lineStyle(2, 0xe0d0a0, 1 - k).strokeCircle(w.ring.x, w.ring.y, RING.from + (RING.to - RING.from) * (1 - (1 - k) ** 3));
@@ -297,7 +317,7 @@ export class SnesLabScene extends Phaser.Scene {
     const bh = lying ? 14 : f.kind === 'supervisor' ? 62 : 56;
     const top = Math.round(f.y - bh - f.z);
     const look = readLook(f);
-    const flash = look === 'windup' && f.t % 8 < 4;
+    const flash = (look === 'windup' && f.t % 8 < 4) || f.hitFlash > 0;
     const colour = flash ? 0xffffff : LOOK_BODY[look] ?? (f.team === 'player' ? BODY.player : BODY[f.kind] ?? BODY.associate);
     const alpha = f.invuln > 0 && f.invuln % 4 < 2 ? 0.35 : 1;
     g.fillStyle(colour, alpha).fillRect(x - bw / 2, top, bw, bh);
@@ -327,8 +347,11 @@ export class SnesLabScene extends Phaser.Scene {
     drawString(this.fill, 'BRAWL LAB', WIDTH - 72, 8, WHITE);
     drawString(this.fill, this.panel.visible ? 'TAB: FIGHT' : 'TAB: DIALS', WIDTH - 72, 20, rgb15(20, 20, 22));
     drawString(this.fill, this.boxes ? 'H: NO BOXES' : 'H: BOXES', WIDTH - 72, 32, rgb15(20, 20, 22));
+    drawString(this.fill, this.showRoutes ? 'M: NO ROUTES' : 'M: ROUTES', WIDTH - 72, 44, rgb15(20, 20, 22));
     if (this.sheet) drawString(this.fill, this.sheet, 8, 44, rgb15(31, 28, 10));
     const foes = w.fighters.filter((f) => f.team === 'foe' && f.state !== 'ko').length + w.bench.length;
     drawString(this.fill, `FOES ${foes}`, 8, 30, rgb15(20, 20, 22));
+    drawCombo(g, this.fill, w.combo, this.tune, { right: WIDTH - 12, top: 66 });
+    if (this.showRoutes) drawRouteMap(g, this.fill, p, this.tune, { x: 8, y: 58 });
   }
 }

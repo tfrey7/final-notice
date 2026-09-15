@@ -39,6 +39,7 @@ import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
 import { turnOwners } from '../../stage1/readout.mjs';
 import { drawReadout } from '../readout.mjs';
+import { drawCombo, drawSparks } from '../hitfx.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
@@ -279,7 +280,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const lying = ['down', 'ko'].includes(f.state);
     const h = lying ? 24 : BODY_H;
     const w = lying ? 56 : 32;
-    const flash = f.state === 'windup' && f.t % 8 < 2;
+    const flash = (f.state === 'windup' && f.t % 8 < 2) || f.hitFlash > 0;
     const palette = flash ? [WHITE, WHITE, WHITE] : FOE_PALETTES[f.kind] ?? FOE_PALETTES.associate;
     const name = `foe:${f.kind}:${lying ? 'down' : 'up'}${flash ? ':flash' : ''}`;
     return artOr(this, name, { w, h, palette }).frame('stand', ms, Math.round(sx - w / 2), Math.round(f.y - h - f.z));
@@ -375,6 +376,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const g = this.marks.clear();
     const w = this.world;
     if (this.card || this.entrance || this.paused) return;
+    drawSparks(g, w.sparks, -off, this.tune);
     const turns = turnOwners(w);
     for (const f of w.fighters) {
       if (f === this.fin?.foe || Math.abs(f.x - off - WIDTH / 2) > WIDTH / 2 + 32) continue;
@@ -422,6 +424,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     // A parry's flash: the whole screen washed white for a few frames while the fight holds still.
     if (w.flash > 0) this.fill(0, 0, WIDTH, HEIGHT, WHITE, Math.ceil(10 * w.flash / (this.tune.parryFlash || 1)));
     drawHud(this.fill, layout, steps);
+    if (!this.paused && !this.card) drawCombo(this.g, this.fill, w.combo, this.tune, { right: WIDTH - 10, top: 44 });
     const { portrait } = layout;
     this.hudSprites.draw(steps.health ? artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
       .frame('stand', 0, portrait.x + 2, portrait.y + 2) : []);

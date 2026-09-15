@@ -181,7 +181,7 @@ function injunction(world, pad, tune, events) {
   p.invuln = Math.max(p.invuln, RING.freeze + 20);
   world.ring = startRing(p.x, p.y - 20);
   world.hitStop = RING.freeze;
-  world.shake = RING.freeze;
+  world.shake = tune.clearShakeFrames ?? RING.freeze;
   events.push('injunction');
   return true;
 }
