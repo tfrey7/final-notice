@@ -65,6 +65,11 @@ export const CAST = {
     voice: 'bf_emma', speed: 1.05, pitch: 0, drive: 1.8, highHz: 400, lowHz: 4000,
     sample: 'Signed each one over.',
   },
+  kemp: {
+    name: 'Mrs. Adele Kemp', notes: 'eighty, died this evening, the intro only: soft, frail, mildly surprised',
+    voice: 'bf_isabella', speed: 0.88, pitch: -1, drive: 1.3, highHz: 150, lowHz: 4200,
+    sample: 'Oh. I was only resting my eyes.',
+  },
   speaker: {
     name: 'Wall-speaker announcer', notes: 'flat corporate PA: tinny, crushed',
     voice: 'am_echo', speed: 1, pitch: 0, drive: 4, highHz: 700, lowHz: 3000,
