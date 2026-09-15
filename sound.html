@@ -40,16 +40,23 @@
     <ul id="songs"></ul>
     <h2>Effects</h2>
     <ul id="effects"></ul>
-    <h2>2A03 + VRC6 + DPCM</h2>
+    <h2 id="chip">2A03 + VRC6 + DPCM</h2>
     <div class="meters" id="meters"></div>
     <div class="help">Up/Down select - Z or Enter play - X stop</div>
   </div>
   <script type="module">
-    import { playSong, stopSong, sfx, hasSong, unlocked, currentSong, channelStatus } from './src/audio/player.mjs';
-    import { SFX } from './src/audio/sfx.mjs';
-    import { SFX_V1 } from './src/audio/sfx-v1.mjs';
+    // ?snes plays the SNES sound chip instead of the NES one.
+    const snes = new URLSearchParams(location.search).has('snes');
+    const { playSong, stopSong, sfx, hasSong, unlocked, currentSong, channelStatus } =
+      await import(snes ? './src/snes/audio/player.mjs' : './src/audio/player.mjs');
+    const { SFX } = await import(snes ? './src/snes/audio/player.mjs' : './src/audio/sfx.mjs');
+    const { SFX_V1 } = snes ? { SFX_V1: {} } : await import('./src/audio/sfx-v1.mjs');
+    if (snes) {
+      document.getElementById('chip').textContent = 'S-SMP: SPC700 + S-DSP';
+      document.title += ' (SNES)';
+    }
 
-    const CUES = ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
+    const CUES = snes ? ['test'] : ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
       'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup',
       'stageStart-v1', 'stageClear-v1', 'lifeLost-v1', 'gameOver-v1', 'continue-v1', 'pickup-v1'];
     const label = (name) => name.replace(/-(v\d)$/, ' ($1)');
