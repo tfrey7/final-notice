@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SHOT_W, SUB_BAND, TITLE_FROM, TITLE_SONG_AT,
-  attractAt, attractCues, attractStep, cameraPixel, lineFrame, shotAt, subtitleAt,
+  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SUB_BAND, TITLE_FROM, TITLE_SONG_AT,
+  attractAt, attractCues, attractStep, lineFrame, shotAt, subtitleAt,
 } from '../src/snes/attract.mjs';
 import { drawSubtitle, measure } from '../src/snes/text.mjs';
 import { INTRO_FRAMES } from '../src/snes/lights.mjs';
@@ -39,13 +39,28 @@ test('every line starts once, inside its own shot, and ends before the shot does
   }
 });
 
-test('a change of place mosaics through the cut; a cut inside a conversation is hard', () => {
+test('a change of place fades through black in 16 steps each way; a cut inside a conversation is hard', () => {
   for (let i = 1; i < SHOTS.length; i++) {
-    const peak = Math.max(attractAt(SHOT_AT[i] - 1).mosaic, attractAt(SHOT_AT[i]).mosaic);
-    if (SHOTS[i].mosaic) assert.equal(peak, 16, `shot ${i + 1}`);
-    else assert.equal(peak, 1, `shot ${i + 1}`);
+    const dip = Math.min(attractAt(SHOT_AT[i] - 1).level, attractAt(SHOT_AT[i]).level);
+    if (!SHOTS[i].fade) {
+      assert.equal(dip, 15, `shot ${i + 1}`);
+      continue;
+    }
+    assert.equal(attractAt(SHOT_AT[i] - 1).level, 0, `shot ${i + 1}`);
+    assert.equal(attractAt(SHOT_AT[i]).level, 0, `shot ${i + 1}`);
+    const down = new Set(Array.from({ length: 40 }, (_, k) => attractAt(SHOT_AT[i] - 40 + k).level));
+    const up = new Set(Array.from({ length: 40 }, (_, k) => attractAt(SHOT_AT[i] + k).level));
+    assert.equal(down.size, 16, `shot ${i + 1} out`);
+    assert.equal(up.size, 16, `shot ${i + 1} in`);
   }
-  assert.equal(attractAt(SHOT_AT[3] + 40).mosaic, 1);
+  assert.equal(attractAt(SHOT_AT[3] + 40).level, 15);
+});
+
+test('no line starts or sounds while its picture is dimmed', () => {
+  for (const line of LINES) {
+    const from = lineFrame(line);
+    for (let f = from; f < from + Math.round(line.s * FPS); f++) assert.equal(attractAt(f).level, 15, `${line.clip} at ${f}`);
+  }
 });
 
 test('it fades up from black and down to black at the hand-off', () => {
@@ -111,15 +126,4 @@ test('a long subtitle pages through the whole line inside two rows of the band',
     seen.add(lines.join(' '));
   }
   assert.equal([...seen].join(' '), line.text);
-});
-
-test('the camera never reads outside the shot', () => {
-  for (let f = 0; f < END_AT; f += 37) {
-    const cam = attractAt(f);
-    for (const [dx, dy] of [[0, 0], [SHOT_W - 1, 0], [0, SHOT_H - 1], [SHOT_W - 1, SHOT_H - 1]]) {
-      const [sx, sy] = cameraPixel(cam, dx, dy);
-      assert.ok(sx >= 0 && sx < SHOT_W && sy >= 0 && sy < SHOT_H);
-    }
-  }
-  assert.deepEqual(cameraPixel({ zoom: 1, x: 0, y: 0 }, 10, 20), [10, 20]);
 });

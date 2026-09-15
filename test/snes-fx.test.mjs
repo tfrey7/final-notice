@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { WIDTH, HEIGHT } from '../src/snes/screen.mjs';
 import { rgb15, channels } from '../src/snes/color.mjs';
 import {
-  colorMath, brightness, fadeLevel, mosaicSize, mode7Matrix, mode7Point, inWindow,
+  colorMath, brightness, crush, dipLevel, fadeLevel, mosaicSize, mode7Matrix, mode7Point, inWindow,
   screen, mathPass, brightnessPass, mosaicPass, windowPass, mode7Pass, fromRgba, toRgba,
 } from '../src/snes/fx.mjs';
 
@@ -38,6 +38,24 @@ test('a fade walks one level every few frames and stops at its end', () => {
   assert.equal(fadeLevel(4, { from: 0, to: 15, every: 1 }), 4);
   const levels = new Set(Array.from({ length: 40 }, (_, f) => fadeLevel(f)));
   assert.equal(levels.size, 16);
+});
+
+test('a dip through black reaches 0 on both sides of the cut and full brightness 30 frames away', () => {
+  assert.equal(dipLevel(Infinity, 1), 0);
+  assert.equal(dipLevel(0, Infinity), 0);
+  assert.equal(dipLevel(30, 31), 15);
+  assert.equal(dipLevel(Infinity, Infinity), 15);
+  assert.equal(dipLevel(3, Infinity), 1);
+  assert.equal(dipLevel(Infinity, 8, 1), 7);
+});
+
+test('a crushed fade takes the same amount off every channel, so shadows reach black first', () => {
+  const colour = rgb15(28, 12, 4);
+  assert.equal(crush(colour, 15), colour);
+  assert.deepEqual(channels(crush(colour, 13)), [23, 7, 0]);
+  assert.deepEqual(channels(crush(colour, 7)), [11, 0, 0]);
+  assert.equal(crush(rgb15(31, 31, 31), 0), 0);
+  assert.throws(() => crush(colour, 16), RangeError);
 });
 
 test('mosaic grows 1 to 16 by the halfway point and shrinks back to 1', () => {

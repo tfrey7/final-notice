@@ -1,8 +1,8 @@
 // The SNES attract intro (docs/shots/item-2279/intro-script.md) as a pure timeline in frames: eight
-// digitized shots with slow camera moves, mosaic on a change of place and hard cuts inside a
+// digitized shots held still, a stepped fade through black on a change of place and hard cuts inside a
 // conversation, nine voiced lines, the punch clock on the beat, and the title melody starting under
 // the tower so the title's Mode 7 logo press lands on its downbeat. Any button skips to the title.
-import { MAX_MOSAIC, LEVELS } from './fx.mjs';
+import { dipLevel } from './fx.mjs';
 import { INTRO_FRAMES } from './lights.mjs';
 import { ZOOM_FRAMES } from './scenes/front.mjs';
 import { WIDTH, HEIGHT } from './screen.mjs';
@@ -11,21 +11,17 @@ import { wrapText } from './text.mjs';
 export const FPS = 60;
 export const SHOT_W = 256;
 export const SHOT_H = 144;
-export const MOSAIC_FRAMES = 32;
-export const FADE_FRAMES = 32;
-export const OUT_FRAMES = 24;
 
-// seconds, whether the shot mosaics in (a change of place), and the camera: zoom and centre offset
-// in shot pixels at its first and last frame.
+// seconds, and whether the shot fades in through black (a change of place) or hard cuts.
 export const SHOTS = [
-  { s: 10, mosaic: false, from: [1, 0, 0], to: [1.14, 0, -4] },
-  { s: 7, mosaic: false, from: [1.04, -6, 0], to: [1.16, 6, 2] },
-  { s: 8, mosaic: false, from: [1.12, -14, 0], to: [1.12, 14, 0] },
-  { s: 10, mosaic: true, from: [1.12, 14, 0], to: [1.12, -14, 0] },
-  { s: 10, mosaic: true, from: [1.1, -12, 4], to: [1.18, 12, 0] },
-  { s: 8, mosaic: false, from: [1, 0, 0], to: [1.2, 0, 4] },
-  { s: 10, mosaic: true, from: [1, 0, 0], to: [1.1, 4, -2] },
-  { s: 12, mosaic: true, from: [1, 0, 12], to: [1.35, 0, -22] },
+  { s: 10, fade: true },
+  { s: 7, fade: false },
+  { s: 8, fade: false },
+  { s: 10, fade: true },
+  { s: 10, fade: true },
+  { s: 8, fade: false },
+  { s: 10, fade: true },
+  { s: 12, fade: true },
 ];
 
 export const SHOT_AT = SHOTS.reduce((at, shot) => [...at, at.at(-1) + shot.s * FPS], [0]);
@@ -74,31 +70,19 @@ export const PUNCH_TO = SHOT_AT[6] - FPS;
 export const TITLE_FROM = INTRO_FRAMES - ZOOM_FRAMES - 40;
 export const TITLE_SONG_AT = END_AT - TITLE_FROM;
 
-const TOP = LEVELS - 1;
-const HALF = MOSAIC_FRAMES >> 1;
-const ease = (p) => p * p * (3 - 2 * p);
-
 export const shotAt = (frame) => {
   const f = Math.max(0, Math.min(END_AT - 1, frame));
   return SHOT_AT.findIndex((at, i) => f >= at && f < SHOT_AT[i + 1]) + 1;
 };
 
-// Where the intro is at `frame`: the shot, its camera, the mosaic and the brightness.
+// Where the intro is at `frame`: the shot and the master brightness. The last shot fades out into
+// the title as if a change of place followed it.
 export function attractAt(frame) {
   const f = Math.max(0, Math.min(END_AT - 1, frame));
   const shot = shotAt(f);
-  const def = SHOTS[shot - 1];
-  const t = f - SHOT_AT[shot - 1];
-  const left = SHOT_AT[shot] - f;
-  const p = ease(t / (def.s * FPS - 1));
-  const [zoom, x, y] = def.from.map((v, i) => v + (def.to[i] - v) * p);
-  let mosaic = 1;
-  if (def.mosaic && t < HALF) mosaic = Math.max(1, MAX_MOSAIC - Math.floor((t * MAX_MOSAIC) / HALF));
-  const nextShot = SHOTS[shot];
-  if (nextShot?.mosaic && left <= HALF) mosaic = Math.max(mosaic, 1 + Math.floor(((HALF - left) * (MAX_MOSAIC - 1)) / (HALF - 1)));
-  const fadeIn = Math.min(TOP, Math.floor((f * TOP) / FADE_FRAMES));
-  const fadeOut = Math.max(0, Math.ceil(((END_AT - 1 - f) * TOP) / OUT_FRAMES));
-  return { shot, zoom, x, y, mosaic, level: Math.min(fadeIn, fadeOut, TOP) };
+  const sinceCut = SHOTS[shot - 1].fade ? f - SHOT_AT[shot - 1] : Infinity;
+  const toCut = (SHOTS[shot]?.fade ?? true) ? SHOT_AT[shot] - f : Infinity;
+  return { shot, level: dipLevel(sinceCut, toCut), crush: true };
 }
 
 // The cues on `frame`: 'music' at the start, 'line:<clip>' as each line starts, 'punch' on the beat
@@ -117,11 +101,4 @@ export function attractStep(frame, pad) {
   if (pad.pressed.size > 0) return { frame, event: 'skip' };
   if (frame + 1 >= END_AT) return { frame, event: 'end' };
   return { frame: frame + 1, event: null };
-}
-
-// The source pixel the camera shows at screen pixel (dx, dy) of the letterboxed shot.
-export function cameraPixel(cam, dx, dy) {
-  const sx = Math.round((dx - SHOT_W / 2) / cam.zoom + SHOT_W / 2 + cam.x);
-  const sy = Math.round((dy - SHOT_H / 2) / cam.zoom + SHOT_H / 2 + cam.y);
-  return [Math.max(0, Math.min(SHOT_W - 1, sx)), Math.max(0, Math.min(SHOT_H - 1, sy))];
 }

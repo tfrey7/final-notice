@@ -1,5 +1,5 @@
-// The SNES attract intro: the eight digitized shots letterboxed on black, each moved by its camera,
-// with their voiced lines, and the hand-off into the title's logo press. It plays on a first boot and
+// The SNES attract intro: the eight digitized shots letterboxed on black and held still, faded through
+// black between places, with their voiced lines, and the hand-off into the title's logo press. It plays on a first boot and
 // whenever the title sits idle; any button goes straight to the settled title. The timeline is
 // src/snes/attract.mjs. `&t=<frames>` pins its clock for a screenshot.
 /* global Phaser */
@@ -12,7 +12,7 @@ import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, showFlow } from '../../flow.mjs';
 import { SEEN_KEY } from '../opening.mjs';
 import { drawSubtitle } from '../text.mjs';
-import { LINES, SHOTS, SHOT_H, SHOT_W, SUB_BAND, attractAt, attractCues, attractStep, cameraPixel, subtitleAt } from '../attract.mjs';
+import { LINES, SHOTS, SHOT_H, SHOT_W, SUB_BAND, attractAt, attractCues, attractStep, subtitleAt } from '../attract.mjs';
 import { FrontScreen, bufferFill } from './front.mjs';
 
 const SHOTS_URL = new URL('../../../assets/intro/', import.meta.url);
@@ -111,13 +111,7 @@ export class SnesAttractScene extends Phaser.Scene {
     this.buf.fill(0);
     const px = pictures.get(at.shot);
     if (!px) return this.buf;
-    for (let dy = 0; dy < SHOT_H; dy++) {
-      const row = (TOP + dy) * WIDTH + LEFT;
-      for (let dx = 0; dx < SHOT_W; dx++) {
-        const [sx, sy] = cameraPixel(at, dx, dy);
-        this.buf[row + dx] = px[sy * SHOT_W + sx];
-      }
-    }
+    for (let dy = 0; dy < SHOT_H; dy++) this.buf.set(px.subarray(dy * SHOT_W, (dy + 1) * SHOT_W), (TOP + dy) * WIDTH + LEFT);
     return this.buf;
   }
 }

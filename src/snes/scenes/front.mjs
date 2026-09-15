@@ -4,7 +4,7 @@
 // sprites too, by tint.
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
-import { MAX_MOSAIC, LEVELS, screen, brightnessPass, mosaicPass, toRgba } from '../fx.mjs';
+import { MAX_MOSAIC, LEVELS, screen, brightnessPass, crushPass, mosaicPass, toRgba } from '../fx.mjs';
 
 export const IN_FRAMES = 16;
 export const OUT_FRAMES = 24;
@@ -84,10 +84,10 @@ export class FrontScreen {
     this.b = screen();
   }
 
-  show(buf, { mosaic = 1, level = TOP } = {}, sprites = null) {
+  show(buf, { mosaic = 1, level = TOP, crush = false } = {}, sprites = null) {
     let frame = buf;
     if (mosaic > 1) frame = mosaicPass(frame, mosaic, frame === this.a ? this.b : this.a);
-    if (level < TOP) frame = brightnessPass(frame, level, frame === this.a ? this.b : this.a);
+    if (level < TOP) frame = (crush ? crushPass : brightnessPass)(frame, level, frame === this.a ? this.b : this.a);
     toRgba(frame, this.pixels.data);
     this.tex.context.putImageData(this.pixels, 0, 0);
     this.tex.refresh();

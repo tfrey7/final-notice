@@ -34,11 +34,31 @@ export function brightness(c, level) {
   return pack(one(0), one(5), one(10));
 }
 
+// A fade by fixed-colour subtraction (COLDATA with CGADSUB sub): every 5-bit channel loses the same
+// amount, up to 31 at level 0, so shadows hit black a few steps before the highlights and the colours
+// crush instead of dimming evenly.
+export function crush(c, level) {
+  if (!(Number.isInteger(level) && level >= 0 && level < LEVELS)) throw new RangeError(`crush is 0-15, got ${level}`);
+  const cut = Math.ceil(((LEVELS - 1 - level) * 31) / (LEVELS - 1));
+  const one = (s) => Math.max(0, ch(c, s) - cut);
+  return pack(one(0), one(5), one(10));
+}
+
 // The brightness level `frame` frames into a fade that moves one level every `every` frames.
 export function fadeLevel(frame, { from = 15, to = 0, every = 2 } = {}) {
   const steps = Math.floor(Math.max(0, frame) / every);
   const dir = Math.sign(to - from);
   return dir ? from + dir * Math.min(steps, Math.abs(to - from)) : from;
+}
+
+// A cut through black, the way a SNES cutscene changes scene: brightness steps down one level every
+// `every` frames to 0 on the last frame before the cut and back up from 0 after it, 16 steps each way;
+// draw it with crushPass. `sinceCut` and `toCut` count frames from the last cut and to the next;
+// Infinity for a side that does not fade.
+export function dipLevel(sinceCut, toCut, every = 2) {
+  const up = fadeLevel(sinceCut, { from: 0, to: LEVELS - 1, every });
+  const down = fadeLevel(toCut - 1, { from: 0, to: LEVELS - 1, every });
+  return Math.min(up, down);
 }
 
 // Mosaic block size, 1-16 px, at time `t` of a transition lasting `duration`: it grows to 16 by
@@ -91,6 +111,11 @@ export function mathPass(main, sub, { op = 'add', half = false, where = () => tr
 
 export function brightnessPass(src, level, out = screen()) {
   for (let i = 0; i < src.length; i++) out[i] = brightness(src[i], level);
+  return out;
+}
+
+export function crushPass(src, level, out = screen()) {
+  for (let i = 0; i < src.length; i++) out[i] = crush(src[i], level);
   return out;
 }
 
