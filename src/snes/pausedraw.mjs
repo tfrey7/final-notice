@@ -9,8 +9,11 @@ import { drawString, measure } from './text.mjs';
 import { attachment, onAttachments, stampPose } from './pause.mjs';
 import { toRgba } from './fx.mjs';
 
-const INK = c(3, 3, 9);
-const RED = c(22, 3, 3);
+const INK = c(31, 31, 31);
+const DIM = c(13, 13, 15);
+const FAINT = c(6, 6, 8);
+const GOLD = c(28, 21, 8);
+const RED = c(31, 5, 4);
 const OUT = c(1, 1, 4);
 export const FORM = { x: (WIDTH - 200) >> 1, y: 18, w: 200, h: 188 };
 // The whole patch the form touches: carbon copy up and right, shadow down and right.
@@ -62,18 +65,18 @@ function drawStamp(s, label, x, y, pose) {
   drawString((i, j) => mask.add(`${i},${j}`), label, x + 7, top + 6, 0, null);
   // Worn ink: more of the stamp's face takes as it presses down.
   const skipEvery = pose.landed ? 6 : 2;
-  const cyan = c(Math.round(4 * pose.ink), Math.round(22 * pose.ink), Math.round(24 * pose.ink));
+  const red = c(Math.round(26 * pose.ink), Math.round(4 * pose.ink), Math.round(3 * pose.ink));
   for (const k of mask) {
     const [i, j] = k.split(',').map(Number);
-    if (noise(i * 3, j) % skipEvery !== 0) s.math(i, j, 1, 1, cyan, 'sub');
+    if (noise(i * 3, j) % skipEvery !== 0) s.math(i, j, 1, 1, red, 'add');
   }
 }
 
 function drawSlot(s, x, y, key, held) {
   s.math(x + 2, y + 2, 30, 30, c(8, 8, 8), 'sub');
   if (held) { s.grad(x, y, 30, 30, c(31, 27, 10), c(18, 10, 1)); s.frame(x, y, 30, 30, OUT, c(31, 31, 22), c(13, 7, 1)); }
-  else s.frame(x, y, 30, 30, c(12, 10, 6), c(31, 30, 26), c(18, 15, 9));
-  s.grad(x + 3, y + 3, 24, 24, c(22, 20, 15), c(27, 25, 19));
+  else s.frame(x, y, 30, 30, c(4, 4, 6), c(20, 20, 24), c(9, 9, 12));
+  s.grad(x + 3, y + 3, 24, 24, c(7, 7, 10), c(3, 3, 5));
   const [cx, cy] = [x + 15, y + 15];
   if (!key) {
     for (let i = 0; i < 18; i += 3) s.fill(x + 6 + i, cy, 2, 1, c(18, 15, 9));
@@ -119,7 +122,7 @@ function drawRoutes(s, routes, x, y) {
       cx += bw + 2;
     });
     const done = r.on && r.lit > 0 && r.lit === r.keys.length;
-    s.text(r.name, nameX, ry + 1, !r.on ? c(18, 15, 9) : done ? RED : INK);
+    s.text(r.name, nameX, ry + 1, !r.on ? DIM : done ? RED : INK);
   });
 }
 
@@ -131,38 +134,27 @@ export function drawPause(px, menu, frame = 0) {
     s.math(0, j, WIDTH, 1, c(9 + k, 9 + k, 6 + Math.round((j / HEIGHT) * 5)), 'sub', true);
   }
   const { x: X, y: Y, w: W, h: H } = FORM;
-  s.math(X + 6, Y + 6, W, H, c(12, 12, 12), 'sub');
-  s.math(X + 5, Y - 4, W, H, c(4, 10, 31), 'add', true);
-  s.frame(X + 5, Y - 4, W, H, c(3, 5, 16), c(12, 16, 30), c(3, 5, 16));
-  s.paper(X, Y, W, H);
-  s.frame(X, Y, W, H, c(10, 8, 5), c(31, 31, 28), c(19, 16, 10));
-  s.grad(X + 2, Y + 2, W - 4, 16, c(10, 9, 14), c(3, 3, 7));
-  drawString(s.fill, 'FORM 13-B', X + 8, Y + 6, c(30, 28, 20), OUT);
-  drawString(s.fill, 'HOLDINGS', X + W - 10 - measure('HOLDINGS'), Y + 6, c(31, 10, 8), OUT);
-  s.fill(X + 2, Y + 19, W - 4, 1, c(24, 6, 5)); s.fill(X + 2, Y + 21, W - 4, 1, c(24, 6, 5));
-  s.text('ITEM', X + 16, Y + 26, RED); s.text('QTY', X + W - 32, Y + 26, RED);
+  s.fill(X, Y, W, H, 0);
+  s.text('FORM 13-B', X + 8, Y + 6, GOLD);
+  s.text('HOLDINGS', X + W - 10 - measure('HOLDINGS'), Y + 6, RED);
+  s.fill(X + 8, Y + 19, W - 16, 1, RED);
+  s.text('ITEM', X + 16, Y + 26, GOLD); s.text('QTY', X + W - 32, Y + 26, GOLD);
 
   const rowY = (i) => Y + 40 + i * 14;
   // Four ruled lines whatever the holdings; the unused ones stay blank, as on a real form.
-  for (let i = 0; i < 4; i++) {
-    const y = rowY(i);
-    if (i === menu.cursor) s.math(X + 8, y - 3, W - 16, 13, c(0, 1, 12), 'sub');
-    s.fill(X + 8, y + 10, W - 16, 1, c(12, 15, 22)); s.fill(X + 8, y + 11, W - 16, 1, c(31, 31, 30));
-  }
+  for (let i = 0; i < 4; i++) s.fill(X + 8, rowY(i) + 11, W - 16, 1, FAINT);
   menu.rows.slice(0, 4).forEach(([name, n], i) => {
     const y = rowY(i);
-    s.text(name, X + 16, y);
+    const col = i === menu.cursor && !onAttachments(menu) ? INK : DIM;
+    s.text(name, X + 16, y, col);
     const q = String(n);
-    s.text(q, X + W - 24 - measure(q), y);
+    s.text(q, X + W - 24 - measure(q), y, col);
   });
 
   const slotY = Y + 114;
   const slots = [X + 16, X + 72];
   const tick = (Math.floor(frame / 8) % 2);
-  const pencil = (px0, py0) => {
-    s.fill(px0, py0, 7, 5, c(24, 5, 4)); s.fill(px0, py0, 7, 1, c(31, 14, 12)); s.fill(px0, py0 + 4, 7, 1, c(14, 2, 2));
-    s.fill(px0 + 7, py0, 2, 5, c(26, 21, 14)); s.fill(px0 + 9, py0 + 1, 1, 3, c(26, 21, 14)); s.fill(px0 + 10, py0 + 2, 1, 1, OUT);
-  };
+  const pencil = (px0, py0) => s.text('▶', px0 + 3, py0 - 1, RED);
 
   if (menu.routes) {
     s.text('COMBO ROUTES', X + 16, Y + 102, RED);
@@ -175,15 +167,15 @@ export function drawPause(px, menu, frame = 0) {
     });
     const held = attachment(menu.carried[menu.hand]);
     s.text(held.name, X + 16, Y + 150);
-    s.text(held.effect, X + 16, Y + 162);
+    s.text(held.effect, X + 16, Y + 162, DIM);
   }
 
   if (onAttachments(menu)) pencil(slots[menu.hand] - 13 + tick, slotY + 12);
   else pencil(X + 4 + tick, rowY(menu.cursor) + 1);
 
   drawStamp(s, 'ON HOLD', X + (menu.routes ? 136 : 118), Y + 122, stampPose(menu.stampT));
-  s.fill(X + 2, Y + 172, W - 4, 1, c(18, 21, 27));
-  s.text('START: RESUME   B: FILE AWAY', X + 10, Y + 176);
+  s.fill(X + 8, Y + 172, W - 16, 1, FAINT);
+  s.text('START: RESUME   B: FILE AWAY', X + 10, Y + 176, DIM);
   return px;
 }
 

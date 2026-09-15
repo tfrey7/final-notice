@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Menu sketches</title>
+<style>
+  body { margin: 0; background: #000; }
+  canvas { display: block; width: 768px; height: 672px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" width="256" height="224"></canvas>
+<script type="module">
+import { WIDTH, HEIGHT } from '../../../src/snes/screen.mjs';
+import { rgb15 as c, channels } from '../../../src/snes/color.mjs';
+import { screen, mode7Pass, mode7Matrix, toRgba } from '../../../src/snes/fx.mjs';
+import { logo, logoPalette } from '../../../src/snes/bg/ui.mjs';
+import { INTRO_FRAMES } from '../../../src/snes/lights.mjs';
+import { paintArt } from '../../../src/snes/titlepaint.mjs';
+import { mode7Texture, bufferFill } from '../../../src/snes/scenes/front.mjs';
+import { drawString, measure } from '../../../src/snes/text.mjs';
+
+const ROWS = ['NEW AUDIT', 'SOUND TEST', 'LABS', 'SETTINGS'];
+const SEL = 0;
+const f = INTRO_FRAMES + 120;
+const main = screen();
+paintArt(main, f, INTRO_FRAMES);
+const buf = mode7Pass(mode7Texture({ ...logo, palette: logoPalette(0) }), mode7Matrix(1, 0), [WIDTH >> 1, 2 + (logo.h >> 1)], main, screen());
+const fill = bufferFill(buf);
+const clamp = (v) => Math.max(0, Math.min(31, v));
+const mix = (a, b, t) => { const [A, B] = [channels(a), channels(b)]; return c(...A.map((v, i) => Math.round(v + (B[i] - v) * t))); };
+const sub = (x, y, w, h, col) => {
+  const s = channels(col);
+  for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) {
+    const k = j * WIDTH + i;
+    buf[k] = c(...channels(buf[k]).map((v, n) => clamp(v - s[n])));
+  }
+};
+const sprite = (rows, x, y, pal) => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (pal[ch] != null) fill(x + i, y + j, 1, 1, pal[ch]); }));
+const centre = (t, extra = 0) => (WIDTH - measure(t) - extra) >> 1;
+// A 2 px-stroke face: the 1 px menu font drawn twice side by side, with a drop shadow under both.
+const bold = (t, x, y, ink, shadow) => {
+  const at = (dx, dy, col) => drawString((i, j) => fill(i, j, 1, 1, typeof col === 'function' ? col(j - y) : col), t, x + dx, y + dy, 0, null);
+  if (shadow != null) { at(1, 1, shadow); at(2, 1, shadow); }
+  at(0, 0, ink); at(1, 0, ink);
+};
+
+// A: Streets of Rage 2 — no window. The lower screen darkens, chrome rules frame a bold centred list,
+// the chosen line in a yellow-to-orange ramp between two red notice seals that pulse in and out.
+function sketchA() {
+  for (let j = 124; j < 214; j++) sub(0, j, WIDTH, 1, c(...Array(3).fill(Math.min(16, (j - 124) * 2))));
+  const rule = (y) => { fill(20, y, WIDTH - 40, 1, c(28, 29, 31)); fill(20, y + 1, WIDTH - 40, 1, c(13, 14, 19)); fill(20, y + 2, WIDTH - 40, 1, c(3, 3, 7)); };
+  rule(138); rule(206);
+  const seal = ['..ooo..', '.orrro.', 'orrwrro', 'orwrrro', 'orrrrro', '.orrro.', '..ooo..'];
+  const pal = { o: c(8, 0, 0), r: c(27, 4, 3), w: c(31, 22, 18) };
+  ROWS.forEach((t, i) => {
+    const y = 148 + i * 14;
+    const x = centre(t, 1);
+    if (i === SEL) {
+      bold(t, x, y, (r) => mix(c(31, 31, 14), c(31, 12, 1), Math.min(1, r / 7)), c(6, 2, 0));
+      sprite(seal, x - 14, y + 1, pal);
+      sprite(seal, x + measure(t) + 8, y + 1, pal);
+    } else {
+      bold(t, x, y, c(15, 17, 23), c(2, 2, 5));
+    }
+  });
+}
+
+// B: Final Fight — the intro's own rule: a black strip under the picture and plain white words
+// centred in it, the chosen one lit, the rest dimmed, a red arrow blinking beside it.
+function sketchB() {
+  fill(0, 164, WIDTH, HEIGHT - 164, 0);
+  ROWS.forEach((t, i) => {
+    const y = 170 + i * 12;
+    const x = centre(t);
+    drawString(fill, t, x, y, i === SEL ? c(31, 31, 31) : c(13, 13, 15), null);
+    if (i === SEL) drawString(fill, '▶', x - 10, y, c(31, 5, 4), null);
+  });
+}
+
+// C: Chrono Trigger — a tiled window: a four-step silver bevel with brass studs at the corners over a
+// deep blue fill with a faint diagonal weave, white shadowed words and a white glove pointer.
+function sketchC() {
+  const [x, y, w, h] = [70, 132, 116, 80];
+  sub(x + 4, y + 4, w, h, c(14, 14, 14));
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const base = mix(c(6, 9, 25), c(1, 2, 10), j / (h - 1));
+    fill(x + i, y + j, 1, 1, (i + j) % 4 === 0 ? mix(base, c(14, 18, 31), 0.18) : base);
+  }
+  const ring = (k, col) => { fill(x + k, y + k, w - 2 * k, 1, col); fill(x + k, y + h - 1 - k, w - 2 * k, 1, col); fill(x + k, y + k, 1, h - 2 * k, col); fill(x + w - 1 - k, y + k, 1, h - 2 * k, col); };
+  ring(0, c(2, 2, 6)); ring(1, c(29, 29, 31)); ring(2, c(19, 20, 25)); ring(3, c(8, 9, 14));
+  fill(x + 1, y + h - 2, w - 2, 1, c(12, 13, 18)); fill(x + w - 2, y + 1, 1, h - 2, c(12, 13, 18));
+  const stud = ['.oo.', 'oyho', 'oyyo', '.oo.'];
+  const spal = { o: c(6, 3, 0), y: c(26, 18, 4), h: c(31, 30, 20) };
+  for (const [sx, sy] of [[x - 1, y - 1], [x + w - 3, y - 1], [x - 1, y + h - 3], [x + w - 3, y + h - 3]]) sprite(stud, sx, sy, spal);
+  const glove = ['.oooooo.....', 'owwwwwwoooo.', 'owwwwwwwwwwo', 'owwwwwgoooo.', 'owwwwwwo....', 'owwwwwgo....', '.owwwwwo....', '..ooooo.....'];
+  ROWS.forEach((t, i) => {
+    const ty = y + 12 + i * 15;
+    drawString(fill, t, x + 30, ty, i === SEL ? c(31, 31, 31) : c(22, 23, 28));
+    if (i === SEL) sprite(glove, x + 12, ty, { o: c(2, 2, 6), w: c(31, 31, 31), g: c(20, 21, 26) });
+  });
+}
+
+const pick = new URLSearchParams(location.search).get('s') || 'a';
+({ a: sketchA, b: sketchB, c: sketchC })[pick]();
+const ctx = document.getElementById('c').getContext('2d');
+const img = ctx.createImageData(WIDTH, HEIGHT);
+toRgba(buf, img.data);
+ctx.putImageData(img, 0, 0);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>
