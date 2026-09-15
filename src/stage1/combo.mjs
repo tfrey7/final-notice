@@ -55,3 +55,37 @@ export function routeLights(p, tune) {
     return { ...r, on, lit: lit === pressed.length ? lit : 0 };
   });
 }
+
+// The routes the chain can still finish, or has just finished: what the on-screen combo guide shows.
+export const liveRoutes = (p, tune) => routeLights(p, tune).filter((r) => r.on && r.lit > 0);
+
+// The guide's mini-map: the buttons pressed so far along row 0, then the buttons still to press as
+// branches, merged where routes share a button. `col` is the step in the chain, `row` the line it sits
+// on, `parent` the index of the node it hangs from, and a route's last node carries its name as `end`.
+export function guideTree(routes) {
+  if (!routes.length) return [];
+  const lit = routes[0].lit;
+  const nodes = routes[0].keys.slice(0, lit).map((key, col) => ({ key, col, row: 0, parent: col - 1, lit: true, end: null, done: false }));
+  let rows = -1;
+  for (const r of routes) {
+    let parent = lit - 1;
+    let row = null;
+    for (let col = lit; col < r.keys.length; col++) {
+      const at = row == null ? nodes.findIndex((n) => n.parent === parent && n.col === col && n.key === r.keys[col] && !n.end) : -1;
+      if (at >= 0) { parent = at; continue; }
+      if (row == null) row = Math.max(++rows, nodes[parent]?.row ?? 0);
+      nodes.push({ key: r.keys[col], col, row, parent, lit: false, end: null, done: false });
+      parent = nodes.length - 1;
+    }
+    if (parent >= 0 && !nodes[parent].end) Object.assign(nodes[parent], { end: r.name, done: r.lit === r.keys.length });
+  }
+  return nodes;
+}
+
+export const GUIDE_FADE = 20;
+
+// The guide holds the last live routes and fades them out over `fade` frames once the chain ends.
+export function guideStep(prev, routes, fade = GUIDE_FADE) {
+  if (routes.length) return { routes, t: fade };
+  return prev?.t > 1 ? { ...prev, t: prev.t - 1 } : null;
+}

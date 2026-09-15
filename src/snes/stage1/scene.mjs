@@ -44,9 +44,10 @@ import { CARD, OFFICE, bossHitStop, cardFrame, clearDone, clearLines, fangFlash 
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
 import { SHAPE, turnOwners } from '../../stage1/readout.mjs';
-import { routeLights } from '../../stage1/combo.mjs';
+import { guideStep, liveRoutes, routeLights } from '../../stage1/combo.mjs';
 import { drawReadout } from '../readout.mjs';
-import { drawCombo, drawSparks } from '../hitfx.mjs';
+import { drawCombo, drawGuide, drawSparks } from '../hitfx.mjs';
+import { readSettings } from '../memo.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
@@ -157,6 +158,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.fill = (x, y, w, h, c, step = 15) => this.g.fillStyle(hex(c), step / 15).fillRect(x, y, w, h);
     this.receipt = null;
     this.drain = null;
+    this.guide = null;
+    this.guideOn = readSettings((() => { try { return localStorage; } catch { return null; } })()).guide === 'on';
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.controls?.remove();
     this.controls = mountControls(`stage1:${this.who}`);
@@ -455,7 +458,11 @@ export class SnesStage1Scene extends Phaser.Scene {
     // A parry's flash: the whole screen washed white for a few frames while the fight holds still.
     if (w.flash > 0) this.fill(0, 0, WIDTH, HEIGHT, WHITE, Math.ceil(10 * w.flash / (this.tune.parryFlash || 1)));
     drawHud(this.fill, layout);
-    if (!this.paused && !this.card) drawCombo(this.g, this.fill, w.combo, this.tune, { right: WIDTH - 10, top: 44 });
+    if (!this.paused && !this.card) {
+      drawCombo(this.g, this.fill, w.combo, this.tune, { right: WIDTH - 10, top: 44 });
+      this.guide = guideStep(this.guide, this.guideOn ? liveRoutes(p, this.tune) : []);
+      if (this.guide) drawGuide(this.g, this.fill, this.guide, { x: 8, y: 38, device: this.controls?.device });
+    }
     const { portrait } = layout;
     this.hudSprites.draw(artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
       .frame('stand', 0, portrait.x + 2, portrait.y + 2));

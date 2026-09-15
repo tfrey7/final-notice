@@ -85,6 +85,8 @@ test('SETTINGS opens, cycles each value both ways and returns to the SETTINGS ro
   m = memoStep(memoStep(m, pad('down')), pad('left'));
   assert.equal(m.settings.sound, 'mono');
   m = memoStep(memoStep(m, pad('down')), pad('a'));
+  assert.equal(m.settings.guide, 'off');
+  m = memoStep(memoStep(m, pad('down')), pad('a'));
   assert.equal(m.event, 'done');
   assert.equal(m.page, 'memo');
   assert.equal(m.rows[m.row], 'SETTINGS');
@@ -94,8 +96,8 @@ test('SETTINGS opens, cycles each value both ways and returns to the SETTINGS ro
 test('settings survive a round trip through storage and junk falls back to the defaults', () => {
   const s = store();
   assert.deepEqual(readSettings(s), DEFAULTS);
-  writeSettings(s, { paper: 'manila', text: 'slow', sound: 'mono' });
-  assert.deepEqual(readSettings(s), { paper: 'manila', text: 'slow', sound: 'mono' });
+  writeSettings(s, { paper: 'manila', text: 'slow', sound: 'mono', guide: 'off' });
+  assert.deepEqual(readSettings(s), { paper: 'manila', text: 'slow', sound: 'mono', guide: 'off' });
   s.setItem(SETTINGS_KEY, '{"paper":"vellum","text":"fast"');
   assert.deepEqual(readSettings(s), DEFAULTS);
   s.setItem(SETTINGS_KEY, '{"paper":"vellum","text":"fast"}');
@@ -104,5 +106,5 @@ test('settings survive a round trip through storage and junk falls back to the d
   assert.deepEqual(readSettings(broken), DEFAULTS);
   assert.doesNotThrow(() => writeSettings(broken, DEFAULTS));
   assert.equal(hasSave(broken), false);
-  assert.equal(SETTING_ROWS.length, 3);
+  assert.equal(SETTING_ROWS.length, 4);
 });

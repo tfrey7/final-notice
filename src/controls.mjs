@@ -48,6 +48,14 @@ export function controlsFor(stage) {
 const GAMEPAD = { y: 'X', x: 'Y', b: 'A', a: 'B', l: 'LB', r: 'RB', start: 'START', select: 'BACK', dpad: 'D-PAD' };
 const firstKey = (b) => keysFor(b).split(' / ')[0];
 
+// A combo route's button as the player presses it: the SNES letter on a pad, the first key on a keyboard.
+const ROUTE_BUTTON = { Y: 'y', X: 'x', A: 'a', JUMP: 'b' };
+export function routeKey(key, device = 'keyboard') {
+  if (device === 'gamepad') return key;
+  if (key.startsWith('DOWN+')) return `DOWN+${routeKey(key.slice(5), device)}`;
+  return key in ROUTE_BUTTON ? firstKey(ROUTE_BUTTON[key]) : key;
+}
+
 // { button: { label, key, alt, does } } for the controller legend, labelled for 'keyboard' or
 // 'gamepad': key is what is drawn inside the button, alt the other keys that do the same.
 export function legendFor(stage, device = 'keyboard') {
@@ -165,6 +173,7 @@ export function mountControls(stage, doc = document) {
   doc.head.append(style);
   doc.body.append(root);
   return {
+    get device() { return device; },
     show(on = true) { root.hidden = !on; },
     remove() {
       win.removeEventListener?.('keydown', onKey, true);

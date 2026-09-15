@@ -2,8 +2,9 @@
 // (a count that pops, a rating word and the timer bar before it drops) and the combo-route map.
 // Plain shapes and the menu font until art lands. `g` is a Phaser Graphics, `fill` draws rgb15.
 import { rgb15 } from './color.mjs';
+import { routeKey } from '../controls.mjs';
 import { drawString, measure } from './text.mjs';
-import { comboRating, comboScale, routeLights } from '../stage1/combo.mjs';
+import { GUIDE_FADE, comboRating, comboScale, guideTree, routeLights } from '../stage1/combo.mjs';
 
 const SPARK = { light: [7, 0xffd030], heavy: [10, 0xffa020], finisher: [14, 0xff6020] };
 
@@ -40,6 +41,49 @@ export function drawCombo(g, fill, combo, tune, { right, top }) {
   const bar = 40;
   g.fillStyle(0x18181c).fillRect(right - bar, top - 5, bar, 3);
   g.fillStyle(0xe8c050).fillRect(right - bar, top - 5, Math.round(bar * combo.t / (tune.comboDrop || 1)), 3);
+}
+
+const CAP = { Y: 0x40c060, X: 0x4070e0, A: 0xd84040 };
+const GOLD = 0xe8c050;
+
+// The combo guide: a small branching map of the chain, no plate behind it. Pressed buttons sit on the
+// top line framed in gold, each way on hangs off it, and each route ends in a star and its name.
+// `guide` is guideStep's state; `fill` takes a 0-15 opacity step as its last argument.
+export function drawGuide(g, fill, guide, { x, y, device = 'keyboard' }) {
+  const a = Math.min(1, (2 * guide.t) / GUIDE_FADE);
+  const ink = (px, py, w, h, c) => fill(px, py, w, h, c, Math.max(1, Math.round(15 * a)));
+  const nodes = guideTree(guide.routes);
+  const label = (k) => routeKey(k, device);
+  const keyW = (k) => Math.max(10, measure(label(k)) + 4);
+  const widths = [];
+  for (const n of nodes) widths[n.col] = Math.max(widths[n.col] ?? 0, keyW(n.key));
+  const colX = [];
+  widths.reduce((cx, w, i) => { colX[i] = cx; return cx + w + 6; }, x);
+  const rowY = (r) => y + r * 13;
+  for (const n of nodes) {
+    if (n.parent < 0) continue;
+    const p = nodes[n.parent];
+    const px = colX[p.col] + keyW(p.key);
+    const my = rowY(n.row) + 5;
+    g.fillStyle(n.lit ? GOLD : 0x808088, a);
+    if (p.row !== n.row) g.fillRect(px + 2, rowY(p.row) + 10, 1, my - rowY(p.row) - 10);
+    g.fillRect(p.row !== n.row ? px + 2 : px, my, colX[n.col] - px - (p.row !== n.row ? 2 : 0), 1);
+  }
+  for (const n of nodes) {
+    const cx = colX[n.col];
+    const cy = rowY(n.row);
+    const bw = keyW(n.key);
+    g.fillStyle(0x000000, 0.5 * a).fillRect(cx + 1, cy + 1, bw, 10);
+    if (n.lit) g.fillStyle(GOLD, a).fillRect(cx - 1, cy - 1, bw + 2, 12);
+    g.fillStyle(CAP[n.key] ?? 0x4a4a52, a).fillRect(cx, cy, bw, 10);
+    g.fillStyle(0xffffff, 0.3 * a).fillRect(cx, cy, bw, 1);
+    drawString(ink, label(n.key), cx + ((bw - measure(label(n.key))) >> 1), cy + 1, rgb15(31, 31, 31), null);
+    if (!n.end) continue;
+    const sx = cx + bw + 6;
+    const hot = n.done && guide.t % 8 < 4;
+    g.fillStyle(hot ? 0xff6020 : 0xffb020, a).fillRect(sx - 1, cy + 1, 3, 9).fillRect(sx - 4, cy + 4, 9, 3).fillRect(sx - 2, cy + 3, 5, 5);
+    drawString(ink, n.end, sx + 7, cy + 1, n.done ? INK.count : rgb15(24, 24, 26));
+  }
 }
 
 // One row per route: its button icons, lit up to where the auditor's chain is, then the route's name.

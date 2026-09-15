@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultTune, fighter, hitFeel, landHit, step } from '../src/stage1/moves.mjs';
-import { comboRating, comboScale, routeLights } from '../src/stage1/combo.mjs';
+import { GUIDE_FADE, comboRating, comboScale, guideStep, guideTree, liveRoutes, routeLights } from '../src/stage1/combo.mjs';
 import { tuneFor } from '../src/stage1/player.mjs';
 import { snesTune } from '../src/snes/fight.mjs';
 
@@ -96,4 +96,26 @@ test('the route map lights the routes the chain is on', () => {
   assert.deepEqual(lit({ state: 'heavy', route: 'launcher' }), { FINISHER: 0, KNOCKBACK: 0, LAUNCHER: 2, CRUSH: 0 });
   assert.deepEqual(lit({ state: 'idle', chain: 0 }), { FINISHER: 0, KNOCKBACK: 0, LAUNCHER: 0, CRUSH: 0 });
   assert.equal(routeLights({ state: 'idle' }, { ...tune, routeLH: 0 }).find((r) => r.name === 'LAUNCHER').on, false);
+});
+
+test('the combo guide keeps only the routes the chain can still finish', () => {
+  const tune = snes();
+  const names = (p, t = tune) => liveRoutes(p, t).map((r) => r.name);
+  assert.deepEqual(names({ state: 'punch', combo: 1 }), ['FINISHER', 'KNOCKBACK', 'LAUNCHER']);
+  assert.deepEqual(names({ state: 'punch', combo: 2 }), ['FINISHER', 'KNOCKBACK']);
+  assert.deepEqual(names({ state: 'punch', combo: 2 }, { ...tune, routeLLH: 0 }), ['FINISHER']);
+  assert.deepEqual(names({ state: 'idle', chain: 0 }), []);
+});
+
+test('the guide map merges shared buttons into branches and fades once the chain ends', () => {
+  const tune = snes();
+  const map = (p) => guideTree(liveRoutes(p, tune)).map((n) => `${n.key}@${n.col},${n.row}${n.end ? `:${n.end}` : ''}`);
+  assert.deepEqual(map({ state: 'punch', combo: 1 }), ['Y@0,0', 'Y@1,0', 'Y@2,0:FINISHER', 'X@2,1:KNOCKBACK', 'X@1,2:LAUNCHER']);
+  const done = guideTree(liveRoutes({ state: 'heavy', route: 'launcher' }, tune));
+  assert.deepEqual(done.map((n) => [n.key, n.end, n.done]), [['Y', null, false], ['X', 'LAUNCHER', true]]);
+  assert.deepEqual(guideTree([]), []);
+  const live = guideStep(null, liveRoutes({ state: 'punch', combo: 1 }, tune));
+  assert.equal(live.t, GUIDE_FADE);
+  assert.equal(guideStep(live, []).t, GUIDE_FADE - 1);
+  assert.equal(guideStep({ ...live, t: 1 }, []), null);
 });

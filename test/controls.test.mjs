@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PADS } from '../src/input.mjs';
-import { SHORTCUTS, controllerSvg, controlsFor, deviceAfter, keysFor, legendFor } from '../src/controls.mjs';
+import { SHORTCUTS, controllerSvg, controlsFor, deviceAfter, keysFor, legendFor, routeKey } from '../src/controls.mjs';
 
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith('.mjs') ? [join(dir, e.name)] : []));
 
@@ -45,6 +45,11 @@ test('the legend speaks for the last device touched', () => {
   assert.equal(deviceAfter('gamepad', { gamepads: [pad(), null] }), 'gamepad');
   assert.equal(deviceAfter('gamepad', { key: 'KeyZ', gamepads: [pad()] }), 'keyboard');
   assert.equal(deviceAfter('keyboard', { gamepads: [pad([], [0.2, -0.3])] }), 'keyboard');
+});
+
+test('combo route buttons read as keys on a keyboard and SNES letters on a pad', () => {
+  assert.deepEqual(['Y', 'X', 'A', 'JUMP', 'DOWN+Y', 'DAZED'].map((k) => routeKey(k)), ['Z', 'V', 'C', 'X', 'DOWN+Z', 'DAZED']);
+  assert.deepEqual(['Y', 'X', 'DOWN+Y'].map((k) => routeKey(k, 'gamepad')), ['Y', 'X', 'DOWN+Y']);
 });
 
 test('controller legend labels keys on keyboard and pad buttons on a gamepad', () => {

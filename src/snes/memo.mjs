@@ -16,8 +16,9 @@ export const SETTING_ROWS = [
   { key: 'paper', label: 'PAPER STOCK', values: PAPER_STOCKS },
   { key: 'text', label: 'TEXT SPEED', values: TEXT_SPEEDS },
   { key: 'sound', label: 'SOUND', values: SOUNDS },
+  { key: 'guide', label: 'COMBO GUIDE', values: ['on', 'off'] },
 ];
-export const DEFAULTS = { paper: 'carbon blue', text: 'normal', sound: 'stereo' };
+export const DEFAULTS = { paper: 'carbon blue', text: 'normal', sound: 'stereo', guide: 'on' };
 
 // Frames per typed letter at each text speed.
 export const LETTER_FRAMES = { slow: 4, normal: 2, fast: 1 };
