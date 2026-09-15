@@ -1,5 +1,5 @@
 // The SNES front end as Mode 1 backgrounds (src/snes/layers.mjs): the night skyline in two parallax
-// layers, the select frame, the BG3 HUD, GAME OVER and THE END, plus the FINAL NOTICE logo as a Mode 7
+// layers, the select desk, the BG3 HUD, GAME OVER and THE END, plus the FINAL NOTICE logo as a Mode 7
 // image. Each picture is painted as palette values and cut into 8x8 tiles; identical tiles are stored
 // once, so THE END's credits skyline costs no tiles beyond the title's. Every screen shares the eight
 // palettes below and carries only the tiles its maps use. The default export is the title screen.
@@ -22,8 +22,9 @@ const palettes = [
   // logo: 1 outline, 2-5 burgundy, 6-10 brass, 11 cream, 12 drop shadow, 13 deep burgundy, 14 rivet, 15 rule glint
   [rgb15(5, 1, 3), rgb15(9, 1, 5), rgb15(14, 2, 7), rgb15(18, 4, 9), rgb15(24, 8, 12), rgb15(12, 7, 2), rgb15(18, 12, 3),
     rgb15(24, 18, 6), rgb15(29, 24, 11), rgb15(31, 29, 19), rgb15(31, 31, 27), rgb15(3, 0, 2), rgb15(7, 1, 4), rgb15(8, 5, 2), rgb15(27, 23, 14)],
-  // frame: 1 outline, 2-4 walnut, 5-7 brass, 8-9 portrait well, 10-11 felt
-  pad([rgb15(3, 2, 3), rgb15(8, 4, 3), rgb15(12, 7, 4), rgb15(16, 10, 6), rgb15(17, 11, 3), rgb15(24, 18, 6), rgb15(30, 26, 14), rgb15(2, 2, 5), rgb15(4, 4, 9), rgb15(10, 2, 6), rgb15(14, 4, 8)]),
+  // frame (the select desk): 1 outline, 2-4 walnut, 5-7 blotter green, 8-10 manila, 11 paper, 12-13 steel, 14-15 photo backdrop
+  [rgb15(10, 4, 1), rgb15(7, 4, 2), rgb15(12, 6, 2), rgb15(18, 10, 4), rgb15(1, 6, 3), rgb15(3, 12, 6), rgb15(9, 19, 10), rgb15(15, 9, 2),
+    rgb15(25, 18, 7), rgb15(31, 26, 13), rgb15(31, 31, 24), rgb15(11, 12, 15), rgb15(25, 26, 28), rgb15(4, 6, 12), rgb15(10, 13, 21)],
   // BG3 draws only colours 1-3: dark, colour, light
   pad([rgb15(3, 1, 3), rgb15(27, 5, 6), rgb15(31, 29, 22)]),
   pad([rgb15(2, 2, 7), rgb15(8, 16, 30), rgb15(28, 30, 31)]),
@@ -65,6 +66,7 @@ const GLYPHS = {
   M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'],
   N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
   O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
   R: ['####.', '#...#', '#...#', '####.', '#.#..', '#..#.', '#...#'],
   T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
   V: ['#...#', '#...#', '#...#', '#...#', '#...#', '.#.#.', '..#..'],
@@ -292,29 +294,105 @@ export const logoTiles = (img = logo) => {
 
 // --- select -----------------------------------------------------------------------------------
 
-// Walnut and felt: a header plate for the prompt, two brass-framed portrait wells and name plates.
+// Where the select scene writes on the files: each file's left edge, its tab, photo well and ruled lines.
+export const FILES = {
+  xs: [18, 134], y: 82, w: 104, h: 122,
+  tab: { dx: 8, y: 67, w: 52, h: 15 },
+  photo: { dx: 6, dy: 8, w: 38, h: 44 },
+  rules: [160, 172, 184, 196],
+  stamp: { dx: 52, y: 186 },
+};
+export const SILL = 56;
+
+const grain = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+
+// Two value ramps with a checker at each seam, top to bottom through [a, b, c].
+const ramp = (r, x, y, [a, b, c]) => (r < 0.14 ? a : r < 0.2 ? ((x + y) % 2 ? a : b) : r < 0.8 ? b : r < 0.86 ? ((x + y) % 2 ? b : c) : c);
+
+function folder(g, fx) {
+  const { y, w, h, tab, photo, rules } = FILES;
+  rect(g, fx + 4, y + 4, w, h, 5);
+  rect(g, fx + tab.dx + 3, tab.y + 3, tab.w, 12, 5);
+  bevel(g, fx - 2, y - 4, w + 4, h + 4, { outline: 1, light: 9, dark: 8, fill: 8 });
+  bevel(g, fx + tab.dx, tab.y, tab.w, tab.h + 4, { outline: 1, light: 10, dark: 8, fill: 9 });
+  [[0, 0], [tab.w - 1, 0]].forEach(([dx, dy]) => put(g, fx + tab.dx + dx, tab.y + dy, 6));
+  rect(g, fx + 4, y - 3, w - 8, 3, 11);
+  rect(g, fx + 4, y - 4, w - 8, 1, 1);
+  bevel(g, fx, y, w, h, { outline: 1, light: 11, dark: 8, fill: 9 });
+  for (let yy = y + 2; yy < y + h - 2; yy++) {
+    for (let xx = fx + 2; xx < fx + w - 2; xx++) {
+      const speck = grain(xx, yy) % 29;
+      put(g, xx, yy, speck === 0 ? 8 : speck === 1 ? 11 : ramp((yy - y) / h, xx, yy, [10, 9, 8]));
+    }
+  }
+  const px = fx + photo.dx;
+  const py = y + photo.dy;
+  bevel(g, px, py, photo.w, photo.h, { outline: 1, light: 13, dark: 12, fill: 14 });
+  for (let yy = py + 2; yy < py + photo.h - 2; yy++) {
+    for (let xx = px + 2; xx < px + photo.w - 2; xx++) put(g, xx, yy, ramp((yy - py) / photo.h, xx, yy, [14, 14, 15]));
+  }
+  for (const ry of rules) { rect(g, fx + 6, ry, w - 12, 1, 8); rect(g, fx + 6, ry + 1, w - 12, 1, 11); }
+  draw(g, fx + w - 18, y - 10, ['.111.', '1DCD1', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D1.1C', 'D.1.C', 'D...C', 'D...C', 'D...C', '1CCC1', '.111.']);
+}
+
+// The office at night: the window (sky left clear for BG2's skyline) with steel mullions and sill,
+// a walnut desk, a green blotter with leather corners, and the two personnel files on it.
 function selectPicture() {
   const g = canvas(COLS * TILE, ROWS * TILE);
-  rect(g, 0, 0, g[0].length, g.length, 10);
-  for (let y = 0; y < g.length; y += 4) for (let x = (y / 4) % 2 ? 2 : 0; x < g[0].length; x += 4) put(g, x, y, 11);
-  bevel(g, 0, 0, 256, 224, { outline: 1, light: 4, dark: 2, fill: 3 });
-  for (let y = 3; y < 221; y += 4) { rect(g, 2, y, 12, 1, 2); rect(g, 242, y, 12, 1, 2); }
-  bevel(g, 14, 14, 228, 196, { outline: 1, light: 7, dark: 5, fill: 6 });
-  bevel(g, 16, 16, 224, 192, { outline: 1, light: 11, dark: 1, fill: 10 });
-  for (let y = 18; y < 206; y += 4) for (let x = (y / 4) % 2 ? 20 : 18; x < 238; x += 4) put(g, x, y, 11);
-  bevel(g, 56, 24, 144, 24, { outline: 1, light: 4, dark: 2, fill: 3 });
-  bevel(g, 60, 28, 136, 16, { outline: 1, light: 7, dark: 5, fill: 6 });
-  for (const x of [32, 136]) {
-    bevel(g, x, 56, 88, 112, { outline: 1, light: 7, dark: 5, fill: 6 });
-    bevel(g, x + 4, 60, 80, 104, { outline: 1, light: 1, dark: 5, fill: 9 });
-    checker(g, x + 6, 62, 76, 4, 8, 9);
-    checker(g, x + 6, 62, 4, 100, 8, 9);
-    rect(g, x + 6, 62, 76, 2, 8);
-    rect(g, x + 6, 62, 2, 100, 8);
-    bevel(g, x, 176, 88, 16, { outline: 1, light: 7, dark: 5, fill: 6 });
-    for (const rx of [x + 4, x + 82]) draw(g, rx, 182, ['75', '51']);
+  for (const x of [84, 168]) { rect(g, x, 0, 4, SILL, 12); rect(g, x + 1, 0, 1, SILL, 13); }
+  rect(g, 0, SILL - 5, 256, 4, 13);
+  rect(g, 0, SILL - 1, 256, 1, 12);
+  for (let y = SILL; y < 224; y++) {
+    for (let x = 0; x < 256; x++) {
+      const band = (y + ((x >> 5) % 3) * 2) % 9;
+      put(g, x, y, grain(x, y) % 37 === 0 ? 2 : band === 0 ? 2 : band < 6 ? 3 : 4);
+    }
   }
+  rect(g, 0, SILL, 256, 1, 1);
+  bevel(g, 8, 62, 240, 160, { outline: 1, light: 7, dark: 5, fill: 6 });
+  for (let y = 64; y < 220; y++) {
+    for (let x = 10; x < 246; x++) {
+      const speck = grain(x, y) % 23;
+      put(g, x, y, speck === 0 ? 5 : speck === 1 ? 7 : ramp((y - 62) / 160, x, y, [7, 6, 5]));
+    }
+  }
+  for (const [cx, cy, sx, sy] of [[9, 63, 1, 1], [246, 63, -1, 1], [9, 220, 1, -1], [246, 220, -1, -1]]) {
+    for (let j = 0; j < 16; j++) for (let i = 0; i < 16 - j; i++) put(g, cx + i * sx, cy + j * sy, i + j === 15 - 1 ? 4 : i + j === 15 ? 1 : 2);
+  }
+  FILES.xs.forEach((fx) => folder(g, fx));
   return g;
+}
+
+// APPROVED in a double box: the ink mask a stamp leaves.
+const APPROVED = (() => {
+  const words = textMask('APPROVED', 1, 2);
+  const w = words[0].length + 13;
+  const m = canvas(w, 21);
+  rect(m, 0, 0, w, 2, 1); rect(m, 0, 19, w, 2, 1); rect(m, 0, 0, 2, 21, 1); rect(m, w - 2, 0, 2, 21, 1);
+  rect(m, 3, 3, w - 6, 1, 1); rect(m, 3, 17, w - 6, 1, 1); rect(m, 3, 3, 1, 15, 1); rect(m, w - 4, 3, 1, 15, 1);
+  words.forEach((row, y) => row.forEach((v, x) => { if (v) { put(m, 6 + x, 7 + y, 1); put(m, 7 + x, 7 + y, 1); } }));
+  return m;
+})();
+
+export const STAMP_FRAMES = 4;
+const STAMP_SCALE = [2.4, 1.7, 1.2, 1];
+
+// Frame k of the stamp coming down: its lit pixels about its centre, shrinking to rest by the last
+// frame, which misses a scatter of pixels the way worn ink does.
+export function approvedStamp(k) {
+  const s = STAMP_SCALE[Math.min(Math.max(0, k), STAMP_FRAMES - 1)];
+  const w = Math.round(APPROVED[0].length * s);
+  const h = Math.round(APPROVED.length * s);
+  const pts = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const mx = Math.floor(x / s);
+      const my = Math.floor(y / s);
+      if (!on(APPROVED, mx, my) || (s === 1 && (mx * 7 + my * 13) % 11 === 0)) continue;
+      pts.push([x - (w >> 1), y - (h >> 1)]);
+    }
+  }
+  return pts;
 }
 
 // --- the HUD, on BG3 --------------------------------------------------------------------------
@@ -407,7 +485,7 @@ const title = screen(NIGHT, [skyline.far, skyline.near]);
 
 export const screens = {
   title,
-  select: screen(rgb15(3, 2, 3), [toLayer(1, stamp(grid(), selectPicture(), PAL.frame), [0, 0])]),
+  select: screen(NIGHT, [{ ...skyline.far, scroll: [0, 0] }, toLayer(1, stamp(grid(), selectPicture(), PAL.frame), [0, 0])]),
   hud: screen(NIGHT, [skyline.far, skyline.near, hudLayer()]),
   gameover: screen(rgb15(1, 0, 1), [{ ...skyline.far, scroll: [0, 0] }, toLayer(1, stamp(grid(), gameOverPicture(), PAL.stamp), [0, 0])]),
   theend: screen(NIGHT, [{ ...skyline.far, scroll: [0, 0] }, { ...theEndLayer(), scroll: [0, 0] }]),

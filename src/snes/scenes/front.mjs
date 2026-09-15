@@ -43,13 +43,13 @@ export function logoZoom(frame) {
 export const confirmed = (pad) => ['start', 'a', 'injunction'].some((b) => pad.pressed.has(b));
 
 // A lamp cone for the sub screen: warm light at its centre fading out to nothing at its edge.
-export function spotSub(cx, cy, rx, ry, out = screen()) {
+export function spotSub(cx, cy, rx, ry, out = screen(), peak = 12) {
   out.fill(0);
   for (let y = Math.max(0, Math.floor(cy - ry)); y < Math.min(HEIGHT, Math.ceil(cy + ry)); y++) {
     for (let x = Math.max(0, Math.floor(cx - rx)); x < Math.min(WIDTH, Math.ceil(cx + rx)); x++) {
       const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
       if (d >= 1) continue;
-      const v = Math.round(12 * (1 - d));
+      const v = Math.round(peak * (1 - d));
       out[y * WIDTH + x] = rgb15(v, Math.round(v * 0.85), v >> 1);
     }
   }

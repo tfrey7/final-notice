@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hex } from '../src/snes/color.mjs';
 import { MAX_TILESET, bakeScene, composeFrame, sceneProblems } from '../src/snes/layers.mjs';
-import { PAL, logo, logoTiles, mode7Problems, screens, skyline } from '../src/snes/bg/ui.mjs';
+import { FILES, PAL, STAMP_FRAMES, approvedStamp, logo, logoTiles, mode7Problems, screens, skyline } from '../src/snes/bg/ui.mjs';
+import { SNES_GLYPHS } from '../src/snes/text.mjs';
 
 test('every front-end screen passes the Mode 1 checks', () => {
   assert.deepEqual(Object.keys(screens), ['title', 'select', 'hud', 'gameover', 'theend']);
@@ -36,6 +37,27 @@ test('the logo is a Mode 7-ready tile image in exactly 15 colours', () => {
   assert.ok(logoTiles() <= 256);
   assert.equal(new Set(logo.pixels.join('').replace(/0/g, '')).size, 15);
   assert.match(mode7Problems({ ...logo, w: 175 }).join(), /not whole tiles/);
+});
+
+test('select is two manila files on a green blotter under the skyline window', () => {
+  const s = screens.select;
+  assert.deepEqual(s.layers.map((l) => l.bg), [2, 1]);
+  const out = composeFrame(s, bakeScene(s), 0, 0);
+  const at = (x, y) => (out[(y * 256 + x) * 4] << 16) | (out[(y * 256 + x) * 4 + 1] << 8) | out[(y * 256 + x) * 4 + 2];
+  const pal = s.palettes[PAL.frame];
+  const manila = new Set([8, 9, 10, 11].map((v) => hex(pal[v - 1])));
+  const blotter = new Set([5, 6, 7].map((v) => hex(pal[v - 1])));
+  for (const fx of FILES.xs) assert.ok(manila.has(at(fx + 60, FILES.y + 70)), `file at ${fx}`);
+  assert.ok(blotter.has(at(128, 150)), 'blotter between the files');
+  for (const ch of 'PERSONNEL FILESA:SIGN OUT7BYKMRCWD') assert.ok(SNES_GLYPHS[ch], ch);
+});
+
+test('the APPROVED stamp comes down in four frames and rests inside its file', () => {
+  const frames = Array.from({ length: STAMP_FRAMES }, (_, k) => approvedStamp(k));
+  const width = (pts) => Math.max(...pts.map(([x]) => x)) - Math.min(...pts.map(([x]) => x));
+  for (let k = 1; k < STAMP_FRAMES; k++) assert.ok(width(frames[k]) < width(frames[k - 1]), `frame ${k} shrinks`);
+  assert.ok(width(frames[STAMP_FRAMES - 1]) < FILES.w - 8);
+  assert.deepEqual(approvedStamp(9), frames[STAMP_FRAMES - 1]);
 });
 
 test('the HUD lives on BG3 and draws only its first three colours', () => {
