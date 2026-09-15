@@ -23,8 +23,9 @@
 import { noteToMidi, midiToHz } from '../../audio/apu.mjs';
 import { DSP_HZ, VOICES, createDsp, makeSample } from './spc.mjs';
 import { SAMPLES as BANK, INSTRUMENTS, demoSong } from './bank.mjs';
+import { SFX, FX_SAMPLES } from './sfx.mjs';
 
-export { INSTRUMENTS };
+export { INSTRUMENTS, SFX };
 
 export const VOICE_NAMES = Array.from({ length: VOICES }, (_, i) => `v${i + 1}`);
 const FRAME_HZ = 60;
@@ -46,6 +47,7 @@ export const SAMPLES = (() => {
   });
   return {
     ...BANK,
+    ...FX_SAMPLES,
     saw: { ...makeSample(saw, 0), rootHz: DSP_HZ / 64 },
     square: { ...makeSample(square, 0), rootHz: DSP_HZ / 32 },
     kick: { ...makeSample(kick), rootHz: midiToHz(60) },
@@ -105,12 +107,8 @@ export function stealVoice(owners) {
   return 7;
 }
 
-// Placeholder effects under their NES names, until the bank card: [midi, frames] steps on one instrument.
-export const SFX = {
-  pickup: { inst: { sample: 'square', adsr: [15, 7, 7, 0], vol: 90, echo: true }, steps: [[84, 3], [88, 3], [91, 3], [96, 8]] },
-  punch: { inst: { noise: 27, adsr: [15, 5, 0, 24], vol: 120 }, steps: [[60, 8]] },
-  stamp: { inst: { sample: 'kick', adsr: [15, 7, 7, 0], vol: 127, echo: true }, steps: [[55, 20]] },
-};
+// A step's pitch on frame f of n: straight, or bent toward `to` fast at first and settling.
+const bendAt = (midi, to, f, n) => (to === undefined ? midi : to + (midi - to) * Math.exp((-4 * f) / Math.max(1, n - 1)));
 
 // The frame clock: song rows and effect steps key the DSP on 60 Hz frames, and render() fills samples between.
 export function createSequencer(dsp = createDsp()) {
@@ -139,13 +137,19 @@ export function createSequencer(dsp = createDsp()) {
     for (let i = 0; i < VOICES; i++) if (!owners[i]) release(i);
   }
 
+  // Each layer takes its voice at once, silencing the song there, and plays its first step after its delay.
   function sfx(def) {
-    const i = stealVoice(owners);
-    const steps = [];
-    for (const [midi, frames] of def.steps) for (let f = 0; f < frames; f++) steps.push({ midi, first: f === 0 });
-    owners[i] = { def, steps, f: 0 };
-    keyed[i] = null;
-    return i;
+    const first = stealVoice(owners);
+    return def.layers.slice(0, 2).map((layer, k) => {
+      const i = k === 0 ? first : 13 - first;
+      const steps = Array(layer.delay ?? 0).fill(null);
+      for (const [inst, midi, frames, to] of layer.steps) {
+        for (let f = 0; f < frames; f++) steps.push(inst ? { inst, midi: bendAt(midi, to, f, frames), first: f === 0, bend: to !== undefined } : null);
+      }
+      owners[i] = { steps, f: 0 };
+      release(i);
+      return i;
+    });
   }
 
   function frame() {
@@ -158,7 +162,9 @@ export function createSequencer(dsp = createDsp()) {
         continue;
       }
       const step = own.steps[own.f++];
-      if (step.first) dsp.keyOn(i, dspInstrument(own.def.inst), notePitch(own.def.inst, step.midi));
+      if (!step) dsp.keyOff(i);
+      else if (step.first) dsp.keyOn(i, dspInstrument(step.inst), notePitch(step.inst, step.midi));
+      else if (step.bend) dsp.setPitch(i, notePitch(step.inst, step.midi));
     }
     if (!song) return;
     if (pos >= song.length * song.tempo) {
@@ -171,12 +177,18 @@ export function createSequencer(dsp = createDsp()) {
       if (owners[i]) continue;
       const note = song.voices[i][row];
       const id = note ? `${pass}:${note.start}` : null;
-      if (id === keyed[i]) continue;
-      if (!note) release(i);
-      else {
-        const inst = song.instruments[note.inst];
-        dsp.keyOn(i, dspInstrument(inst), notePitch(inst, note.pitch));
-        keyed[i] = id;
+      const inst = note && song.instruments[note.inst];
+      if (id !== keyed[i]) {
+        if (!note) release(i);
+        else {
+          dsp.keyOn(i, dspInstrument(inst), notePitch(inst, note.pitch));
+          keyed[i] = id;
+        }
+      }
+      // An instrument's `pitch` list bends each note by semitones a frame, its last entry held.
+      if (inst?.pitch) {
+        const f = pos - note.start * song.tempo;
+        dsp.setPitch(i, notePitch(inst, note.pitch + inst.pitch[Math.min(f, inst.pitch.length - 1)]));
       }
     }
     pos++;

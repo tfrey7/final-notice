@@ -11,7 +11,7 @@ const BRR_BLOCK_BYTES = 9;
 const TAU = 2 * Math.PI;
 const PEAK = 22000;
 
-function noise(seed) {
+export function noise(seed) {
   let s = seed >>> 0;
   return () => {
     s = (s + 0x6d2b79f5) >>> 0;
@@ -23,7 +23,7 @@ function noise(seed) {
 
 const toBlock = (n) => Math.ceil(n / 16) * 16;
 const fade = (i, len) => (i < len ? (1 - i / len) ** 2 : 0);
-const gate = (t, end, len) => (t < end ? 1 : Math.max(0, 1 - (t - end) / len));
+export const gate = (t, end, len) => (t < end ? 1 : Math.max(0, 1 - (t - end) / len));
 
 function saw(phase, partials, tilt = 1) {
   let s = 0;
@@ -37,12 +37,12 @@ function normalise(wave) {
   return wave.map((x) => (x * PEAK) / (max || 1));
 }
 
-const lowpass = (a) => (wave) => {
+export const lowpass = (a) => (wave) => {
   let y = 0;
   return wave.map((x) => (y += a * (x - y)));
 };
 
-const highpass = (a) => (wave) => {
+export const highpass = (a) => (wave) => {
   let y = 0;
   let prev = 0;
   return wave.map((x) => {
@@ -60,7 +60,7 @@ function tone({ hz, attack = 0, loopLen, fn }) {
 }
 
 // A one-shot at `rate`, sounding natural when played at C4.
-function hit({ rate, seconds, fn, post = (w) => w }) {
+export function hit({ rate, seconds, fn, post = (w) => w }) {
   const n = toBlock(Math.round(rate * seconds));
   const wave = normalise(post(Float64Array.from({ length: n }, (_, i) => fn(i / rate, i))));
   return { ...makeSample(wave), rootHz: midiToHz(60 + 12 * Math.log2(DSP_HZ / rate)) };
