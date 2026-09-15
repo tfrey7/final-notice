@@ -32,6 +32,7 @@ import { thingPriority, withPriority } from './priority.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
+import { mountControls } from '../../controls.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
@@ -133,7 +134,13 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.receipt = null;
     this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
-    this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; window.removeEventListener('keydown', onKey); });
+    this.controls?.remove();
+    this.controls = mountControls('stage1');
+    this.events.once('shutdown', () => {
+      this.panel?.remove(); this.panel = null;
+      this.controls?.remove(); this.controls = null;
+      window.removeEventListener('keydown', onKey);
+    });
     this.ready = true;
   }
 
@@ -209,6 +216,7 @@ export class SnesStage1Scene extends Phaser.Scene {
 
   togglePause() {
     this.paused = !this.paused;
+    this.controls?.show(this.paused);
     sfx('pause');
     if (this.paused) {
       holdMusic();

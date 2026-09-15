@@ -19,6 +19,7 @@ import { scaledTune } from '../stage1/finisher.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { buildDials, labKinds, settingsText, takeTurns, waveKinds } from '../../lab/dials.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
+import { isShortcut, mountControls } from '../../controls.mjs';
 import { armWorld, scaledWeapons } from '../../stage1/weapons.mjs';
 import { MAX_PER_LINE, boxEntries, frameEntries } from '../limits.mjs';
 import { thingPriority } from '../stage1/priority.mjs';
@@ -73,15 +74,18 @@ export class SnesLabScene extends Phaser.Scene {
       onCopy: () => settingsText(this.dials, this.counts, this.who),
       onReset: () => { this.dials.forEach((d) => { d.value = d.start; }); this.panel.flash('Dials reset.'); },
     });
+    this.controls = mountControls('stage1');
+    this.controls.show();
     this.tabbed = false;
     // H overlays hit and hurt boxes, the attack-turn owners and each fighter's state tag; ?boxes starts it on.
     this.boxes = params.has('boxes');
-    // L (or ?lines) shows each scanline's sprite count at Stage 1's limits: green drawn, red dropped.
+    // G (or ?lines) shows each scanline's sprite count at Stage 1's limits: green drawn, red dropped.
+    // Not L, which is the pad's A button.
     this.showLines = params.has('lines');
     const onKey = (e) => {
-      if (e.code === 'Tab') { e.preventDefault(); this.tabbed = true; }
-      if (e.code === 'KeyH') this.boxes = !this.boxes;
-      if (e.code === 'KeyL') this.showLines = !this.showLines;
+      if (isShortcut(e.code, 'dials')) { e.preventDefault(); this.tabbed = true; }
+      if (isShortcut(e.code, 'boxes')) this.boxes = !this.boxes;
+      if (isShortcut(e.code, 'lines')) this.showLines = !this.showLines;
     };
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot.
@@ -94,6 +98,7 @@ export class SnesLabScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
+      this.controls.remove();
       for (const [k, v] of Object.entries(this.kinds)) Object.assign(KINDS[k], v);
     });
   }

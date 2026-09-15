@@ -1,5 +1,6 @@
 import { LABELS, STORAGE_KEY, machineFor, nextMode, pickMode, pictureWidth, screenBox } from './mode.mjs';
 import { platformFor } from '../platform.mjs';
+import { isShortcut } from '../controls.mjs';
 
 // Each Phaser frame (256x240 NES, 256x224 SNES) is uploaded as a texture and drawn once through this shader onto a
 // window-sized canvas laid over the game. Sharp pixels hides that canvas and shows Phaser's own.
@@ -148,7 +149,7 @@ function remember(mode) {
   try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* private window: this visit only */ }
 }
 
-// Lays the TV over the game. V or the corner button cycles the mode.
+// Lays the TV over the game. Backtick, F2 or the corner button cycles the mode.
 export function installCrt(game, params) {
   const canvas = document.createElement('canvas');
   canvas.id = 'crt';
@@ -174,7 +175,7 @@ export function installCrt(game, params) {
   function show() {
     canvas.hidden = mode === 'sharp';
     button.textContent = LABELS[mode];
-    button.title = 'Display: ' + LABELS[mode] + ' (V to change)';
+    button.title = 'Display: ' + LABELS[mode] + ' (` or F2 to change)';
   }
 
   function cycle() {
@@ -208,7 +209,7 @@ export function installCrt(game, params) {
   }
 
   button.addEventListener('click', () => { cycle(); button.blur(); });
-  window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && screen) cycle(); });
+  window.addEventListener('keydown', (e) => { if (isShortcut(e.code, 'display') && screen) { e.preventDefault(); cycle(); } });
   window.addEventListener('resize', resize);
   game.events.on('postrender', draw);
   resize();

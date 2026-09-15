@@ -13,6 +13,7 @@ import { inHand } from '../../stage2/pickups.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { buildClimbDials, climbSettingsText, climbTune, createClimb, rowsClimbed, startAt, stepClimb } from '../../lab/climb.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
+import { isShortcut, mountControls } from '../../controls.mjs';
 
 const REPEAT = { delay: 14, every: 3 };
 const SOUND = { jump: 'jump', cast: 'punch', margin: 'punch', hit: 'hit', break: 'knockdown', clink: 'land', shelfLanded: 'knockdown', hurt: 'hit', swap: 'step', injunction: 'injunction' };
@@ -44,8 +45,10 @@ export class SnesClimbLabScene extends Phaser.Scene {
       onCopy: () => climbSettingsText(this.dials, this.who),
       onReset: () => { this.dials.forEach((d) => { d.value = d.start; }); this.panel.flash('Dials reset.'); },
     });
+    this.controls = mountControls('stage2');
+    this.controls.show();
     this.tabbed = false;
-    const onKey = (e) => { if (e.code === 'Tab') { e.preventDefault(); this.tabbed = true; } };
+    const onKey = (e) => { if (isShortcut(e.code, 'dials')) { e.preventDefault(); this.tabbed = true; } };
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot; ?at=<row> starts on that row's ledge
     // with the flood its usual gap below; ?frames=<n> plays that many idle frames first.
@@ -56,6 +59,7 @@ export class SnesClimbLabScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
+      this.controls.remove();
       Object.assign(TUNING, this.saved);
     });
   }

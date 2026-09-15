@@ -29,6 +29,7 @@ import { STAGE2, backdropFor, bodySize, camera, hudState, onScreen } from './vie
 import { weighShared } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
+import { mountControls } from '../../controls.mjs';
 import { PRESS_IN, SLIP, pressEntrance, skipTo, slipFrame } from '../entrance.mjs';
 import { PRESS_H, RAIL, burstSize, headY, mosaicRect, pressTexture, shadowHalf, stampScale, titleCard } from './seal.mjs';
 
@@ -60,6 +61,9 @@ export class SnesStage2Scene extends Phaser.Scene {
     weighShared();
     this.ready = false;
     this.paused = false;
+    this.controls?.remove();
+    this.controls = mountControls('stage2');
+    this.events.once('shutdown', () => { this.controls?.remove(); this.controls = null; });
     this.slowdown = createSlowdown();
     this.fast = fastOn();
     const params = new URLSearchParams(location.search);
@@ -168,6 +172,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     }
     if (run.paused !== this.paused) {
       this.paused = run.paused;
+      this.controls?.show(this.paused);
       sfx('pause');
       if (this.paused) {
         holdMusic();

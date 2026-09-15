@@ -31,9 +31,13 @@ real buttons.
 | Y | Z or J | X / left face | punch, grab | cast |
 | B | X or K | A / bottom face | jump | jump |
 | A | C or L | B / right face | Emergency Injunction | Emergency Injunction |
-| X | V or I | Y / top face | — | swap enchantment |
+| X | V or I | Y / top face | Objection parry | swap enchantment |
 | L / R | Q / E | shoulders or triggers | step back / forward | R held: stand and aim |
 | Start | Enter | Start | pause, skip scene | pause, skip scene |
+
+Double tap left or right to run. Every key above belongs to the pad: the display mode (CRT, sharp
+pixels, composite) cycles on backtick or F2, and the labs' dial panel opens on Tab. The pause screen
+and both labs list these controls for the stage.
 
 On a placeholder stage, Start clears it, B loses a life and A reaches the next checkpoint.
 `?go=<screen>` starts on any screen (`title`, `select`, `scene1`, `stage1`, `scene2`, `stage2`,
