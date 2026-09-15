@@ -1,6 +1,7 @@
 /* global Phaser */
 import { WIDTH, HEIGHT, integerZoom } from './nes/screen.mjs';
 import { nes } from './nes/palette.mjs';
+import { installCrt } from './crt/display.mjs';
 import { NesTestScene } from './nes/testscene.mjs';
 import { ArtScene } from './nes/artscene.mjs';
 import { AUDITORS, CHECKPOINTS, SCREENS, jumpTo, next } from './flow.mjs';
@@ -41,6 +42,7 @@ const game = new Phaser.Game({
   backgroundColor: nes(0x0f),
   pixelArt: true,
   roundPixels: true,
+  render: { preserveDrawingBuffer: true },
   scale: {
     mode: Phaser.Scale.NONE,
     zoom: integerZoom(window.innerWidth, window.innerHeight),
@@ -50,6 +52,7 @@ const game = new Phaser.Game({
 });
 game.registry.set('flow', start);
 window.finalNotice = game;
+window.finalNoticeCrt = installCrt(game, params);
 
 window.addEventListener('resize', () => {
   game.scale.setZoom(integerZoom(window.innerWidth, window.innerHeight));
