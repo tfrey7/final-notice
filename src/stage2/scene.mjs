@@ -13,10 +13,12 @@ import { drawActors, loadActorArt } from './draw.mjs';
 import { carry, inHand, swapHand } from './pickups.mjs';
 import { createRun, stepRun } from './core.mjs';
 import { drawStage2Hud } from './hud.mjs';
+import { drawRing } from '../hud.mjs';
+import { HITS_PER_SEGMENT, ringShape } from '../injunction.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction' };
 const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
 
 // The art cards' Stage 2 names, as ward.mjs exports them; an auditor without them is a 16x32 stand-in.
@@ -45,6 +47,8 @@ export class EscapeScene extends Phaser.Scene {
     if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
     // ?spell=<name> starts with that enchantment in hand.
     if (params.has('spell')) carry(this.run, params.get('spell')), swapHand(this.run);
+    // ?meter=<segments> starts with that much of the injunction meter filled.
+    if (params.has('meter')) this.run.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
     window.finalNoticeStage2 = this.run;
     playSong('stage2');
 
@@ -121,7 +125,9 @@ export class EscapeScene extends Phaser.Scene {
     }
     drawActors(run, this.actors, this.fx.clear(), sprites);
     this.layer.draw(sprites);
-    drawStage2Hud(this.hud.clear(), run, flow);
+    const hud = this.hud.clear();
+    if (run.ring) drawRing(hud, ringShape(run.ring), Math.round(run.ring.x - cx), run.ring.y);
+    drawStage2Hud(hud, run, flow);
     if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
   }
 }

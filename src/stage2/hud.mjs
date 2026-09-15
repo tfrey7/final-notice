@@ -4,6 +4,7 @@ import { WIDTH, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { drawText } from '../scenes/placeholder.mjs';
 import { HEALTH } from './player.mjs';
+import { SEGMENTS, segments } from '../injunction.mjs';
 
 const C = { back: nes(0x0f), text: nes(0x30), pip: nes(0x16), empty: nes(0x00), frame: nes(0x28), wax: nes(0x16), gold: nes(0x38), dim: nes(0x2d), ink: nes(0x02) };
 
@@ -34,6 +35,8 @@ export function drawStage2Hud(g, run, flow) {
   drawText(g, p.auditor.toUpperCase(), 8, SAFE + 2, C.text);
   for (let i = 0; i < HEALTH; i++) g.fillStyle(i < p.health ? C.pip : C.empty).fillRect(8 + i * 6, SAFE + 14, 4, 6);
   drawText(g, `x${flow.lives}`, 64, SAFE + 12, C.text);
+  drawText(g, 'NOTICE', 96, SAFE + 2, C.text);
+  for (let i = 0; i < SEGMENTS; i++) g.fillStyle(i < segments(run.meterHits) ? C.frame : C.empty).fillRect(96 + i * 16, SAFE + 14, 14, 6);
   run.carried.forEach((name, i) => {
     const x = WIDTH - 48 + i * 20;
     const y = SAFE + 4;

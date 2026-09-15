@@ -7,10 +7,11 @@ import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
 import { SONGS, jumpTo, next } from '../flow.mjs';
 import { TUNING, shakeOffset } from './moves.mjs';
-import { FLOOR_W, PIPS, animFor, newFloor, stepFloor, tuneFor } from './player.mjs';
+import { FLOOR_W, HITS_PER_SEGMENT, PIPS, animFor, newFloor, stepFloor, tuneFor } from './player.mjs';
+import { ringShape } from '../injunction.mjs';
 import { registerTuning, mountTunePanel } from '../tune.mjs';
 import { drawText, showFlow } from '../scenes/placeholder.mjs';
-import { HUD_HEIGHT, drawHud, hudLayout } from '../hud.mjs';
+import { HUD_HEIGHT, drawHud, drawRing, hudLayout } from '../hud.mjs';
 import { pose, spawnStaff } from './staff.mjs';
 import { bindSprites, foeSprites, tapeSprites } from './foe-actors.mjs';
 
@@ -18,7 +19,7 @@ const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, s
 const MS = 1000 / 60;
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
-  redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw',
+  redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction',
 };
 const FOE = { idle: 'idle', walk: 'walk', windup: 'punch', punch: 'punch', hurt: 'hurt', held: 'hurt', knockdown: 'hurt', down: 'hurt', getup: 'hurt', ko: 'hurt' };
 
@@ -46,6 +47,8 @@ export class Stage1Scene extends Phaser.Scene {
       spawnStaff(this.world, params.get('foes').split(','), this.tune);
       pose(this.world, params.get('pose'), this.tune);
     }
+    // ?meter=<segments> starts with that much of the injunction meter filled.
+    if (params.has('meter')) this.world.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
     await Promise.all([loadArt('ward'), loadArt('cast')]);
     this.body = this.who === 'ward' ? artOr(this, 'ward') : artOr(this, 'cast');
     this.cast = artOr(this, 'cast');
@@ -128,6 +131,7 @@ export class Stage1Scene extends Phaser.Scene {
     const flow = this.registry.get('flow');
     const p = w.fighters.find((f) => f.team === 'player');
     const g = this.hud.clear();
+    if (w.ring) drawRing(g, ringShape(w.ring), Math.round(w.ring.x - w.cameraX), w.ring.y);
     drawHud(g, hudLayout({ name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter }), drawText);
     if (p.state === 'bound') drawText(g, 'MASH!', Math.round(p.x - w.cameraX) - 20, p.y - 56, nes(0x30));
     if (this.freezeAt !== null) {

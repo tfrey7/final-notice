@@ -1,14 +1,15 @@
 // The chosen auditor on Stage 1's long test floor: how Ward and Mercer differ, the evasive step,
 // carried props, the practice dummy, the scrolling camera, the injunction meter and lives.
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
-import { defaultTune, fighter, landHit, player, step } from './moves.mjs';
+import { defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
 import { stepStaff, struggle } from './staff.mjs';
+import { HITS_PER_SEGMENT, RING, SEGMENTS, addHits, pushDir, restoreAtCheckpoint, ringVictims, segments, startRing, stepRing, wantsInjunction, withoutAB } from '../injunction.mjs';
 
+export { HITS_PER_SEGMENT };
 export const SCREEN_W = 256;
 export const FLOOR_W = SCREEN_W * 4;
 export const PIPS = 8;
-export const METER_SEGMENTS = 4;
-export const HITS_PER_SEGMENT = 4;
+export const METER_SEGMENTS = SEGMENTS;
 export const STEP = { frames: 14, speed: 3.5 };
 export const PROP = { reach: 16, speed: 4, damage: 3, respawn: 90 };
 export const START = { x: 48, y: 188 };
@@ -121,8 +122,33 @@ function moveProps(world, tune, events) {
 
 const foeHp = (world) => world.fighters.filter((f) => f.team !== 'player').reduce((n, f) => n + f.hp, 0);
 
+// The Emergency Injunction: every ordinary foe on screen is thrown back unhurt, red tape snaps, and
+// the fight holds still for a beat. Answers true when it fired.
+function injunction(world, pad, tune, events) {
+  const p = player(world);
+  if (world.hitStop > 0 || DOWNED.includes(p.state) || !wantsInjunction(pad, world.meterHits)) return false;
+  world.meterHits = 0;
+  const view = { x0: world.cameraX, x1: world.cameraX + SCREEN_W };
+  const standing = (f) => f.team === 'foe' && !DOWNED.includes(f.state) && f.state !== 'held';
+  for (const f of ringVictims(world.fighters, view, standing)) {
+    const dir = pushDir(f, p.x);
+    set(f, 'knockdown');
+    Object.assign(f, { vx: dir * tune.launchX * 1.5, vz: tune.launchUp, z: Math.max(f.z, 1), taken: 0, facing: -dir });
+  }
+  world.tapes = [];
+  if (p.state === 'bound') set(p, 'idle');
+  p.invuln = Math.max(p.invuln, RING.freeze + 20);
+  world.ring = startRing(p.x, p.y - 20);
+  world.hitStop = RING.freeze;
+  world.shake = RING.freeze;
+  events.push('injunction');
+  return true;
+}
+
 export function stepFloor(world, pad, tune) {
   const events = [];
+  world.ring = stepRing(world.ring);
+  if (injunction(world, pad, tune, events)) pad = withoutAB(pad);
   const frozen = world.hitStop > 0;
   const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
     : struggle(world, pad, events) ?? beforeStep(world, pad, tune, events);
@@ -134,15 +160,16 @@ export function stepFloor(world, pad, tune) {
     stepStaff(world, tune, events);
     if (p.state === 'punch' && p.t === 0) events.push('punch');
   }
-  if (foeHp(world) < before) world.meterHits++;
-  world.meter = Math.min(METER_SEGMENTS, Math.floor(world.meterHits / HITS_PER_SEGMENT));
+  if (foeHp(world) < before) world.meterHits = addHits(world.meterHits);
 
   if (world.events.includes('lifeLost')) {
+    world.meterHits = restoreAtCheckpoint(world.meterHits);
     drop(world, p);
     Object.assign(p, { x: world.checkpointX, y: START.y, z: 0, vx: 0, vz: 0 });
     world.cameraX = Math.max(0, world.checkpointX - SCREEN_W / 2);
   }
   if (!world.think && !world.fighters.some((f) => f.dummy)) world.fighters.push(dummy(tune, 128));
+  world.meter = segments(world.meterHits);
   world.events.push(...events);
   world.cameraX = cameraX(world.cameraX, p.x);
   return world;

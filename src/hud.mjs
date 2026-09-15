@@ -18,6 +18,24 @@ export function hudLayout({ name, hp, maxHp = 8, lives, meter, segments = 4 }) {
   };
 }
 
+// The injunction's wax-seal ring around screen point (x, y), with the screen-wide flash first.
+export function drawRing(g, shape, x, y) {
+  if (shape.flash) {
+    g.fillStyle(nes(0x30)).fillRect(0, 0, WIDTH, 240);
+    return;
+  }
+  const dots = (r, n, size, colour) => {
+    g.fillStyle(colour);
+    for (let i = 0; i < n; i++) {
+      const a = (i * 2 * Math.PI) / n;
+      g.fillRect(Math.round(x + Math.cos(a) * r) - (size >> 1), Math.round(y + Math.sin(a) * r) - (size >> 1), size, size);
+    }
+  };
+  dots(shape.radius, 40, 4, nes(0x16));
+  dots(shape.radius - 5, 32, 2, nes(shape.blink ? 0x38 : 0x28));
+  dots(shape.radius * 0.45, 16, 3, nes(0x06));
+}
+
 export function drawHud(g, layout, drawText) {
   const { strip } = layout;
   g.fillStyle(nes(0x0f)).fillRect(strip.x, strip.y, strip.w, strip.h);

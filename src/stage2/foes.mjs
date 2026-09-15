@@ -15,6 +15,15 @@ export function stepFoes(foes, glyphs, player, area) {
   const keep = foes.filter((f) => {
     f.flash = Math.max(0, f.flash - 1);
     if (f.hp <= 0) return ++f.down < ASSOCIATE.down;
+    // Thrown back by the injunction: slides away, stopping at a wall or the ledge's edge.
+    if (f.knock > 0) {
+      f.knock -= 1;
+      f.windUp = 0;
+      const nx = f.x + f.knockDir * (1 + f.knock * 0.25);
+      const edge = nx + f.knockDir * (f.w / 2);
+      if (!solidPoint(area, edge, f.y - 8) && solidPoint(area, edge, f.y + 1)) f.x = nx;
+      return true;
+    }
     if (f.frozen > 0) {
       f.frozen -= 1;
       f.windUp = 0;
