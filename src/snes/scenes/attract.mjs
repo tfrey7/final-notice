@@ -11,8 +11,8 @@ import { CHAIN, digitize, parseWav, voiceOf } from '../audio/voice.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, showFlow } from '../../flow.mjs';
 import { SEEN_KEY } from '../opening.mjs';
-import { drawTextBox } from '../text.mjs';
-import { LINES, SHOTS, SHOT_H, SHOT_W, SUB_BOX, attractAt, attractCues, attractStep, cameraPixel, subtitleAt } from '../attract.mjs';
+import { LINE_H, drawString, measure } from '../text.mjs';
+import { LINES, SHOTS, SHOT_H, SHOT_W, SUB, attractAt, attractCues, attractStep, cameraPixel, subtitleAt } from '../attract.mjs';
 import { FrontScreen, bufferFill } from './front.mjs';
 
 const SHOTS_URL = new URL('../../../assets/intro/', import.meta.url);
@@ -97,7 +97,10 @@ export class SnesAttractScene extends Phaser.Scene {
     const at = attractAt(this.frame);
     const frame = this.paint(at);
     const sub = subtitleAt(this.frame);
-    if (sub) drawTextBox(bufferFill(frame), sub, SUB_BOX);
+    if (sub) {
+      const fill = bufferFill(frame);
+      sub.lines.forEach((l, i) => drawString(fill, l, (WIDTH - measure(l)) >> 1, SUB.y + i * LINE_H));
+    }
     this.view.show(frame, at);
   }
 

@@ -44,10 +44,9 @@ export const LINES = [
 ];
 export const lineFrame = (line) => SHOT_AT[line.shot - 1] + Math.round(line.at * FPS);
 
-// Subtitles sit in the house text box in the black band under the picture, clear of every face; the
-// speaker's tab overlaps only the bottom few rows of the shot.
-export const SUB_BOX = { x: 4, y: 186, w: 248, h: 36, pad: 6, rows: 2 };
-export const SUB_SPEAKERS = { ward: 'WARD', mercer: 'MERCER', kemp: 'MRS. KEMP', supervisor: 'SUPERVISOR' };
+// Final Fight's subtitles, not an RPG text box: plain white lines centred in the black band under the
+// picture, no window and no name tag; the picture shows who is talking.
+export const SUB = { y: 191, w: 240, rows: 2 };
 export const SUB_LINGER = 30;
 
 // The subtitle showing on `frame`, or null: from the line's first frame until it has finished sounding
@@ -58,10 +57,10 @@ export function subtitleAt(frame) {
     const next = LINES[i + 1]?.shot === line.shot ? lineFrame(LINES[i + 1]) : SHOT_AT[line.shot];
     const until = Math.min(next, from + Math.round(line.s * FPS) + SUB_LINGER);
     if (frame < from || frame >= until) continue;
-    const pages = wrapText(line.text, SUB_BOX.w - 2 * SUB_BOX.pad, SUB_BOX.rows);
+    const pages = wrapText(line.text, SUB.w, SUB.rows);
     const spoken = Math.round(line.s * FPS);
     const page = Math.min(pages.length - 1, Math.floor(((frame - from) * pages.length) / spoken));
-    return { speaker: SUB_SPEAKERS[line.who], lines: pages[page], shown: Infinity, blink: false };
+    return { who: line.who, lines: pages[page] };
   }
   return null;
 }

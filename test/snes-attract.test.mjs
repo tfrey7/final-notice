@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SHOT_W, SUB_BOX, SUB_SPEAKERS, TITLE_FROM, TITLE_SONG_AT,
+  END_AT, FPS, LINES, PUNCH_FROM, PUNCH_TO, SHOTS, SHOT_AT, SHOT_H, SHOT_W, SUB, TITLE_FROM, TITLE_SONG_AT,
   attractAt, attractCues, attractStep, cameraPixel, lineFrame, shotAt, subtitleAt,
 } from '../src/snes/attract.mjs';
 import { measure } from '../src/snes/text.mjs';
@@ -75,24 +75,24 @@ test('every spoken line is subtitled while it sounds, under the picture, and not
     const from = lineFrame(line);
     for (let f = from; f < from + Math.round(line.s * FPS); f += 7) {
       const sub = subtitleAt(f);
-      assert.equal(sub?.speaker, SUB_SPEAKERS[line.who], `${line.clip} at ${f}`);
+      assert.equal(sub?.who, line.who, `${line.clip} at ${f}`);
       assert.ok(line.text.includes(sub.lines[0].split(' ')[0]));
     }
   }
   assert.equal(subtitleAt(0), null);
   assert.equal(subtitleAt(SHOT_AT[5] + 60), null);
   assert.equal(subtitleAt(END_AT - 1), null);
-  assert.ok(SUB_BOX.y >= (224 - SHOT_H) / 2 + SHOT_H);
-  assert.ok(SUB_BOX.y + SUB_BOX.h <= 224);
+  assert.ok(SUB.y >= (224 - SHOT_H) / 2 + SHOT_H);
+  assert.ok(SUB.y + SUB.rows * 12 <= 224);
 });
 
-test('a long subtitle pages through the whole line inside two rows of the box', () => {
+test('a long subtitle pages through the whole line in two plain rows', () => {
   const line = LINES[0];
   const seen = new Set();
   for (let f = lineFrame(line); f < lineFrame(line) + Math.round(line.s * FPS); f++) {
     const { lines } = subtitleAt(f);
-    assert.ok(lines.length <= SUB_BOX.rows);
-    for (const l of lines) assert.ok(measure(l) <= SUB_BOX.w - 2 * SUB_BOX.pad);
+    assert.ok(lines.length <= SUB.rows);
+    for (const l of lines) assert.ok(measure(l) <= SUB.w);
     seen.add(lines.join(' '));
   }
   assert.equal([...seen].join(' '), line.text);
