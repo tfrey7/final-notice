@@ -138,7 +138,10 @@ export function chapelDrops(form) {
   const drops = [];
   form.forEach((b, i) => {
     const voices = [];
-    if (b.part === 'A2' && b.bar < 4) voices.push('v8');
+    if (b.part === 'intro' && b.bar < 2) voices.push('v2', 'v4', 'v6', 'v7', 'v8');
+    if (b.part === 'intro' && b.bar >= 2) voices.push('v7', 'v8');
+    if (b.part === 'A' && i < 12 && b.bar < 4) voices.push('v7', 'v8');
+    if (b.part === 'A2' && b.bar < 4) voices.push('v6', 'v7', 'v8');
     if (b.part === 'B' && b.bar < 4) voices.push('v7');
     if (b.part === 'break' && b.bar < 4) voices.push('v6', 'v7', 'v8');
     if (voices.length) drops.push({ from: i * BAR_ROWS, to: (i + 1) * BAR_ROWS, voices });
@@ -147,17 +150,17 @@ export function chapelDrops(form) {
 }
 
 export const INSTRUMENTS_USED = {
-  lead: { ...INSTRUMENTS.organ, adsr: [14, 4, 7, 6], vol: 110, vibrato: { delay: 14, period: 12, depth: 0.12 } },
-  arp: { ...INSTRUMENTS.organ, adsr: [15, 5, 5, 12], vol: 56 },
-  choir: { ...INSTRUMENTS.choir, vol: 74 },
-  bell: { ...INSTRUMENTS.bell, vol: 76 },
+  lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 110, vibrato: { delay: 8, period: 11, depth: 0.25 } },
+  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 48 },
+  choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 84 },
+  bell: { ...INSTRUMENTS.bell, vol: 58 },
   timpani: { ...INSTRUMENTS.timpani, vol: 100 },
-  pedal: { ...INSTRUMENTS.organ, adsr: [13, 2, 7, 6], vol: 104 },
-  kick: { ...INSTRUMENTS.gkick, vol: 104 },
-  snare: { ...INSTRUMENTS.gsnare, vol: 84 },
-  htom: { ...INSTRUMENTS.htom, vol: 88 },
-  ltom: { ...INSTRUMENTS.ltom, vol: 96 },
-  crash: { ...INSTRUMENTS.crash, vol: 56 },
+  pedal: { ...INSTRUMENTS.organ, adsr: [12, 2, 7, 2], vol: 104 },
+  kick: { ...INSTRUMENTS.gkick, vol: 96 },
+  snare: { ...INSTRUMENTS.gsnare, vol: 66 },
+  htom: { ...INSTRUMENTS.htom, vol: 80 },
+  ltom: { ...INSTRUMENTS.ltom, vol: 88 },
+  crash: { ...INSTRUMENTS.crash, vol: 40 },
 };
 
 const parts = arrange(FORM);
@@ -165,15 +168,15 @@ const parts = arrange(FORM);
 export default {
   tempo: 7,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 60, room: 'hall', evol: 44 },
+  echo: { mvol: 34, room: 'cathedral', evol: 32 },
   instruments: INSTRUMENTS_USED,
   drops: chapelDrops(FORM),
-  v1: { rows: bars(parts.v1, BAR_ROWS), pan: -12 },
-  v2: { rows: bars(parts.v2, BAR_ROWS), pan: 50 },
-  v3: { rows: bars(parts.v3, BAR_ROWS), pan: -50 },
-  v4: { rows: bars(parts.v4, BAR_ROWS), pan: 20 },
+  v1: { rows: bars(parts.v1, BAR_ROWS), pan: -20 },
+  v2: { rows: bars(parts.v2, BAR_ROWS), pan: 80 },
+  v3: { rows: bars(parts.v3, BAR_ROWS), pan: -80 },
+  v4: { rows: bars(parts.v4, BAR_ROWS), pan: 45 },
   v5: { rows: bars(parts.v5, BAR_ROWS) },
   v6: { rows: bars(parts.v6, BAR_ROWS) },
-  v7: { rows: bars(parts.v7, BAR_ROWS), pan: 12 },
-  v8: { rows: bars(parts.v8, BAR_ROWS), pan: -30 },
+  v7: { rows: bars(parts.v7, BAR_ROWS), pan: 30 },
+  v8: { rows: bars(parts.v8, BAR_ROWS), pan: -55 },
 };
