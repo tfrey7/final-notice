@@ -2,24 +2,39 @@
 // match 56-64 px characters, and the TMNT IV throw-into-camera finisher on an area's last foe.
 import { STAGE } from '../../stage1/areas.mjs';
 import { KINDS } from '../../stage1/staff.mjs';
-import { STAFF_WEIGHT, weighed } from '../weight.mjs';
+import { VELLUM } from '../../stage1/vellum.mjs';
+import { STAFF_WEIGHT, VELLUM_WEIGHT, weighed } from '../weight.mjs';
 
 // Every tuning number measured in pixels; times and damage keep their values.
 export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp'];
 export const STAFF_SCALED = ['speed', 'reach', 'stand', 'flank', 'keep', 'near'];
 
-const grown = (table, keys, scale) => ({ ...table, ...Object.fromEntries(keys.filter((k) => k in table).map((k) => [k, table[k] * scale])) });
+export const VELLUM_SCALED = ['speed', 'stand', 'rushSpeed', 'rushReach', 'sweepReach'];
 
-// The player's tune grown, carrying the staff foes' table weighed and grown to match, which
-// staff.mjs reads in place of its NES KINDS. A flanker walks no faster than the auditor, so he can
-// be caught.
+const grown = (table, keys, scale) => ({ ...table, ...Object.fromEntries(keys.filter((k) => k in table).map((k) => [k, table[k] * scale])) });
+const each = (value, fn) => (Array.isArray(value) ? value.map(fn) : fn(value));
+
+// Vellum's parry duel: his table weighed and grown like the staff's, his guard short, and his tell
+// (the wind-up, quicker with his fangs out) and the stagger a parry leaves him in read from the dials.
+export function vellumTable(tune, scale) {
+  const out = { ...VELLUM };
+  for (const [k, m] of Object.entries(VELLUM_WEIGHT.scale)) out[k] = each(out[k], (x) => x * m);
+  for (const [k, n] of Object.entries(VELLUM_WEIGHT.frames)) out[k] = each(out[k], (x) => x + n);
+  for (const k of VELLUM_SCALED) out[k] = each(out[k], (x) => x * scale);
+  const tell = tune.vellumTell;
+  return { ...out, guard: VELLUM_WEIGHT.guard, windup: [tell, Math.max(1, Math.round(tell * 0.6))], stagger: tune.vellumStagger };
+}
+
+// The player's tune grown, carrying the staff foes' and Vellum's tables weighed and grown to match,
+// which staff.mjs and vellum.mjs read in place of their NES tables. A flanker walks no faster than
+// the auditor, so he can be caught.
 export function scaledTune(base, scale) {
   const tune = grown(base, SCALED, scale);
   const staff = (k) => {
     const out = grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale);
     return k.flank ? { ...out, speed: Math.min(out.speed, tune.walkX) } : out;
   };
-  return { ...tune, kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, staff(k)])) };
+  return { ...tune, kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, staff(k)])), vellum: vellumTable(tune, scale) };
 }
 
 export const livingFoes = (world) => world.fighters.filter((f) => f.kind && f.state !== 'ko');

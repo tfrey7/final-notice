@@ -22,6 +22,15 @@ export const STAFF_WEIGHT = {
   frames: { windup: BRAWL_WEIGHT.frames.foeWindup, cooldown: BRAWL_WEIGHT.frames.foeCooldown },
 };
 
+// Vellum's parry duel (vellum.mjs VELLUM): he paces and rushes at the foes' pace, recovers a little
+// slower, and guards only about half a second between attacks, so the fight is his tells and your parries.
+// Pairs are [normal, fangs]; `guard` replaces his NES guard outright.
+export const VELLUM_WEIGHT = {
+  scale: { speed: BRAWL_WEIGHT.scale.foeSpeed, rushSpeed: 0.85 },
+  frames: { recover: 4, sweepFrames: 4 },
+  guard: [30, 22],
+};
+
 export const FOES_WEIGHT = {
   scale: { walkX: 0.8, walkY: 0.8, circleSpeed: 0.8, dodgeSpeed: 0.8, knockback: 1.25 },
   frames: { tokenCooldown: 15, windupFrames: 6, recoverFrames: 6, staggerFrames: 4, knockdownFrames: 12 },

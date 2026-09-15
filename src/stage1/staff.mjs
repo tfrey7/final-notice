@@ -1,7 +1,7 @@
 // Stage 1's four NES foes on the moves.mjs floor (docs/NES-PLAN.md section 6): the Security
 // Associate, the Account Manager, Contract Counsel and the Facilities Supervisor. Pure rules;
 // src/stage1/foe-actors.mjs draws them. (src/stage1/foes.mjs is the older foes page's model.)
-import { DOWNED, fighter, inReach, landHit, player, set, updateCommon } from './moves.mjs';
+import { DOWNED, deflect, fighter, inReach, landHit, player, set, updateCommon } from './moves.mjs';
 
 export const MAX_ON_SCREEN = 3;
 // Attack tokens, as Final Fight and Streets of Rage 2 space their crowds: the rest wait their turn.
@@ -186,19 +186,24 @@ export function struggle(world, pad, events) {
   return { held: new Set(), pressed: new Set(), dash: null };
 }
 
-// After moves.mjs's frame: red tape flies and binds, and benched foes take any free seat.
+// After moves.mjs's frame: red tape flies and binds, and benched foes take any free seat. Tape met
+// inside a parry window snaps instead, and staggers whoever threw it.
 export function stepStaff(world, tune, events) {
   if (!world.think) return;
-  const p = player(world);
   for (const tape of world.tapes) {
     tape.x += tape.vx;
     tape.t++;
-    const caught = Math.abs(p.x - tape.x) < 8 && Math.abs(p.y - tape.y) <= tune.depthReach && p.z < 16
-      && p.invuln <= 0 && !DOWNED.includes(p.state) && !['bound', 'step'].includes(p.state);
-    if (caught) {
+    for (const p of world.fighters.filter((f) => f.team === 'player')) {
+      const caught = tape.t < TAPE.life && Math.abs(p.x - tape.x) < 8 && Math.abs(p.y - tape.y) <= tune.depthReach && p.z < 16
+        && p.invuln <= 0 && !DOWNED.includes(p.state) && !['bound', 'step'].includes(p.state);
+      if (!caught) continue;
+      tape.t = TAPE.life;
+      if (p.parry > 0) {
+        deflect(world, p, world.fighters.find((f) => f.id === tape.from && !DOWNED.includes(f.state)), Math.sign(tape.vx), tune);
+        continue;
+      }
       set(p, 'bound');
       p.mash = TAPE.mash;
-      tape.t = TAPE.life;
       events.push('bound');
     }
   }

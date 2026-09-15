@@ -53,6 +53,9 @@ export const TUNING = {
   parryStagger: [48, 16, 120, 2],
   parryFreeze: [8, 0, 20, 1],
   parryFlash: [6, 0, 20, 1],
+  // Vellum's parry duel on the SNES: how long each attack is telegraphed and how long a parry leaves him open.
+  vellumTell: [30, 8, 60, 1],
+  vellumStagger: [70, 16, 150, 2],
 };
 
 export const defaultTune = () => Object.fromEntries(Object.entries(TUNING).map(([k, [v]]) => [k, v]));
@@ -143,16 +146,19 @@ export function landHit(world, target, { damage, heavy, dir, body, from }, tune)
 }
 
 // The Objection: the fight freezes on a flash and the attacker reels open, long enough for a full combo.
-function deflect(world, p, foe, dir, tune) {
+// A foe may carry his own `parryStagger`; red tape parried from afar has no `foe` in reach and only snaps.
+export function deflect(world, p, foe, dir, tune) {
   p.parry = 0;
   p.parryLock = 0;
   world.hitStop = tune.parryFreeze;
   world.flash = tune.parryFlash;
   world.events.push('parry');
+  if (!foe) return;
   if (foe.target) release(world, foe);
   set(foe, 'hurt');
+  foe.armoured = false;
   foe.vx = -dir * tune.knockback;
-  foe.stagger = tune.parryStagger;
+  foe.stagger = foe.parryStagger ?? tune.parryStagger;
 }
 
 function knockDown(f, dir, tune) {
@@ -180,7 +186,7 @@ function foesOf(world, f) {
 }
 
 function tryGrab(world, f, tune) {
-  const foe = foesOf(world, f).find((o) => o.state === 'hurt' && inReach(f, o, tune.grabReach, tune));
+  const foe = foesOf(world, f).find((o) => o.state === 'hurt' && !o.boss && inReach(f, o, tune.grabReach, tune));
   if (!foe) return false;
   set(f, 'grab');
   f.target = foe.id;

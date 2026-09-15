@@ -55,7 +55,7 @@ const axis = (held, lo, hi) => (held.has(hi) ? 1 : 0) - (held.has(lo) ? 1 : 0);
 const near = (a, b, reach, tune) => Math.abs(b.x - a.x) <= reach && Math.abs(b.y - a.y) <= tune.depthReach;
 
 function canGrabFoe(world, p, tune) {
-  return world.fighters.some((o) => o.team !== 'player' && o.state === 'hurt'
+  return world.fighters.some((o) => o.team !== 'player' && o.state === 'hurt' && !o.boss
     && (o.x - p.x) * p.facing >= 0 && (o.x - p.x) * p.facing <= tune.grabReach && Math.abs(o.y - p.y) <= tune.depthReach);
 }
 

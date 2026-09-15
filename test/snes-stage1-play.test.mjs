@@ -13,7 +13,7 @@ test('one scale factor grows every pixel number and leaves times and damage alon
   const big = scaledTune(base, 1.5);
   for (const k of SCALED) assert.equal(big[k], base[k] * 1.5, k);
   for (const k of ['hitStop', 'punchStartup', 'punchDamage', 'playerHp']) assert.equal(big[k], base[k], k);
-  const { kinds, ...same } = scaledTune(base, 1);
+  const { kinds, vellum, ...same } = scaledTune(base, 1);
   assert.deepEqual(same, base);
   assert.equal(STAGE1.scale, 1.5);
 });

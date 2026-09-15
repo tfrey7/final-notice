@@ -1,13 +1,16 @@
 // Deputy Director Vellum, Stage 1's boss, on the moves.mjs floor (docs/NES-PLAN.md section 6).
 // Pure rules: he guards, telegraphs one of three attacks, and is open only in the recovery after
-// one (the bait) or when a thrown Associate breaks his guard. Below half he bares his fangs.
+// one (the bait), when a thrown Associate breaks his guard, or when a parry sends him reeling.
+// Below half he bares his fangs. A tune may carry its own `vellum` table (the SNES scene's parry
+// duel, grown and weighed); without one VELLUM is used.
 import { DOWNED, fighter, landHit, player, set, updateCommon } from './moves.mjs';
 import { TAPE, spawnStaff, thinkStaff } from './staff.mjs';
 import { WIDTH } from '../snes/screen.mjs';
 
 // Pairs are [normal, fangs]; times are frames. Each telegraph is held about half a second (L8).
+// `stand` is how far off the auditor he paces while guarding.
 export const VELLUM = {
-  hp: 16, fangsAt: 8, damage: 2, speed: [0.5, 0.75],
+  hp: 16, fangsAt: 8, damage: 2, speed: [0.5, 0.75], stand: 28,
   guard: [80, 44], windup: [30, 18], recover: [44, 28],
   rushSpeed: [3, 4], rushFrames: 70, rushReach: 14,
   sweepReach: 38, sweepActive: 4, sweepFrames: 18,
@@ -19,11 +22,19 @@ export const LOOPS = { 1: ['rush', 'sweep', 'tape'], 2: ['rush', 'sweep', 'rush'
 // One screen wide on both consoles (NES and SNES are each 256 px), so nobody walks out of view.
 export const ARENA = { left: 16, right: WIDTH - 16, top: 160, bottom: 216 };
 
-const pick = (v, key) => VELLUM[key][v.fangs ? 1 : 0];
-export const windupFor = (v) => pick(v, 'windup');
-export const guardFor = (v) => pick(v, 'guard');
+export const vellumOf = (tune) => tune?.vellum ?? VELLUM;
+const pick = (v, key, table = VELLUM) => {
+  const value = table[key];
+  return Array.isArray(value) ? value[v.fangs ? 1 : 0] : value;
+};
+export const windupFor = (v, table) => pick(v, 'windup', table);
+export const guardFor = (v, table) => pick(v, 'guard', table);
 
 export const vellum = (world) => world.fighters.find((f) => f.kind === 'vellum');
+
+// The auditor nearest him; with two players he turns on whoever is closest.
+const players = (world) => world.fighters.filter((f) => f.team === 'player');
+const nearest = (world, v) => players(world).reduce((a, b) => (Math.hypot(b.x - v.x, b.y - v.y) < Math.hypot(a.x - v.x, a.y - v.y) ? b : a));
 
 // The locked one-screen office: only the auditor and Vellum, no props, no camera scroll.
 export function enterOffice(world, tune) {
@@ -54,15 +65,19 @@ function wantsSummon(world, v) {
   return v.summoned === 0 ? v.attacks >= 1 : v.fangs;
 }
 
+// His blow goes through the parry like anyone's: met inside the window, it sends him reeling.
 function hitsPlayer(world, v, p, tune) {
   if (p.z >= 16 || DOWNED.includes(p.state) || p.invuln > 0) return false;
-  return landHit(world, p, { damage: VELLUM.damage, heavy: true, dir: v.facing }, tune);
+  return landHit(world, p, { damage: VELLUM.damage, heavy: true, dir: v.facing, from: v }, tune);
 }
 
 export function thinkVellum(world, v, tune) {
-  const p = player(world);
+  const table = vellumOf(tune);
+  const at = (key) => pick(v, key, table);
+  const p = nearest(world, v);
   if (v.invuln > 0) v.invuln--;
   if (v.guardDown > 0) v.guardDown--;
+  v.parryStagger = table.stagger;
   v.t++;
   v.armoured = v.state === 'windup';
   switch (v.state) {
@@ -73,13 +88,13 @@ export function thinkVellum(world, v, tune) {
       const stance = v.guardDown > 0 ? 'idle' : 'guard';
       if (v.state !== stance) set(v, stance);
       const side = Math.sign(v.x - p.x) || 1;
-      const dx = p.x + side * 28 - v.x;
+      const dx = p.x + side * table.stand - v.x;
       const dy = p.y - v.y;
-      const speed = pick(v, 'speed');
+      const speed = at('speed');
       v.x += Math.sign(dx) * Math.min(Math.abs(dx), speed);
       v.y += Math.sign(dy) * Math.min(Math.abs(dy), speed * 0.75);
       v.facing = Math.sign(p.x - v.x) || v.facing;
-      if (++v.wait < guardFor(v) || DOWNED.includes(p.state)) break;
+      if (++v.wait < at('guard') || DOWNED.includes(p.state)) break;
       v.wait = 0;
       if (wantsSummon(world, v)) {
         v.summoned++;
@@ -101,13 +116,13 @@ export function thinkVellum(world, v, tune) {
       break;
     case 'windup':
       if (v.attack !== 'tape') v.y += Math.sign(p.y - v.y) * Math.min(Math.abs(p.y - v.y), 0.5);
-      if (v.t < windupFor(v)) break;
+      if (v.t < at('windup')) break;
       v.attacks++;
       v.armoured = false;
       v.facing = Math.sign(p.x - v.x) || v.facing;
       if (v.attack === 'rush') {
-        v.vx = v.facing * pick(v, 'rushSpeed');
-        v.landed = false;
+        v.vx = v.facing * at('rushSpeed');
+        v.landed = [];
         set(v, 'rush');
       } else if (v.attack === 'sweep') {
         set(v, 'sweep');
@@ -119,21 +134,24 @@ export function thinkVellum(world, v, tune) {
       break;
     case 'rush':
       v.x = Math.min(world.floor.right - 8, Math.max(world.floor.left + 8, v.x + v.vx));
-      if (!v.landed && Math.abs(p.x - v.x) < VELLUM.rushReach && Math.abs(p.y - v.y) <= tune.depthReach) {
-        v.landed = hitsPlayer(world, v, p, tune);
+      for (const o of players(world)) {
+        if (v.state !== 'rush' || v.landed === true || v.landed?.includes?.(o.id)) continue;
+        if (Math.abs(o.x - v.x) < table.rushReach && Math.abs(o.y - v.y) <= tune.depthReach && hitsPlayer(world, v, o, tune)) v.landed = [...(v.landed || []), o.id];
       }
-      if (v.x <= world.floor.left + 8 || v.x >= world.floor.right - 8 || v.t >= VELLUM.rushFrames) set(v, 'recover');
+      if (v.state === 'rush' && (v.x <= world.floor.left + 8 || v.x >= world.floor.right - 8 || v.t >= table.rushFrames)) set(v, 'recover');
       break;
     case 'sweep': {
-      const ahead = (p.x - v.x) * v.facing;
-      if (v.t === VELLUM.sweepActive && ahead >= -8 && ahead <= VELLUM.sweepReach && Math.abs(p.y - v.y) <= tune.depthReach * 2) {
-        hitsPlayer(world, v, p, tune);
+      if (v.t === table.sweepActive) {
+        for (const o of players(world)) {
+          const ahead = (o.x - v.x) * v.facing;
+          if (v.state === 'sweep' && ahead >= -8 && ahead <= table.sweepReach && Math.abs(o.y - v.y) <= tune.depthReach * 2) hitsPlayer(world, v, o, tune);
+        }
       }
-      if (v.t >= VELLUM.sweepFrames) set(v, 'recover');
+      if (v.state === 'sweep' && v.t >= table.sweepFrames) set(v, 'recover');
       break;
     }
     case 'recover':
-      if (v.t >= pick(v, 'recover')) set(v, 'guard');
+      if (v.t >= at('recover')) set(v, 'guard');
       break;
     case 'fangs':
       if (v.t >= VELLUM.fangsFrames) set(v, 'guard');
