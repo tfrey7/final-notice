@@ -7,7 +7,7 @@ import { AUDITORS, SCREENS, jumpTo } from './flow.mjs';
 import { PlaceholderScene } from './scenes/placeholder.mjs';
 import { CinemaScene } from './scenes/cinema.mjs';
 import { EscapeScene } from './stage2/scene.mjs';
-import { Stage1Scene } from './scenes/stage1.mjs';
+import { Stage1Scene } from './stage1/scene.mjs';
 import { TitleScene } from './scenes/title.mjs';
 import { SelectScene } from './scenes/select.mjs';
 

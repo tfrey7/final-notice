@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TUNING, defaultTune, fighter, landHit, player, step } from '../src/brawl.mjs';
+import { TUNING, defaultTune, fighter, landHit, player, step } from '../src/stage1/moves.mjs';
 
 // A player squared up to one foe that never swings.
 function duel(tune) {

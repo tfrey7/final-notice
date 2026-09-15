@@ -42,6 +42,7 @@ export const TUNING = {
   kneesToDrop: [3, 1, 6, 1],
   throwDamage: [3, 0, 8, 1],
   throwFrames: [16, 4, 40, 1],
+  bowl: [1, 0, 1, 1],
   playerHp: [16, 1, 40, 1],
   foeHp: [8, 1, 30, 1],
   foeSpeed: [0.5, 0.125, 2, 0.125],
@@ -75,9 +76,9 @@ function wave(tune, n) {
 }
 
 const set = (f, state) => { f.state = state; f.t = 0; };
-const clampFloor = (f) => {
-  f.x = Math.min(FLOOR.right, Math.max(FLOOR.left, f.x));
-  f.y = Math.min(FLOOR.bottom, Math.max(FLOOR.top, f.y));
+const clampFloor = (f, floor = FLOOR) => {
+  f.x = Math.min(floor.right, Math.max(floor.left, f.x));
+  f.y = Math.min(floor.bottom, Math.max(floor.top, f.y));
 };
 export const player = (world) => world.fighters.find((f) => f.team === 'player');
 
@@ -279,7 +280,7 @@ function updateCommon(world, f, tune) {
       // A body flying through the fight bowls over any other foe it touches.
       const bowled = world.fighters.find((o) => o !== f && o.team === f.team && Math.abs(o.x - f.x) < 12
         && Math.abs(o.y - f.y) <= tune.depthReach && !DOWNED.includes(o.state));
-      if (bowled && Math.abs(f.vx) > 1) landHit(world, bowled, { damage: tune.throwDamage, heavy: true, dir: Math.sign(f.vx) }, tune);
+      if (bowled && Math.abs(f.vx) > 1 && tune.bowl) landHit(world, bowled, { damage: tune.throwDamage, heavy: true, dir: Math.sign(f.vx) }, tune);
       if (f.z <= 0) {
         f.z = 0;
         set(f, 'down');
@@ -317,6 +318,7 @@ function updateFoe(world, f, tune) {
   if (f.cooldown > 0) f.cooldown--;
   switch (f.state) {
     case 'idle': case 'walk': {
+      if (f.dummy) break;
       // The second foe of a pair works the player's other side, so the two never stack.
       const side = f.id.endsWith('b') && world.fighters.filter((o) => o.team === 'foe').length > 1 ? -1 : Math.sign(f.x - p.x) || 1;
       const dx = p.x + side * 18 - f.x;
@@ -364,10 +366,10 @@ export function step(world, input, tune = defaultTune()) {
   }
   updatePlayer(world, p, input, tune);
   for (const f of world.fighters) if (f.team === 'foe') updateFoe(world, f, tune);
-  for (const f of world.fighters) clampFloor(f);
+  for (const f of world.fighters) clampFloor(f, world.floor);
 
   world.fighters = world.fighters.filter((f) => f.state !== 'ko' || f.t < 40);
-  if (!world.fighters.some((f) => f.team === 'foe')) {
+  if (!world.noWaves && !world.fighters.some((f) => f.team === 'foe')) {
     if (world.waveTimer === 0) world.events.push('waveClear');
     if (++world.waveTimer >= 60) {
       world.wave++;
