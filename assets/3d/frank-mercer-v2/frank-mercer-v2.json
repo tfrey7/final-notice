@@ -102,5 +102,19 @@
       "removed past the cuff": 1374,
       "tie vertices loosened": 320
     }
+  },
+  "detail": {
+    "Human.male_elegantsuit01": {
+      "vertices before": 6242,
+      "vertices after": 24695,
+      "edge vertices frayed": 2224,
+      "fold vertices": 15071
+    },
+    "Human.short02": {
+      "vertices before": 1755,
+      "vertices after": 6853,
+      "locks": 13,
+      "edge vertices pointed": 1264
+    }
   }
 }

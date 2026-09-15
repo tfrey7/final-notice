@@ -30,6 +30,8 @@ LIGHT_CAM = Vector((-0.55, 0.65, 0.52)).normalized()
 BAND_AT = (0.18, 0.62)   # lit fraction where shadow turns to mid, and mid to lit
 TOON_LEVELS = (0.46, 0.74, 1.0)
 LINE_PX = 7.0            # Line Art thickness at 8x: a little under one native pixel
+SKIN = 4                 # pixel_id lit from FRONT_CAM instead of the sun, so the face and hands stay out of shadow
+FRONT_CAM = Vector((-0.35, 0.45, 0.82)).normalized()
 
 
 def eevee(scene):
@@ -42,8 +44,7 @@ def eevee(scene):
 
 
 def sun():
-    # the camera looks along world +y, so camera x is world x, camera up is world z, toward the viewer is -y
-    direction = Vector((LIGHT_CAM.x, -LIGHT_CAM.z, LIGHT_CAM.y))
+    direction = cam_to_world(LIGHT_CAM)
     data = bpy.data.lights.new("cel_sun", "SUN")
     data.energy = 1.0
     data.angle = 0.0
@@ -53,16 +54,33 @@ def sun():
     return obj
 
 
-def toon_material(name, colour, levels):
+def cam_to_world(v):
+    # the camera looks along world +y, so camera x is world x, camera up is world z, toward the viewer is -y
+    return Vector((v.x, -v.z, v.y))
+
+
+def toon_material(name, colour, levels, front=False):
+    """Diffuse from the sun stepped into three bands; with front, the lit fraction is the surface
+    normal against FRONT_CAM instead, which no Blender light has to reach."""
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     tree = mat.node_tree
     for node in list(tree.nodes):
         tree.nodes.remove(node)
     out = tree.nodes.new("ShaderNodeOutputMaterial")
-    diffuse = tree.nodes.new("ShaderNodeBsdfDiffuse")
-    diffuse.inputs["Color"].default_value = (1, 1, 1, 1)
-    to_rgb = tree.nodes.new("ShaderNodeShaderToRGB")
+    if front:
+        geometry = tree.nodes.new("ShaderNodeNewGeometry")
+        dot = tree.nodes.new("ShaderNodeVectorMath")
+        dot.operation = "DOT_PRODUCT"
+        dot.inputs[1].default_value = cam_to_world(FRONT_CAM)
+        tree.links.new(geometry.outputs["Normal"], dot.inputs[0])
+        lit = dot.outputs["Value"]
+    else:
+        diffuse = tree.nodes.new("ShaderNodeBsdfDiffuse")
+        diffuse.inputs["Color"].default_value = (1, 1, 1, 1)
+        to_rgb = tree.nodes.new("ShaderNodeShaderToRGB")
+        tree.links.new(diffuse.outputs[0], to_rgb.inputs[0])
+        lit = to_rgb.outputs["Color"]
     ramp = tree.nodes.new("ShaderNodeValToRGB")
     ramp.color_ramp.interpolation = "CONSTANT"
     els = ramp.color_ramp.elements
@@ -71,8 +89,7 @@ def toon_material(name, colour, levels):
     for el, level in zip((els[0], els[1], extra), levels):
         el.color = (colour[0] * level, colour[1] * level, colour[2] * level, 1.0)
     emit = tree.nodes.new("ShaderNodeEmission")
-    tree.links.new(diffuse.outputs[0], to_rgb.inputs[0])
-    tree.links.new(to_rgb.outputs["Color"], ramp.inputs["Fac"])
+    tree.links.new(lit, ramp.inputs["Fac"])
     tree.links.new(ramp.outputs["Color"], emit.inputs["Color"])
     tree.links.new(emit.outputs[0], out.inputs["Surface"])
     return mat
@@ -146,8 +163,9 @@ def main():
     for obj in meshes:
         for mat in originals[obj.name]:
             pid = int(mat["pixel_id"])
-            band_mats.setdefault(pid, toon_material("cel_band_%d" % pid, (1, 1, 1), (0.0, 0.5, 1.0)))
-            toon_mats.setdefault(pid, toon_material("cel_toon_%d" % pid, colours[str(pid)], TOON_LEVELS))
+            front = pid == SKIN
+            band_mats.setdefault(pid, toon_material("cel_band_%d" % pid, (1, 1, 1), (0.0, 0.5, 1.0), front))
+            toon_mats.setdefault(pid, toon_material("cel_toon_%d" % pid, colours[str(pid)], TOON_LEVELS, front))
     holdout = holdout_material()
     lines = line_art(scene)
     poser = fpb.Poser(rig)
