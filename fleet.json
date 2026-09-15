@@ -1,7 +1,7 @@
 {
   "repo": "final-notice",
   "land": true,
-  "suite": "node --test",
+  "suite": "FINAL_NOTICE_FULL=1 node --test",
   "build": null,
   "protect": [".state/", ".ci/"],
   "restart": null

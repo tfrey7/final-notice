@@ -58,6 +58,9 @@ The native composition is 298x224 (4:3), zoomed by a whole number to fit the win
 
 `node --test` from the worktree root: headless, no dependencies, under a second. One file:
 `node --test test/logic.test.mjs`. Only pure logic is tested; Phaser scenes are checked by screenshot.
+Locally the headless-Chrome start test skips, and song renders whose sources match their last clean
+pass skip (`test/*.clean.json`, rewritten by a local run: commit it with the song). The fleet's CI and
+landing run `FINAL_NOTICE_FULL=1 node --test` from `fleet.json`, which runs and renders everything.
 
 ## 5. What never to commit
 

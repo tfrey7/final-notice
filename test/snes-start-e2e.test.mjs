@@ -1,5 +1,6 @@
 // A cold load of ?snes, played with real Enter presses from the title into Stage 1 in headless Chrome.
-// Skips where no Chrome is installed; FINAL_NOTICE_CHROME points at one anywhere else.
+// Runs only in the full suite (FINAL_NOTICE_FULL=1, as the fleet's CI and landing run it through
+// fleet.json). Skips where no Chrome is installed; FINAL_NOTICE_CHROME points at one anywhere else.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -66,7 +67,7 @@ async function devtools(profile) {
   return { send, on: (fn) => listeners.push(fn), close: () => ws.close() };
 }
 
-test('?snes from a cold load: Enter on every screen reaches Stage 1 with no stall or error', { skip: !chrome && 'no Chrome here', timeout: TOTAL_MS + 30000 }, async () => {
+test('?snes from a cold load: Enter on every screen reaches Stage 1 with no stall or error', { skip: process.env.FINAL_NOTICE_FULL !== '1' ? 'full suite only: FINAL_NOTICE_FULL=1' : !chrome && 'no Chrome here', timeout: TOTAL_MS + 30000 }, async () => {
   const server = await serve();
   const profile = mkdtempSync(join(tmpdir(), 'fn-e2e-'));
   const browser = spawn(chrome, [

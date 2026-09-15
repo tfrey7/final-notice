@@ -6,6 +6,20 @@ import ending, { FORM as ENDING_FORM, LAST, TAIL_BARS } from '../src/snes/audio/
 import { compileSong, renderSong, VOICE_NAMES, SAMPLES } from '../src/snes/audio/player.mjs';
 import { sampleBytes } from '../src/snes/audio/bank.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
+import { cleanRenders } from './clean-renders.mjs';
+
+// The three whole-song renders below skip locally when their sources match their last pass.
+const renders = cleanRenders(import.meta.url);
+const PLAYER = new URL('../src/snes/audio/player.mjs', import.meta.url);
+const SONG = (name) => new URL(`../src/snes/audio/songs/${name}.mjs`, import.meta.url);
+function rendered(name, song, check) {
+  return (t) => {
+    const hash = renders.due(name, [SONG(song), PLAYER]);
+    if (!hash) return t.skip('unchanged since its last clean render');
+    check();
+    renders.passed(name, hash);
+  };
+}
 
 const CUES = {
   boss: [boss, BOSS_FORM, BOSS_FORM.length],
@@ -54,7 +68,7 @@ test('the scene and ending are corporate wave: no plucked keys, bells or orchest
   }
 });
 
-test('the ending hangs unresolved on its last bar, then its echo rings in the silent tail', () => {
+test('the ending hangs unresolved on its last bar, then its echo rings in the silent tail', rendered('ending tail', 'ending', () => {
   const last = pitches(ending.v1.rows).slice(LAST * BAR_ROWS, (LAST + 1) * BAR_ROWS).filter((t) => /^[A-G]/.test(t));
   assert.ok(last.length && last.every((t) => !/^E\d/.test(t)), `last bar ${last}`);
   const song = compileSong(ending);
@@ -69,9 +83,9 @@ test('the ending hangs unresolved on its last bar, then its echo rings in the si
   for (let i = a; i < a + n; i++) sum += left[i] ** 2 + right[i] ** 2;
   assert.ok(Math.sqrt(sum / (2 * n)) > 0.01, `tail rms ${Math.sqrt(sum / (2 * n))}`);
   assert.ok(peakOf(out) < 0.95, `peak ${peakOf(out)}`);
-});
+}));
 
-test('the boss loop seam sounds the same on the second pass, with nothing clipped', () => {
+test('the boss loop seam sounds the same on the second pass, with nothing clipped', rendered('boss seam', 'boss', () => {
   const song = compileSong(boss);
   const rowSec = boss.tempo / 60;
   const loopSec = song.loop * rowSec;
@@ -88,9 +102,9 @@ test('the boss loop seam sounds the same on the second pass, with nothing clippe
   assert.ok(first > 0.05, `loop bar rms ${first}`);
   assert.ok(Math.abs(first - second) / first < 0.1, `loop bar rms ${first} then ${second}`);
   assert.ok(peakOf(out) < 0.95, `peak ${peakOf(out)}`);
-});
+}));
 
-test('the scene stays soft under dialogue, nothing clipped', () => {
+test('the scene stays soft under dialogue, nothing clipped', rendered('scene soft', 'scene', () => {
   const peak = peakOf(renderSong(scene, 40));
   assert.ok(peak > 0.05 && peak < 0.95, `peak ${peak}`);
-});
+}));
