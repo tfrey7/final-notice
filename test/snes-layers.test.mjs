@@ -121,6 +121,29 @@ test('scrolling moves BG1 a whole step and one hdma line alone moves at its own 
   assert.equal(at(bent, 10, 101), hex(RED));
 });
 
+test('colour math tints only the enabled layer on its own lines', () => {
+  const s = scene();
+  s.math = [[10, 'none'], [10, 'half', rgb15(0, 0, 31), [2]], [10, 'sub', rgb15(31, 31, 31), [1]]];
+  assert.deepEqual(sceneProblems(s), []);
+  const out = composeFrame(s, bakeScene(s), 0, 0);
+  assert.equal(at(out, 200, 9), hex(RED), 'line 9 is before the half run');
+  assert.equal(at(out, 200, 15), 0x7f007f);
+  assert.equal(at(out, 10, 15), hex(GREEN), 'BG1 is not enabled on the half run');
+  assert.equal(at(out, 10, 25), 0);
+  assert.equal(at(out, 200, 25), hex(RED));
+  s.math = [[300, 'mix', 5, [4]]];
+  assert.equal(sceneProblems(s).length, 4);
+});
+
+test('every Claims & Adjustments area is legal and inside its tile budget', async () => {
+  const { default: claims } = await import('../src/snes/bg/claims.mjs');
+  assert.deepEqual(claims.areas.map((a) => a.name), ['Reception', 'Service Floor']);
+  for (const area of claims.areas) {
+    assert.deepEqual(sceneProblems(area), [], area.name);
+    assert.ok(Object.keys(area.tiles).length < 384, `${area.name} has ${Object.keys(area.tiles).length} tiles`);
+  }
+});
+
 test('every background module passes the Mode 1 checks', async () => {
   const dir = new URL('../src/snes/bg/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));

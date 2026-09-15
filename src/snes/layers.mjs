@@ -16,7 +16,14 @@
 //         hdma: [[160, 1], [1, 1.02], ...],    // optional: runs of [lines, x multiplier] from line 0
 //       },
 //     ],
+//     math: [[16, 'none'], [96, 'half', rgb15(...), [2]], ...],   // optional colour math, see below
 //   };
+//
+// `math` is the fixed-colour half of colour math (CGADSUB + COLDATA rewritten by two hdma channels):
+// runs of [lines, op, colour, layers] from line 0, op one of none/add/sub/half. On those lines a
+// pixel whose topmost layer is in `layers` gets the colour added, subtracted, or averaged in. The
+// layers enabled per run stand in for a window: glass on BG2 seen through BG1's openings tints
+// only the view, and a floor darkened toward the horizon is a sub gradient on BG1's floor lines.
 //
 // A tile uses one palette. BG1 and BG2 tiles draw values 1-F as that palette's colours 1-15; BG3
 // tiles only 1-3, its first three. The map wraps like the hardware's, so a layer tiles sideways
@@ -27,7 +34,7 @@
 // sceneProblems() checks all of it; test/snes-layers.test.mjs runs it on every bg module.
 
 import { WIDTH, HEIGHT } from './screen.mjs';
-import { hex } from './color.mjs';
+import { hex, rgb, isRgb15 } from './color.mjs';
 import { BG_PALETTES, paletteSetProblems } from './limits.mjs';
 
 export const TILE = 8;
@@ -92,9 +99,44 @@ export function sceneProblems(scene) {
       problems.push(...hdmaProblems(layer.hdma).map((m) => `${at}: ${m}`));
     }
   }
+  if (scene.math) {
+    channels += 2;
+    problems.push(...mathProblems(scene.math));
+  }
   if (channels > HDMA_CHANNELS) problems.push(`more than ${HDMA_CHANNELS} hdma channels`);
   return problems;
 }
+
+export const MATH_OPS = ['none', 'add', 'sub', 'half'];
+
+export function mathProblems(runs, height = HEIGHT) {
+  if (!Array.isArray(runs)) return ['math is a list of [lines, op, colour, layers] runs'];
+  const problems = hdmaProblems(runs.map(([n]) => [n, 1]), height).map((m) => `math: ${m.replace('hdma ', '')}`);
+  runs.forEach(([, op, colour, layers], i) => {
+    if (!MATH_OPS.includes(op)) problems.push(`math run ${i} op is ${op}, not ${MATH_OPS.join('/')}`);
+    if (op === 'none') return;
+    if (!isRgb15(colour)) problems.push(`math run ${i} colour is not rgb15`);
+    if (!(Array.isArray(layers) && layers.length && layers.every((b) => b in DEPTHS))) problems.push(`math run ${i} layers are not among 1, 2, 3`);
+  });
+  return problems;
+}
+
+// One { op, rgb, layers } per scanline, or null where no math runs.
+export function mathLines(runs, height = HEIGHT) {
+  const out = new Array(height).fill(null);
+  let y = 0;
+  for (const [n, op, colour, layers] of runs ?? []) {
+    const m = op === 'none' ? null : { op, rgb: rgb(colour), layers: new Set(layers) };
+    for (let i = 0; i < n && y < height; i++) out[y++] = m;
+  }
+  return out;
+}
+
+const OPS = {
+  add: (a, b) => Math.min(255, a + b),
+  sub: (a, b) => Math.max(0, a - b),
+  half: (a, b) => (a + b) >> 1,
+};
 
 // One multiplier per scanline, from a layer's hdma table (or its plain x multiplier).
 export function lineFactors(layer, height = HEIGHT) {
@@ -161,21 +203,30 @@ export function composeFrame(scene, baked, camX, camY, out = new Uint8ClampedArr
   const back = hex(scene.backdrop ?? 0);
   const factors = baked.map((b) => lineFactors(b.layer));
   const ys = baked.map((b) => layerScroll(b.layer, camX, camY)[1]);
+  const maths = mathLines(scene.math);
+  const row = new Int32Array(WIDTH);
+  const src = new Int8Array(WIDTH);
   for (let y = 0; y < HEIGHT; y++) {
-    const row = new Int32Array(WIDTH).fill(back + 1);
+    row.fill(back + 1);
+    src.fill(0);
     baked.forEach((b, i) => {
       const [sx] = layerScroll(b.layer, camX, camY, factors[i][y]);
       const my = (ys[i] + y) % b.h;
       const base = my * b.w;
       for (let x = 0; x < WIDTH; x++) {
         const c = b.px[base + ((sx + x) % b.w)];
-        if (c) row[x] = c;
+        if (c) { row[x] = c; src[x] = b.layer.bg; }
       }
     });
+    const m = maths[y];
+    const f = m && OPS[m.op];
     for (let x = 0; x < WIDTH; x++) {
       const c = row[x] - 1;
       const o = (y * WIDTH + x) * 4;
       out[o] = (c >> 16) & 255; out[o + 1] = (c >> 8) & 255; out[o + 2] = c & 255; out[o + 3] = 255;
+      if (f && m.layers.has(src[x])) {
+        out[o] = f(out[o], m.rgb[0]); out[o + 1] = f(out[o + 1], m.rgb[1]); out[o + 2] = f(out[o + 2], m.rgb[2]);
+      }
     }
   }
   return out;
