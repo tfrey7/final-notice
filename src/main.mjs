@@ -15,6 +15,7 @@ import { EndingScene } from './scenes/ending.mjs';
 import { SnesTitleScene } from './snes/scenes/title.mjs';
 import { SnesSelectScene } from './snes/scenes/select.mjs';
 import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
+import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -29,7 +30,7 @@ const SCENES = {
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: new EndingScene(),
 };
-for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = new CinemaScene(key);
+for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = snes ? new SnesCinemaScene(key) : new CinemaScene(key);
 
 // ?snes runs the SNES profile (?snes&hw and the other rows of src/snes/debug.mjs are its test screens),
 // ?fast gives foes and bosses cheap health, ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen,

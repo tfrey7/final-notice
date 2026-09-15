@@ -25,12 +25,13 @@ const HOME = { assignment: 'bellwether-office', incident: 'vellum-desk', documen
 const NO_PORTRAIT = new Set(['retention-button', 'ledger-page']);
 
 // Every page of a scene as the chosen auditor sees it; a line too long for one box runs onto a second.
-export function cinemaPages(sceneId, auditor) {
+// `wrapper(text)` answers pages of lines: the NES font's columns by default, the SNES its pixel widths.
+export function cinemaPages(sceneId, auditor, wrapper = wrap) {
   const out = [];
   for (const beat of SCENES[sceneId].beats) {
     const who = beat.speaker === 'auditor' ? auditor : beat.speaker;
     const text = beat.speaker === 'auditor' ? beat[auditor] : beat.line;
-    wrap(text).forEach((lines, i) => out.push({
+    wrapper(text).forEach((lines, i) => out.push({
       backdrop: BACKDROPS[beat.picture] ?? HOME[sceneId],
       portrait: NO_PORTRAIT.has(beat.picture) ? null : who,
       speaker: who,
@@ -43,8 +44,8 @@ export function cinemaPages(sceneId, auditor) {
 
 export const letters = (page) => page.lines.reduce((n, line) => n + line.length, 0);
 
-export function startPlayer(sceneId, auditor) {
-  return { pages: cinemaPages(sceneId, auditor), page: 0, typed: 0, clock: 0, done: false };
+export function startPlayer(sceneId, auditor, wrapper = wrap) {
+  return { pages: cinemaPages(sceneId, auditor, wrapper), page: 0, typed: 0, clock: 0, done: false };
 }
 
 // One frame of typing; `blip` on every other letter that is not a space.
