@@ -19,6 +19,14 @@ const eight = (v) => (v << 3) | (v >> 2);
 
 export const rgb = (c) => channels(c).map(eight);
 
+// Part way t (0-1) from a to b, each channel rounded to its nearest 5-bit step.
+export function lerp15(a, b, t) {
+  const ca = channels(a);
+  const cb = channels(b);
+  const [r, g, bl] = ca.map((x, i) => Math.round(x + (cb[i] - x) * t));
+  return rgb15(r, g, bl);
+}
+
 // 0xRRGGBB, as Phaser takes a colour.
 export function hex(c) {
   const [r, g, b] = rgb(c);

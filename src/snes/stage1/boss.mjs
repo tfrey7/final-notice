@@ -3,6 +3,7 @@
 // fangs once he is at half health, and the longer hit-stop on his big hits.
 import { VELLUM } from '../../stage1/vellum.mjs';
 import { rgb15 } from '../color.mjs';
+import { descentAt } from '../descent.mjs';
 
 export const OFFICE = 'stage1-area5';
 
@@ -12,6 +13,7 @@ export const CARD = {
   stamp: 'FILED',
   subtitle: "YOU'RE OVERDUE.",
   voice: 'vellumLine',
+  descent: descentAt(OFFICE),
 };
 
 // Frames: the memo drops in, is stamped, he speaks, it holds, then slides away and the fight starts.

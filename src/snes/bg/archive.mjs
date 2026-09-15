@@ -5,6 +5,7 @@
 // three planes of shelving against the play layer. src/snes/bgart.mjs composes them.
 import { rgb15 as c } from '../color.mjs';
 import { floorTable } from '../layers.mjs';
+import { descentAt } from '../descent.mjs';
 
 const H = 28;
 const FLOOR = 22;
@@ -338,9 +339,9 @@ function original() {
 // Each area: the scene, which bg layers go to the sub screen, the colour math and how far the
 // camera pans (a locked room only sways).
 export const AREAS = [
-  { key: 'access', name: 'ARCHIVE ACCESS', scene: access(), sub: [3], math: { op: 'add' }, span: 256 },
-  { key: 'retention', name: 'RETENTION ORDER', scene: retention(), sub: [3], math: { op: 'add', half: true }, span: 512 },
-  { key: 'original', name: 'THE ORIGINAL COPY', scene: original(), sub: [3], math: { op: 'add' }, span: 64 },
+  { key: 'access', name: 'ARCHIVE ACCESS', scene: access(), sub: [3], math: { op: 'add' }, span: 256, descent: descentAt('stage2-area1') },
+  { key: 'retention', name: 'RETENTION ORDER', scene: retention(), sub: [3], math: { op: 'add', half: true }, span: 512, descent: descentAt('stage2-area2') },
+  { key: 'original', name: 'THE ORIGINAL COPY', scene: original(), sub: [3], math: { op: 'add' }, span: 64, descent: descentAt('stage2-area3') },
 ];
 
 export default AREAS[0].scene;

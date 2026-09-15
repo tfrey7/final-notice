@@ -6,7 +6,7 @@
 //   1 outline   2 shadow   3-5 wall dark, mid, light
 // Slots 6-15 are the palette's own materials, named in MATERIALS below. The sky (BG2 only) and the
 // overlay (BG3) never share a tile with BG1 materials, so their own slots start at 1.
-import { rgb15, channels } from '../color.mjs';
+import { rgb15, lerp15 } from '../color.mjs';
 
 export const BANDS = ['corporate', 'backrooms', 'gothic'];
 // The descent a band's anchors are drawn at; between two anchors a slot is a lerp.
@@ -81,13 +81,6 @@ function anchor(band) {
 }
 
 export const BAND_PALETTES = Object.fromEntries(BANDS.map((b) => [b, anchor(b)]));
-
-const lerp15 = (a, b, t) => {
-  const [ar, ag, ab] = channels(a);
-  const [br, bg, bb] = channels(b);
-  const m = (x, y) => Math.round(x + (y - x) * t);
-  return rgb15(m(ar, br), m(ag, bg), m(ab, bb));
-};
 
 // The eight palettes at descent d: each slot lerped between the anchors either side, snapped to 5 bits.
 export function palettesAt(d) {

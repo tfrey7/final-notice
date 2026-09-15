@@ -37,6 +37,7 @@
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { hex, rgb, isRgb15 } from './color.mjs';
 import { BG_PALETTES, paletteSetProblems } from './limits.mjs';
+import { MAX_DRIFT_BANDS, MAX_DRIFT_SLOTS } from './descent.mjs';
 
 export const TILE = 8;
 export const MAX_MAP_TILES = 128;
@@ -103,6 +104,12 @@ export function sceneProblems(scene) {
   if (scene.math) {
     channels += 2;
     problems.push(...mathProblems(scene.math));
+  }
+  if (scene.drift) {
+    channels++;
+    problems.push(...hdmaProblems(scene.drift.map(([n]) => [n, 1])).map((m) => `drift: ${m.replace('hdma ', '')}`));
+    if (scene.drift.length > MAX_DRIFT_BANDS) problems.push(`drift has ${scene.drift.length} bands, at most ${MAX_DRIFT_BANDS}`);
+    if (scene.drift.some(([, w]) => w.length > MAX_DRIFT_SLOTS)) problems.push(`drift rewrites more than ${MAX_DRIFT_SLOTS} slots a band`);
   }
   if (channels > HDMA_CHANNELS) problems.push(`more than ${HDMA_CHANNELS} hdma channels`);
   return problems;
@@ -179,6 +186,7 @@ export function bakeLayer(scene, layer) {
   const w = layer.map[0].length * TILE;
   const h = layer.map.length * TILE;
   const px = new Int32Array(w * h);
+  const idx = scene.drift ? new Int16Array(w * h) : null;
   const top = TOP_VALUE[layer.bg];
   layer.map.forEach((row, ty) => [...row].forEach((ch, tx) => {
     const t = scene.tiles[layer.legend?.[ch]];
@@ -187,11 +195,29 @@ export function bakeLayer(scene, layer) {
     for (let y = 0; y < TILE; y++) {
       for (let x = 0; x < TILE; x++) {
         const v = parseInt(t.pixels[y][x], 16);
-        if (v && v <= top) px[(ty * TILE + y) * w + tx * TILE + x] = hex(pal[v - 1]) + 1;
+        if (!v || v > top) continue;
+        const i = (ty * TILE + y) * w + tx * TILE + x;
+        px[i] = hex(pal[v - 1]) + 1;
+        if (idx) idx[i] = t.palette * 16 + v;
       }
     }
   }));
-  return { layer, w, h, px };
+  return { layer, w, h, px, idx };
+}
+
+// A scene's `drift` (descent.mjs driftTable): per scanline, a lookup from palette * 16 + slot to
+// 0xRRGGBB + 1, the scene's palettes with that band's CGRAM writes applied.
+export function driftLuts(scene, height = HEIGHT) {
+  const base = new Int32Array(BG_PALETTES * 16);
+  scene.palettes.forEach((pal, p) => pal.forEach((c, s) => { base[p * 16 + s + 1] = hex(c) + 1; }));
+  const out = new Array(height).fill(base);
+  let y = 0;
+  for (const [n, writes] of scene.drift) {
+    const lut = base.slice();
+    for (const [p, s, c] of writes) lut[p * 16 + s] = hex(c) + 1;
+    for (let i = 0; i < n && y < height; i++) out[y++] = lut;
+  }
+  return out;
 }
 
 export const bakeScene = (scene) => scene.layers
@@ -205,6 +231,7 @@ export function composeFrame(scene, baked, camX, camY, out = new Uint8ClampedArr
   const factors = baked.map((b) => lineFactors(b.layer));
   const ys = baked.map((b) => layerScroll(b.layer, camX, camY)[1]);
   const maths = mathLines(scene.math);
+  const luts = scene.drift ? driftLuts(scene) : null;
   const row = new Int32Array(WIDTH);
   const src = new Int8Array(WIDTH);
   for (let y = 0; y < HEIGHT; y++) {
@@ -214,8 +241,10 @@ export function composeFrame(scene, baked, camX, camY, out = new Uint8ClampedArr
       const [sx] = layerScroll(b.layer, camX, camY, factors[i][y]);
       const my = (ys[i] + y) % b.h;
       const base = my * b.w;
+      const lut = luts && b.idx ? luts[y] : null;
       for (let x = 0; x < WIDTH; x++) {
-        const c = b.px[base + ((sx + x) % b.w)];
+        const at = base + ((sx + x) % b.w);
+        const c = lut ? (b.idx[at] && lut[b.idx[at]]) : b.px[at];
         if (c) { row[x] = c; src[x] = b.layer.bg; }
       }
     });

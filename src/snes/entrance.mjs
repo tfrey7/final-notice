@@ -2,6 +2,7 @@
 // pan into Vellum's office and him standing from the desk, the Records Custodian's short slip with its
 // drawer slam, and the Great Seal's press lowered out of the dark by Mode 7. Each ends on the frame the
 // title card (or the pad) takes over; Start jumps straight to that frame.
+import { descentAt } from './descent.mjs';
 
 const clamp = (p) => Math.max(0, Math.min(1, p));
 const ease = (p) => 1 - (1 - p) ** 2;
@@ -17,7 +18,7 @@ export function vellumEntrance(t, times = VELLUM_IN) {
   };
 }
 
-export const SLIP = { name: 'RECORDS CUSTODIAN', area: 'ORIGINAL COPY', drop: 10, hold: 150, leave: 162 };
+export const SLIP = { name: 'RECORDS CUSTODIAN', area: 'ORIGINAL COPY', drop: 10, hold: 150, leave: 162, descent: descentAt('custodian', 1) };
 
 // The slip drops in top-left, the drawer slams as it lands, and it rises away; no voice.
 export function slipFrame(t, times = SLIP) {

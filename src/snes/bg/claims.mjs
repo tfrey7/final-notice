@@ -26,6 +26,7 @@
 //   fixed colour cannot light two lamps without tinting the whole band.
 import { rgb15 } from '../color.mjs';
 import { floorTable, TILE } from '../layers.mjs';
+import { descentAt } from '../descent.mjs';
 
 const COLS = 64;
 const ROWS = 28;
@@ -391,6 +392,6 @@ function serviceFloor() {
   };
 }
 
-const areas = [reception(), serviceFloor()];
+const areas = [reception(), serviceFloor()].map((a, i) => ({ ...a, descent: descentAt(`stage1-area${i + 1}`) }));
 
 export default { ...areas[0], areas };

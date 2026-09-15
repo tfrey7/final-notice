@@ -5,6 +5,7 @@
 // palette. The arena's middle stays empty for the press, which is a Mode 7 sprite of its own.
 import { rgb15 as c } from '../color.mjs';
 import { floorTable } from '../layers.mjs';
+import { descentAt } from '../descent.mjs';
 
 export const FRAMES = 4;
 const H = 28;
@@ -436,9 +437,9 @@ const frames = (build) => Array.from({ length: FRAMES }, (_, f) => build(f));
 // Each area: its frames (scene is the first), which bg layers go to the sub screen, the colour
 // math, how far the camera pans and how fast the frames turn.
 export const AREAS = [
-  { key: 'line', name: 'DISPOSAL LINE', frames: frames(line), sub: [3], math: { op: 'add' }, span: LINE_W * 8 - 298, fps: 8 },
-  { key: 'front', name: 'WAX FRONT', frames: frames(front), sub: [3], math: { op: 'add', half: true }, span: LINE_W * 8 - 298, fps: 8 },
-  { key: 'seal', name: 'THE GREAT SEAL', frames: frames(arena), sub: [3], math: { op: 'add' }, span: ARENA_W * 8 - 298, fps: 8 },
+  { key: 'line', name: 'DISPOSAL LINE', frames: frames(line), sub: [3], math: { op: 'add' }, span: LINE_W * 8 - 298, fps: 8, descent: descentAt('stage2-area4') },
+  { key: 'front', name: 'WAX FRONT', frames: frames(front), sub: [3], math: { op: 'add', half: true }, span: LINE_W * 8 - 298, fps: 8, descent: descentAt('stage2-area4', 1) },
+  { key: 'seal', name: 'THE GREAT SEAL', frames: frames(arena), sub: [3], math: { op: 'add' }, span: ARENA_W * 8 - 298, fps: 8, descent: descentAt('stage2-area5') },
 ].map((a) => ({ ...a, scene: a.frames[0] }));
 
 export default AREAS[0].scene;

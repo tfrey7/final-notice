@@ -17,6 +17,7 @@
 // onto the damask and the desk top, since one fixed colour cannot light a single spot.
 import { rgb15 } from '../color.mjs';
 import { floorTable } from '../layers.mjs';
+import { descentAt } from '../descent.mjs';
 import TITLE, { skyline, PAL } from './ui.mjs';
 import {
   palettes as CLAIMS, pad, noise, canvas, cut, floorMath, stoneFloor, carpet, FLOOR,
@@ -448,6 +449,6 @@ function vellumsOffice() {
   };
 }
 
-const areas = [internalReview(), executiveWaiting(), vellumsOffice()];
+const areas = [internalReview(), executiveWaiting(), vellumsOffice()].map((a, i) => ({ ...a, descent: descentAt(`stage1-area${i + 3}`) }));
 
 export default { ...areas[0], areas };

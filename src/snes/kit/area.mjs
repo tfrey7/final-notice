@@ -18,6 +18,7 @@ import { rgb15 } from '../color.mjs';
 import { floorTable } from '../layers.mjs';
 import { floorMath } from '../bg/claims.mjs';
 import { BANDS, bandOf, palettesAt } from './palettes.mjs';
+import { driftTable } from '../descent.mjs';
 import { painter, cut } from './paint.mjs';
 import { ROOM, SKY_SPLIT, TILESETS, WINDOW, skyline } from './tilesets.mjs';
 import { PROPS } from './props.mjs';
@@ -74,6 +75,7 @@ export function buildArea(desc) {
     band,
     backdrop: rgb15(1, 1, 4),
     palettes: palettesAt(d),
+    drift: driftTable({ d }),
     tiles,
     layers,
     math: [[WINDOW.top, 'none'], [WINDOW.bottom - WINDOW.top, 'half', GLASS[band], [2]], [ROOM.floor - WINDOW.bottom, 'none'], ...floorMath()],
