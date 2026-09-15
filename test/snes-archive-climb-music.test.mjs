@@ -7,14 +7,14 @@ import { sampleBytes } from '../src/snes/audio/bank.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 import { ARCHIVE_CLIMB_SONG } from '../src/snes/audio/cues.mjs';
 
-test('the climb plays all eight voices on recorded samples within 64 KB', () => {
+test('the climb plays all eight voices on recorded samples within 1 MB', () => {
   const song = compileSong(climb);
   assert.equal(song.length, FORM.length * BAR_ROWS);
   for (const [i, v] of VOICE_NAMES.entries()) assert.ok(song.voices[i].some(Boolean), `${v} plays`);
   const used = new Set(Object.values(climb.instruments).map((i) => i.sample));
   for (const key of used) assert.match(key, /^rec-/);
   const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + song.echo.edl * 2048;
-  assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+  assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
 });
 
 test('the climb loops from the top of A after 40 to 90 s, rising a tone on its second A', () => {

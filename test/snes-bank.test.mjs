@@ -22,7 +22,7 @@ test('the bank holds the plan\'s fourteen instruments, each on its own sample wi
   }
 });
 
-test('every sample is BRR-style 4-bit blocks, and the whole bank fits the 60 KB budget', () => {
+test('every sample is BRR-style 4-bit blocks, and the whole bank fits the 1 MB budget', () => {
   for (const [key, s] of Object.entries(SAMPLES)) {
     assert.equal(s.pcm.length, s.brr.blocks.length * 16, key);
     assert.ok(s.brr.blocks.every((b) => b.nibbles.every((n) => n >= -8 && n <= 7)), key);

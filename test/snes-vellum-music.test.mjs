@@ -12,14 +12,14 @@ import { vellumPinch } from '../src/snes/audio/cues.mjs';
 const seconds = (def, song) => ((song.length - song.loop) * def.tempo) / 60;
 
 for (const [name, def, form] of [['vellum', vellum, FORM], ['vellum-pinch', pinch, PINCH_FORM]]) {
-  test(`${name} plays all eight voices for the whole form, on recorded samples within 64 KB`, () => {
+  test(`${name} plays all eight voices for the whole form, on recorded samples within 1 MB`, () => {
     const song = compileSong(def);
     assert.equal(song.length, form.length * BAR_ROWS);
     for (const [i, v] of VOICE_NAMES.entries()) assert.ok(song.voices[i].some(Boolean), `${v} plays`);
     const used = new Set(Object.values(def.instruments).map((i) => i.sample));
     for (const key of used) assert.match(key, /^rec-/);
     const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + song.echo.edl * 2048;
-    assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+    assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
   });
 }
 

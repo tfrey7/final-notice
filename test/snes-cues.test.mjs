@@ -24,11 +24,11 @@ for (const [name, [def, form, barCount]] of Object.entries(CUES)) {
     }
   });
 
-  test(`the SNES ${name} uses only recorded samples, and they and its echo fit 64 KB`, () => {
+  test(`the SNES ${name} uses only recorded samples, and they and its echo fit 1 MB`, () => {
     const used = new Set(Object.values(def.instruments).map((i) => i.sample));
     for (const key of used) assert.match(key, /^rec-/);
     const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + def.echo.edl * 2048;
-    assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+    assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
   });
 
   test(`the SNES ${name} is a whole song: two to three minutes, an intro, A, B and a key change`, () => {

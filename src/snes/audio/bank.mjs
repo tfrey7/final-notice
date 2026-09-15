@@ -6,7 +6,7 @@
 import { midiToHz } from '../../audio/apu.mjs';
 import { DSP_HZ, makeSample } from './spc.mjs';
 
-export const BUDGET_BYTES = 60 * 1024;
+export const BUDGET_BYTES = 1024 * 1024;
 const BRR_BLOCK_BYTES = 9;
 const TAU = 2 * Math.PI;
 const PEAK = 22000;

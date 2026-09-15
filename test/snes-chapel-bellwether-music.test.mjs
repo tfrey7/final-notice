@@ -14,14 +14,14 @@ const seconds = (def, song) => ((song.length - song.loop) * def.tempo) / 60;
 const SONG_LIST = [['stage5', chapel, CHAPEL_FORM], ['bellwether', bellwether, FORM], ['bellwether-2', phase2, FORM2], ['bellwether-3', phase3, FORM3]];
 
 for (const [name, def, form] of SONG_LIST) {
-  test(`${name} plays all eight voices for the whole form, on recorded samples within 64 KB`, () => {
+  test(`${name} plays all eight voices for the whole form, on recorded samples within 1 MB`, () => {
     const song = compileSong(def);
     assert.equal(song.length, form.length * BAR_ROWS);
     for (const [i, v] of VOICE_NAMES.entries()) assert.ok(song.voices[i].some(Boolean), `${v} plays`);
     const used = new Set(Object.values(def.instruments).map((i) => i.sample));
     for (const key of used) assert.match(key, /^rec-/);
     const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + song.echo.edl * 2048;
-    assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+    assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
   });
 
   test(`${name}'s lead names only real notes, marks after the instrument`, () => {

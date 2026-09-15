@@ -26,10 +26,10 @@ test('the lead is ornamented note by note and layers leave and return by section
   assert.ok(new Set(stage1.drops.flatMap((d) => d.voices)).size >= 4);
 });
 
-test('the samples it uses and its echo buffer fit the 64 KB of sound RAM', () => {
+test('the samples it uses and its echo buffer fit the 1 MB of sound RAM', () => {
   const used = new Set(Object.values(stage1.instruments).map((i) => i.sample));
   const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + song.echo.edl * 2048;
-  assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+  assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
 });
 
 test('the loop seam matches on the second pass and the mix keeps its headroom', () => {

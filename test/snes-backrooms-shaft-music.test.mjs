@@ -16,7 +16,7 @@ test('Stage 3 plays the Backrooms song and Stage 4 the shaft song', () => {
 });
 
 for (const [name, def, mod] of SONG_SET) {
-  test(`${name} plays all eight voices on recorded samples within 64 KB, no brass`, () => {
+  test(`${name} plays all eight voices on recorded samples within 1 MB, no brass`, () => {
     const song = compileSong(def);
     assert.equal(song.length, mod.FORM.length * mod.BAR_ROWS);
     for (const [i, v] of VOICE_NAMES.entries()) assert.ok(song.voices[i].some(Boolean), `${v} plays`);
@@ -24,7 +24,7 @@ for (const [name, def, mod] of SONG_SET) {
     for (const key of used) assert.match(key, /^rec-/);
     assert.ok(!used.has('rec-brass'));
     const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + song.echo.edl * 2048;
-    assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+    assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
   });
 
   test(`${name} loops from the top of A after 40 to 90 s, its seam level and nothing clipped`, () => {

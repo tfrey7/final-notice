@@ -24,7 +24,7 @@ test('effects are at most two layers on known samples, and under a second bar th
   }
 });
 
-test('the bank and the effect samples together stay within the 60 KB budget', () => {
+test('the bank and the effect samples together stay within the 1 MB budget', () => {
   const total = soundBytes();
   assert.ok(total <= BUDGET_BYTES, `${total} bytes`);
   for (const [key, s] of Object.entries(FX_SAMPLES)) assert.ok(s.pcm.length > 0 && s.pcm.every(Number.isFinite), key);

@@ -1,5 +1,5 @@
 // The recorded instrument bank: real instrument samples from FluidR3_GM, cut, looped and BRR-encoded
-// by tools/snes-bank.mjs, the way a 1994 sound engineer squeezed a sample CD into 64 KB. The
+// by tools/snes-bank.mjs, into a pretend 1 MB of sound RAM (the real SNES had 64 KB). The
 // synthesised first bank (bank.mjs) stays on the sound test as "(v1)".
 
 import { brrDecode } from './spc.mjs';

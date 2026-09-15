@@ -32,10 +32,10 @@ test('the lead keeps the NES title melody note for note, the sax, strings and br
   });
 });
 
-test('the samples it uses and its echo buffer fit the 64 KB of sound RAM', () => {
+test('the samples it uses and its echo buffer fit the 1 MB of sound RAM', () => {
   const used = new Set(Object.values(title.instruments).map((i) => i.sample));
   const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + title.echo.edl * 2048;
-  assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+  assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
 });
 
 test('the loop seam: the loop bar sounds the same on the second pass, with nothing clipped', () => {

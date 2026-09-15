@@ -130,20 +130,25 @@ straight like a built-in windows 95 .wav". Real 1993-95 soundtracks (Chrono Trig
 Donkey Kong Country, Super Metroid) were sample CDs squeezed into 64 KB, so the bank is now the same:
 one recorded sample an instrument, cut by `tools/snes-bank.mjs` from a SoundFont.
 
+**Sound RAM is a pretend 1 MB** (Tim, 16:17 EDT 2026-09-15, items 2245 and 2255: "can we cheat and say
+we actually have 1MB sample memory? i know snes can't do that but i feel like it will help a lot"). The
+real console had 64 KB; every other S-DSP rule (eight voices, BRR, Gaussian interpolation, the echo)
+still holds.
+
 - **Resampled so the loop fits.** The loop is a whole number of pitch periods and a whole number of
-  16-sample BRR blocks at once: the tool picks the storage rate that makes both true (12-22 kHz, as the
-  games did; the S-DSP plays everything out at 32 kHz), crossfades the loop's end into the audio just
-  before it, then BRR-encodes. Drums and the orchestra hit are one-shots with a faded tail.
-- **A light treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top. It
-  was halved (item 2156) after the judge heard "a bright haze across the top"; the new orchestral
-  and drum samples take none, keeping the era's soft top.
-- **63.6 KB for twenty-three instruments** fitted the real 64 KB of sound RAM. Item 2219 spent the room
-  on longer piano and e-piano loops and brighter bass, toms and crash, and cut the orchestra hit short.
-- **The pipe organ, at full quality** (item 2245): the game allows itself 1 MB of sample memory (Tim,
-  16:17 EDT 2026-09-15), so the church organ, reed organ and organ pedal are stored at 28 kHz (the
-  pedal at 16 kHz) with 0.3 s of pipe speech and a 0.6 s loop, long enough to breathe rather than
-  drone: about 36 KB for the three, 101.6 KB for the bank. `node tools/snes-organ-demo.mjs <dir>`
-  renders the organ alone and over Stage 1.
+  16-sample BRR blocks at once: the tool picks the storage rate nearest the recipe's that makes both
+  true, crossfades the loop's end into the audio just before it, then BRR-encodes. Drums and the
+  orchestra hit are one-shots with a faded tail.
+- **Stored at the S-DSP's own 32 kHz** (item 2255), with the natural attack and loops up to 1.6 s for
+  the pads, strings and choir, so nothing is dulled or frozen into a buzz, and no treble lift.
+- **The piano stays dark** (item 2244): stored at 10 kHz and cut to about 2.2 kHz with its hammer eased
+  in, since the full-band sample "tinks" pitched up to C5-E6; it now rings 2.2 s before its loop.
+- **The pipe organ** (item 2245): the church organ, reed organ and organ pedal at 28 kHz (the pedal at
+  16 kHz) with 0.3 s of pipe speech and a 0.6 s loop, long enough to breathe rather than drone.
+  `node tools/snes-organ-demo.mjs <dir>` renders the organ alone and over Stage 1.
+- **513.4 KB for 26 instruments**, inside the 1 MB. The bank was 101.6 KB before
+  item 2255, most instruments at 11-22 kHz with loops of 0.03-0.4 s, and 63.6 KB when it fitted the
+  real 64 KB.
 - The synthesised bank stays on the sound test as "(v1)": the instruments, the bank walk `bank (v1)`,
   and the first arrangements `title (v1)` and `stage1 (v1)`. The jingles and effects moved to the new
   bank in place.
@@ -153,32 +158,32 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 
 | Instrument | Key | Source preset / sample | Stored at |
 | --- | --- | --- | --- |
-| Rhodes electric piano | `epiano` | Rhodes EP / Rhodes C5(L) | 15993 Hz |
-| warm pad | `pad` | Warm Pad / Alien Strings(L) | 11989 Hz |
-| string section | `strings` | Strings / Strings C#5L | 13991 Hz |
-| choir | `choir` | Ahh Choir / Ahh Choir C5(L) | 14014 Hz |
-| tubular bell | `bell` | Tubular Bells / Tubular Bells C7(L) | 21896 Hz |
-| slap bass | `slap` | Slap Bass / Slap Bass D3 | 16027 Hz |
-| synth bass | `synbass` | Synth Bass 1 / saw-110(L) | 12027 Hz |
-| alto sax | `sax` | Alto Sax / Alto G5(L) | 15954 Hz |
-| brass section | `brass` | Brass Section / Brass Section C5 | 15939 Hz |
-| square lead | `sqlead` | Square Lead / Square Wave A3 | 16246 Hz |
-| punch kick | `gkick` | Power kit / Power Bass Drum 2(L) | 16000 Hz |
-| punch snare | `gsnare` | Power kit / Power Snare 1(L) | 16000 Hz |
-| closed hat | `chat` | Standard kit / Hi-Hat Closed(L) | 22000 Hz |
-| open hat | `ohat` | Standard kit / Hi-Hat Half-Open(L) | 16000 Hz |
-| clap | `clap` | Standard kit / Clap(L) | 16000 Hz |
-| orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 12000 Hz |
-| grand piano | `piano` | Yamaha Grand Piano / P200 Piano D5(L) | 14032 Hz |
-| slow string pad | `slowstr` | Slow Strings / Strings C#5L | 12503 Hz |
-| fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 11033 Hz |
-| timpani | `timpani` | Timpani / Timpani 3(L) | 10976 Hz |
+| Rhodes electric piano | `epiano` | Rhodes EP / Rhodes C5(L) | 31995 Hz |
+| warm pad | `pad` | Warm Pad / Alien Strings(L) | 31998 Hz |
+| string section | `strings` | Strings / Strings C#5L | 31996 Hz |
+| choir | `choir` | Ahh Choir / Ahh Choir C5(L) | 31999 Hz |
+| tubular bell | `bell` | Tubular Bells / Tubular Bells C7(L) | 31995 Hz |
+| slap bass | `slap` | Slap Bass / Slap Bass D3 | 31991 Hz |
+| synth bass | `synbass` | Synth Bass 1 / saw-110(L) | 32000 Hz |
+| alto sax | `sax` | Alto Sax / Alto G5(L) | 32012 Hz |
+| brass section | `brass` | Brass Section / Brass Section C5 | 31995 Hz |
+| square lead | `sqlead` | Square Lead / Square Wave A3 | 32000 Hz |
+| punch kick | `gkick` | Power kit / Power Bass Drum 2(L) | 32000 Hz |
+| punch snare | `gsnare` | Power kit / Power Snare 1(L) | 32000 Hz |
+| closed hat | `chat` | Standard kit / Hi-Hat Closed(L) | 32000 Hz |
+| open hat | `ohat` | Standard kit / Hi-Hat Half-Open(L) | 32000 Hz |
+| clap | `clap` | Standard kit / Clap(L) | 32000 Hz |
+| orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 32000 Hz |
+| grand piano | `piano` | Yamaha Grand Piano / P200 Piano D5(L) | 10005 Hz |
+| slow string pad | `slowstr` | Slow Strings / Strings C#5L | 31996 Hz |
+| fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 31983 Hz |
+| timpani | `timpani` | Timpani / Timpani 3(L) | 32008 Hz |
 | church organ | `organ` | Church Organ / Church Organ C3 | 27996 Hz |
 | reed organ | `reed` | Reed Organ / reed organ c5(L) | 27996 Hz |
 | organ pedal | `pedal` | Church Organ / Church Organ C1 | 15993 Hz |
-| low tom | `ltom` | Power kit / Tom Floor(L) | 14000 Hz |
-| high tom | `htom` | Power kit / Tom Low(L) | 14000 Hz |
-| crash cymbal | `crash` | Standard kit / Crsh 1(L) | 14000 Hz |
+| low tom | `ltom` | Power kit / Tom Floor(L) | 32000 Hz |
+| high tom | `htom` | Power kit / Tom Low(L) | 32000 Hz |
+| crash cymbal | `crash` | Standard kit / Crsh 1(L) | 32000 Hz |
 
 **Licence, every sample:** FluidR3_GM, MIT licence, Copyright (c) 2000-2002, 2008 Frank Wen
 (the licence text is the `COPYING` file at https://github.com/pianobooster/fluid-soundfont). The

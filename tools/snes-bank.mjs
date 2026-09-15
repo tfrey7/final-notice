@@ -18,35 +18,36 @@ const midiToHz = (m) => 440 * 2 ** ((m - 69) / 12);
 // fraction of the stored Nyquist; ease: seconds of fade-in over the attack; hit: a one-shot of that
 // many seconds.
 //
-// The piano is cut to about 2.2 kHz with its hammer eased in: pitched up to C5-E6 the full-band
-// sample "tinks" (Tim, item 2244).
+// Sound RAM is a pretend 1 MB (Tim, item 2255), so most instruments are stored at the DSP's own 32 kHz
+// with their natural attack, a long loop and no treble lift. The piano is cut to about 2.2 kHz with its
+// hammer eased in: pitched up to C5-E6 the full-band sample "tinks" (Tim, item 2244).
 export const RECIPES = {
-  epiano: { program: 4, key: 60, rate: 16000, attack: 0.35, loop: 0.15, bright: 0.25 },
-  pad: { program: 89, key: 60, rate: 12000, attack: 0.25, loop: 0.4, bright: 0.15 },
-  bell: { program: 14, key: 72, rate: 22000, attack: 0.25, loop: 0.05, bright: 0.15 },
-  slap: { program: 36, key: 40, rate: 16000, attack: 0.14, loop: 0.05, bright: 0.2 },
-  synbass: { program: 38, key: 36, rate: 12000, attack: 0.1, loop: 0.05, bright: 0.15 },
-  sax: { program: 65, key: 67, rate: 16000, attack: 0.16, loop: 0.12, bright: 0.2 },
-  brass: { program: 61, key: 60, rate: 16000, attack: 0.14, loop: 0.1, bright: 0.2 },
-  strings: { program: 48, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
-  choir: { program: 52, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
-  sqlead: { program: 80, key: 72, rate: 16000, attack: 0.03, loop: 0.03, bright: 0 },
-  piano: { program: 0, key: 60, rate: 10000, attack: 0.45, loop: 0.25, bright: 0.1, cutoff: 0.45, ease: 0.02 },
-  slowstr: { program: 49, key: 60, rate: 12500, attack: 0.3, loop: 0.3, bright: 0 },
-  subbass: { program: 35, key: 33, rate: 11000, attack: 0.2, loop: 0.1, bright: 0 },
-  timpani: { program: 47, key: 43, rate: 11000, attack: 0.3, loop: 0.1, bright: 0 },
+  epiano: { program: 4, key: 60, rate: 32000, attack: 1.2, loop: 0.6, bright: 0 },
+  pad: { program: 89, key: 60, rate: 32000, attack: 0.8, loop: 1.6, bright: 0 },
+  bell: { program: 14, key: 72, rate: 32000, attack: 1.4, loop: 0.3, bright: 0 },
+  slap: { program: 36, key: 40, rate: 32000, attack: 0.6, loop: 0.25, bright: 0 },
+  synbass: { program: 38, key: 36, rate: 32000, attack: 0.4, loop: 0.3, bright: 0 },
+  sax: { program: 65, key: 67, rate: 32000, attack: 0.5, loop: 0.6, bright: 0 },
+  brass: { program: 61, key: 60, rate: 32000, attack: 0.5, loop: 0.6, bright: 0 },
+  strings: { program: 48, key: 60, rate: 32000, attack: 0.7, loop: 1.6, bright: 0 },
+  choir: { program: 52, key: 60, rate: 32000, attack: 0.7, loop: 1.6, bright: 0 },
+  sqlead: { program: 80, key: 72, rate: 32000, attack: 0.15, loop: 0.2, bright: 0 },
+  piano: { program: 0, key: 60, rate: 10000, attack: 2.2, loop: 0.5, bright: 0.1, cutoff: 0.45, ease: 0.02 },
+  slowstr: { program: 49, key: 60, rate: 32000, attack: 1.0, loop: 1.6, bright: 0 },
+  subbass: { program: 35, key: 33, rate: 32000, attack: 0.8, loop: 0.4, bright: 0 },
+  timpani: { program: 47, key: 43, rate: 32000, attack: 1.4, loop: 0.3, bright: 0 },
   organ: { program: 19, key: 60, rate: 28000, attack: 0.3, loop: 0.6, bright: 0 },
   reed: { program: 20, key: 58, rate: 28000, attack: 0.3, loop: 0.6, bright: 0 },
   pedal: { program: 19, key: 36, rate: 16000, attack: 0.3, loop: 0.6, bright: 0 },
-  gkick: { bank: 128, program: 16, key: 36, rate: 16000, hit: 0.3, bright: 0.1 },
-  gsnare: { bank: 128, program: 16, key: 38, rate: 16000, hit: 0.28, bright: 0.15 },
-  chat: { bank: 128, program: 0, key: 42, rate: 22000, hit: 0.08, bright: 0 },
-  ohat: { bank: 128, program: 0, key: 46, rate: 16000, hit: 0.3, bright: 0.1 },
-  clap: { bank: 128, program: 0, key: 39, rate: 16000, hit: 0.25, bright: 0.1 },
-  orch: { program: 55, key: 60, rate: 12000, hit: 0.3, bright: 0.15 },
-  ltom: { bank: 128, program: 16, key: 41, rate: 14000, hit: 0.32, bright: 0 },
-  htom: { bank: 128, program: 16, key: 45, rate: 14000, hit: 0.28, bright: 0 },
-  crash: { bank: 128, program: 0, key: 49, rate: 14000, hit: 0.5, bright: 0 },
+  gkick: { bank: 128, program: 16, key: 36, rate: 32000, hit: 0.5, bright: 0 },
+  gsnare: { bank: 128, program: 16, key: 38, rate: 32000, hit: 0.5, bright: 0 },
+  chat: { bank: 128, program: 0, key: 42, rate: 32000, hit: 0.2, bright: 0 },
+  ohat: { bank: 128, program: 0, key: 46, rate: 32000, hit: 0.6, bright: 0 },
+  clap: { bank: 128, program: 0, key: 39, rate: 32000, hit: 0.45, bright: 0 },
+  orch: { program: 55, key: 60, rate: 32000, hit: 0.9, bright: 0 },
+  ltom: { bank: 128, program: 16, key: 41, rate: 32000, hit: 0.7, bright: 0 },
+  htom: { bank: 128, program: 16, key: 45, rate: 32000, hit: 0.6, bright: 0 },
+  crash: { bank: 128, program: 0, key: 49, rate: 32000, hit: 1.8, bright: 0 },
 };
 
 // Plays the SoundFont's own loop out to `seconds`, so a short looped sample has room to cut from.

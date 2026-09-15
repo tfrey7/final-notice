@@ -30,11 +30,11 @@ test('its form has an intro, A, B, a breakdown in a new key and a turnaround hom
   assert.equal(FORM.at(-1).shift, 0);
 });
 
-test('every instrument is a recorded sample, and they and the echo fit the 64 KB of sound RAM', () => {
+test('every instrument is a recorded sample, and they and the echo fit the 1 MB of sound RAM', () => {
   for (const [name, inst] of Object.entries(stage2.instruments)) assert.ok(inst.sample.startsWith(PREFIX), name);
   const used = new Set(Object.values(stage2.instruments).map((i) => i.sample));
   const bytes = [...used].reduce((sum, key) => sum + sampleBytes(SAMPLES[key]), 0) + stage2.echo.edl * 2048;
-  assert.ok(bytes <= 64 * 1024, `${bytes} bytes`);
+  assert.ok(bytes <= 1024 * 1024, `${bytes} bytes`);
 });
 
 test('the loop seam: the loop bar sounds the same on the second pass, with nothing clipped', () => {
