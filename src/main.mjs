@@ -92,6 +92,8 @@ const game = new Phaser.Game({
   backgroundColor: profile.background,
   pixelArt: true,
   roundPixels: true,
+  // Every scene steps one 60 fps frame per update, so a 120 or 144 Hz screen would play at double speed.
+  fps: { limit: 60 },
   render: { preserveDrawingBuffer: true },
   scale: {
     mode: Phaser.Scale.NONE,
