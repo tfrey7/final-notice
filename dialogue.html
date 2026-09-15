@@ -25,8 +25,12 @@
   import { glyph, wrap, CELL } from './src/text/font.mjs';
   import { SCENES, SCENE_ORDER, AUDITORS, SELECT, beatsFor } from './src/story/script.mjs';
   import { nes } from './src/nes/palette.mjs';
+  import * as snesText from './src/snes/text.mjs';
+  import { rgb15, css } from './src/snes/color.mjs';
 
-  const W = 256, H = 240;
+  // ?snes types the script in the SNES text box on a 256x224 screen.
+  const SNES = new URLSearchParams(location.search).has('snes');
+  const W = 256, H = SNES ? 224 : 240;
   const BLACK = nes(0x0f), WHITE = nes(0x30), GREY = nes(0x10), DARK = nes(0x02), NAVY = nes(0x01);
   const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
   const BOX = { x: 8, y: 160, w: 240, h: 64 };
@@ -58,10 +62,27 @@
   }
 
   const beats = () => beatsFor(state.scene, state.auditor);
-  const pages = () => wrap(beats()[state.beat].line);
+  const pages = () => (SNES ? snesText.wrapText : wrap)(beats()[state.beat].line);
   const pageChars = () => pages()[state.page].join('').length;
 
+  const snesFill = (x, y, w, h, c) => { ctx.fillStyle = css(c); ctx.fillRect(x, y, w, h); };
+
+  function drawSnes() {
+    const beat = beats()[state.beat];
+    snesFill(0, 0, W, H, 0);
+    const sky = snesText.windowGradient(136, rgb15(6, 4, 14), rgb15(1, 1, 4));
+    sky.forEach((c, i) => snesFill(8, 12 + i, 240, 1, c));
+    const title = SCENES[state.scene].title;
+    snesText.drawString(snesFill, title, 8 + Math.floor((240 - snesText.measure(title)) / 2), 18);
+    const label = `[${beat.picture}]`;
+    snesText.drawString(snesFill, label, 8 + Math.floor((240 - snesText.measure(label)) / 2), 76, rgb15(16, 16, 20));
+    snesText.drawTextBox(snesFill, {
+      speaker: beat.speaker, lines: pages()[state.page], shown: state.shown, blink: Math.floor(state.frame / 16) % 2 === 0,
+    });
+  }
+
   function draw() {
+    if (SNES) return drawSnes();
     const beat = beats()[state.beat];
     ctx.fillStyle = hex(BLACK);
     ctx.fillRect(0, 0, W, H);
@@ -134,6 +155,7 @@
   canvas.addEventListener('click', advance);
   addEventListener('resize', fit);
   if (params.has('instant')) state.shown = Infinity;
+  if (SNES) canvas.height = H;
   fit();
   renderButtons();
   requestAnimationFrame(tick);
