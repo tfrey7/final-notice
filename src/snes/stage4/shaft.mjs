@@ -2,84 +2,30 @@
 // cable and car ahead of a runaway car rising in surges, through the checkpoint to the top landing where
 // Bellwether's signature waits. Boxes stand in for every sprite; the climb has its own song. ?bot lets the
 // shaft bot play; ?frames=<n> plays that many frames first (with the bot under ?bot), for a screenshot.
-/* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString, measure } from '../text.mjs';
-import { hex, rgb15 } from '../color.mjs';
-import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
-import { showFlow } from '../../flow.mjs';
-import { climbFlow, climber, inRun } from '../runflow.mjs';
-import { HEALTH } from '../../stage2/player.mjs';
+import { rgb15 } from '../color.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { CAR, CHECKPOINT_LEDGE, FLOORS, SHAFT, TOP_LEDGE, createShaft, floorsClimbed, stepShaft } from '../../stage4/shaft.mjs';
 import { botButtons, createBot } from '../../stage4/shaftbot.mjs';
-import { mountControls } from '../../controls.mjs';
-import { playSong } from '../audio/player.mjs';
 import { SHAFT_SONG } from '../audio/cues.mjs';
+import { ClimbStageScene, DIM, RED, WHITE } from '../climb/scene.mjs';
 
 const GREY = { back: 0x26262c, rail: 0x34343a, tile: 0x6a6a72, edge: 0x8a8a92, cable: 0x9a9aa2, car: 0x7a7a84, roof: 0xb0b0b8 };
-const WHITE = rgb15(31, 31, 31);
-const DIM = rgb15(20, 20, 22);
-const RED = rgb15(31, 12, 12);
 const TITLES = { clear: 'STAGE CLEAR', 'game over': 'GAME OVER' };
 
-export class SnesShaftScene extends Phaser.Scene {
+export class SnesShaftScene extends ClimbStageScene {
   constructor() {
     super('shaft');
+    Object.assign(this, { climbSong: SHAFT_SONG, retryAfter: 45, bots: { botButtons, createBot } });
   }
 
-  create() {
-    const params = new URLSearchParams(location.search);
-    const flow = this.registry.get('flow');
-    this.inRun = inRun(flow, 'shaft');
-    this.who = climber(flow, 'shaft', params);
-    this.autoplay = params.has('bot');
-    this.restart();
-    this.g = this.add.graphics();
-    this.hud = this.add.graphics().setScrollFactor(0);
-    this.fill = (x, y, w, h, c) => this.hud.fillStyle(hex(c)).fillRect(x, y, w, h);
-    this.controls = mountControls('stage2');
-    this.events.once('shutdown', () => this.controls.remove());
-    const idle = pollPad(-1);
-    for (let i = 0; i < Number(params.get('frames') ?? 0); i++) stepShaft(this.s, this.autoplay ? this.botPad() : idle);
+  fresh() {
+    return createShaft(this.who);
   }
 
-  restart() {
-    this.s = createShaft(this.who);
-    if (this.inRun) this.s.lives = this.registry.get('flow').lives;
-    this.bot = createBot();
-    this.pad = createPad(PADS.snes);
-    playSong(this.song = SHAFT_SONG);
-  }
-
-  // The climb plays until the run ends: the clear gets its fanfare, a lost run the game-over sting.
-  cue() {
-    const song = { clear: 'stageClear', 'game over': 'gameOver' }[this.s.over?.kind] ?? SHAFT_SONG;
-    if (song !== this.song) playSong(this.song = song);
-  }
-
-  botPad() {
-    this.pad = updatePad(this.pad, botButtons(this.bot, this.s));
-    return this.pad;
-  }
-
-  update() {
-    const pad = pollPad(this.game.loop.frame);
-    const { s } = this;
-    if (this.inRun) {
-      stepShaft(s, this.autoplay ? this.botPad() : pad);
-      if (this.follow(pad)) return;
-    } else if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
-    else stepShaft(s, this.autoplay ? this.botPad() : pad);
-    this.cue();
-    this.draw();
-  }
-
-  follow(pad) {
-    const { flow, leave } = climbFlow(this.registry.get('flow'), this.s, pad);
-    if (leave) showFlow(this, flow);
-    else this.registry.set('flow', flow);
-    return leave;
+  step(s, pad) {
+    stepShaft(s, pad);
   }
 
   draw() {
@@ -88,26 +34,12 @@ export class SnesShaftScene extends Phaser.Scene {
     const { area } = run;
     const camY = Math.round(s.camY);
     const view = [camY - 8, camY + HEIGHT + 8];
-    this.cameras.main.setScroll(-(WIDTH - area.width) / 2, camY);
-    const g = this.g.clear();
+    const g = this.frameView(area, camY);
 
     g.fillStyle(GREY.back).fillRect(0, view[0], area.width, HEIGHT + 16);
     for (const x of [2 * TILE, area.width - 2 * TILE - 4]) g.fillStyle(GREY.rail).fillRect(x, view[0], 4, HEIGHT + 16);
-    const r0 = Math.max(0, Math.floor(camY / TILE));
-    const r1 = Math.min(area.rows - 1, Math.ceil((camY + HEIGHT) / TILE));
-    for (let row = r0; row <= r1; row++) {
-      for (let col = 0; col < area.cols; col++) {
-        if (!area.solid[row * area.cols + col]) continue;
-        g.fillStyle(GREY.tile).fillRect(col * TILE, row * TILE, TILE, TILE);
-        g.fillStyle(GREY.edge).fillRect(col * TILE, row * TILE, TILE, 1);
-      }
-    }
-
-    for (const c of SHAFT.cables) {
-      if (c.bottom < view[0] || c.top > view[1]) continue;
-      g.fillStyle(GREY.cable).fillRect(c.x - 1, c.top, 2, c.bottom - c.top);
-      g.fillStyle(0x505058).fillRect(c.x - 3, c.top - 2, 6, 3);
-    }
+    this.drawTiles(g, area, camY, GREY.tile, GREY.edge);
+    this.drawCables(g, SHAFT.cables, view, GREY.cable);
 
     for (const car of s.cars) {
       if (car.y + CAR.h < view[0] || car.top > view[1]) continue;
@@ -118,10 +50,7 @@ export class SnesShaftScene extends Phaser.Scene {
       g.fillStyle(lamp).fillRect(car.x - 2, car.y + 4, 4, 3);
     }
 
-    const cp = CHECKPOINT_LEDGE;
-    const flagX = cp.c0 * TILE + 4;
-    g.fillStyle(0x505058).fillRect(flagX, cp.row * TILE - 28, 2, 28);
-    g.fillStyle(s.checkpoint ? 0x80e080 : 0x707078).fillRect(flagX + 2, cp.row * TILE - 28, 10, 7);
+    this.drawFlag(g, CHECKPOINT_LEDGE, s.checkpoint);
 
     const sig = s.signature;
     const found = s.over?.kind === 'clear';
@@ -130,16 +59,8 @@ export class SnesShaftScene extends Phaser.Scene {
     g.fillStyle(0x505058).fillRect(sig.x - 1, sig.y - 8, 2, 8);
     if (TOP_LEDGE.row * TILE > view[0]) g.fillStyle(0x18181c).fillRect(0, 0, area.width, 3 * TILE);
 
-    for (const k of run.casts) {
-      if (k.kind === 'burst') g.lineStyle(1, 0xe0e0a0, 1 - k.age / k.rule.burstFrames).strokeCircle(k.x, k.y, k.rule.radius);
-      else g.fillStyle(0x80e080).fillRect(k.x - 3, k.y - 3, 6, 6);
-    }
-    const p = run.player;
-    const h = p.crouch ? 20 : p.h;
-    if (!s.dying && !(p.invuln > 0 && p.invuln % 4 < 2)) {
-      g.fillStyle(0xdcdcdc).fillRect(p.x - p.w / 2, p.y - h, p.w, h);
-      g.fillStyle(0x18181c).fillRect(p.facing > 0 ? p.x + 1 : p.x - 5, p.y - h + 6, 4, 4);
-    }
+    this.drawCasts(g, run.casts);
+    this.drawAuditor(g, run.player, s.dying);
 
     const r = s.runaway;
     const ry = Math.round(r.y);
@@ -158,24 +79,18 @@ export class SnesShaftScene extends Phaser.Scene {
   drawHud() {
     const { s } = this;
     const p = s.run.player;
-    const hud = this.hud.clear();
-    hud.fillStyle(0x111114).fillRect(4, 4, 4 + HEALTH * 6, 8);
-    for (let i = 0; i < HEALTH; i++) hud.fillStyle(i < p.health ? 0xd8d8d8 : 0x3a3a3e).fillRect(6 + i * 6, 6, 4, 4);
-    drawString(this.fill, `LIVES ${s.lives}`, 4, 16, DIM);
-    drawString(this.fill, `FLOOR ${floorsClimbed(s)}/${FLOORS}`, 4, 28, DIM);
     const gap = Math.max(0, Math.round((s.runaway.y - p.y) / TILE));
-    drawString(this.fill, `CAR ${gap}`, 4, 40, gap < 4 || s.runaway.warn > 0 ? RED : DIM);
+    this.drawStatus(p, [
+      [`LIVES ${s.lives}`, DIM],
+      [`FLOOR ${floorsClimbed(s)}/${FLOORS}`, DIM],
+      [`CAR ${gap}`, gap < 4 || s.runaway.warn > 0 ? RED : DIM],
+    ]);
     drawString(this.fill, 'THE SHAFT', WIDTH - 76, 6, WHITE);
-    if (s.events.some((e) => e.type === 'checkpoint')) this.cpShown = 90;
-    if (this.cpShown > 0 && this.cpShown--) drawString(this.fill, 'CHECKPOINT', WIDTH - 84, 18, rgb15(16, 28, 16));
-    else if (s.runaway.warn > 0 && s.runaway.warn % 20 < 12) drawString(this.fill, 'BRAKES OUT', WIDTH - 84, 18, RED);
+    if (!this.noticeCheckpoint() && s.runaway.warn > 0 && s.runaway.warn % 20 < 12) drawString(this.fill, 'BRAKES OUT', WIDTH - 84, 18, RED);
     const title = s.dying ? (s.dying === 'caught' ? 'CRUSHED' : 'WORN DOWN') : TITLES[s.over?.kind];
     if (!title) return;
     if (s.over?.kind === 'clear') return this.drawSignature();
-    hud.fillStyle(0x000000, 0.6).fillRect(0, HEIGHT / 2 - 20, WIDTH, 40);
-    drawString(this.fill, title, WIDTH / 2 - title.length * 4, HEIGHT / 2 - 12, WHITE);
-    const sub = s.over ? 'JUMP TO RETRY' : 'BACK TO THE CHECKPOINT';
-    drawString(this.fill, sub, WIDTH / 2 - sub.length * 4, HEIGHT / 2 + 2, DIM);
+    this.banner(title, s.over ? 'JUMP TO RETRY' : 'BACK TO THE CHECKPOINT');
   }
 
   // The stub for the stage's reward: the signed form found on the top landing.

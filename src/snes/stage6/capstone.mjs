@@ -3,14 +3,9 @@
 // the Great Seal at the crown, and makes the final choice. Boxes stand in for every sprite, and there is no
 // sound yet. &at=crown starts at the fight; ?bot lets the finale bot play; ?frames=<n> plays that many
 // frames first (with the bot under ?bot), for a screenshot.
-/* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString, measure } from '../text.mjs';
-import { hex, rgb15 } from '../color.mjs';
-import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
-import { showFlow } from '../../flow.mjs';
-import { climbFlow, climber, inRun } from '../runflow.mjs';
-import { HEALTH } from '../../stage2/player.mjs';
+import { rgb15 } from '../color.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { PHASES, slamBox, stampBox } from '../../stage6/bellwether.mjs';
 import {
@@ -18,96 +13,53 @@ import {
   createCapstone, floorsClimbed, handReach, inhaling, startAtCrown, stepCapstone,
 } from '../../stage6/capstone.mjs';
 import { botButtons, createBot } from '../../stage6/finalebot.mjs';
-import { mountControls } from '../../controls.mjs';
 import { playSong } from '../audio/player.mjs';
 import { bellwetherSong } from '../audio/cues.mjs';
+import { ClimbStageScene, DIM, RED, WHITE } from '../climb/scene.mjs';
 
 const GREY = { back: 0x24222a, course: 0x2e2b36, tile: 0x6a6872, edge: 0x8a8892, cable: 0x9a9aa2 };
 const SHADE = { body: 0x1a1024, edge: 0x5a3a78, swell: 0x8a5ab0, hand: 0x2a1838, warn: 0xc080ff };
-const WHITE = rgb15(31, 31, 31);
-const DIM = rgb15(20, 20, 22);
-const RED = rgb15(31, 12, 12);
 const VIOLET = rgb15(24, 16, 31);
 const INK = rgb15(6, 6, 8);
 const PLUM = rgb15(12, 6, 18);
+const centreX = (text) => Math.round((WIDTH - measure(text)) / 2);
 
-export class SnesCapstoneScene extends Phaser.Scene {
+export class SnesCapstoneScene extends ClimbStageScene {
   constructor() {
     super('capstone');
+    Object.assign(this, { retryAfter: 60, bots: { botButtons, createBot } });
   }
 
-  create() {
-    const params = new URLSearchParams(location.search);
-    const flow = this.registry.get('flow');
-    this.inRun = inRun(flow, 'capstone');
-    this.who = climber(flow, 'capstone', params);
-    this.autoplay = params.has('bot');
+  setup(params) {
     this.crown = params.get('at') === 'crown';
-    this.restart();
-    this.g = this.add.graphics();
-    this.hud = this.add.graphics().setScrollFactor(0);
-    this.fill = (x, y, w, h, c) => this.hud.fillStyle(hex(c)).fillRect(x, y, w, h);
-    this.controls = mountControls('stage2');
-    this.events.once('shutdown', () => this.controls.remove());
-    const idle = pollPad(-1);
-    for (let i = 0; i < Number(params.get('frames') ?? 0); i++) stepCapstone(this.s, this.autoplay ? this.botPad() : idle);
   }
 
-  restart() {
-    this.s = createCapstone(this.who);
-    if (this.crown) startAtCrown(this.s);
-    if (this.inRun) this.s.lives = this.registry.get('flow').lives;
-    this.bot = createBot();
-    this.pad = createPad(PADS.snes);
+  fresh() {
+    const s = createCapstone(this.who);
+    if (this.crown) startAtCrown(s);
+    return s;
   }
 
-  botPad() {
-    this.pad = updatePad(this.pad, botButtons(this.bot, this.s));
-    return this.pad;
-  }
-
-  update() {
-    const pad = pollPad(this.game.loop.frame);
-    const { s } = this;
-    if (this.inRun) {
-      stepCapstone(s, this.autoplay ? this.botPad() : pad);
-      if (this.follow(pad)) return;
-    } else if (s.over && s.over.t > 60 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
-    else stepCapstone(s, this.autoplay ? this.botPad() : pad);
-    this.music();
-    this.draw();
-  }
-
-  follow(pad) {
-    const { flow, leave } = climbFlow(this.registry.get('flow'), this.s, pad);
-    if (leave) showFlow(this, flow);
-    else this.registry.set('flow', flow);
-    return leave;
+  step(s, pad) {
+    stepCapstone(s, pad);
   }
 
   // Bellwether's theme from the moment the crown is reached, a harder song at each phase, and the
   // stage-clear jingle once the Seal is taken.
-  music() {
+  cue() {
     const { s } = this;
     const song = s.fight?.beaten ? 'stageClear' : s.part === 'climb' || !s.fight ? null : bellwetherSong(s.fight.phase);
-    if (song && song !== this.song) playSong(this.song = song);
+    if (song && song !== this.playing) playSong(this.playing = song);
   }
 
   draw() {
     const { s } = this;
     const { area } = s.run;
     const camY = Math.round(s.camY);
-    this.cameras.main.setScroll(-(WIDTH - area.width) / 2, camY);
-    const g = this.g.clear();
+    const g = this.frameView(area, camY);
     g.fillStyle(GREY.back).fillRect(-32, camY - 8, area.width + 64, HEIGHT + 16);
     this.drawSlope(g, area, camY);
-    for (let row = Math.max(0, Math.floor(camY / TILE)); row <= Math.min(area.rows - 1, Math.ceil((camY + HEIGHT) / TILE)); row++) {
-      for (let col = 0; col < area.cols; col++) {
-        if (!area.solid[row * area.cols + col]) continue;
-        g.fillStyle(GREY.tile).fillRect(col * TILE, row * TILE, TILE, TILE);
-        g.fillStyle(GREY.edge).fillRect(col * TILE, row * TILE, TILE, 1);
-      }
-    }
+    this.drawTiles(g, area, camY, GREY.tile, GREY.edge);
     if (s.part === 'climb') this.drawClimb(g, camY);
     else this.drawCrown(g);
     this.drawPlayer(g);
@@ -127,16 +79,8 @@ export class SnesCapstoneScene extends Phaser.Scene {
 
   drawClimb(g, camY) {
     const { s } = this;
-    const view = [camY - 8, camY + HEIGHT + 8];
-    for (const c of CAPSTONE.cables) {
-      if (c.bottom < view[0] || c.top > view[1]) continue;
-      g.fillStyle(GREY.cable).fillRect(c.x - 1, c.top, 2, c.bottom - c.top);
-      g.fillStyle(0x505058).fillRect(c.x - 3, c.top - 2, 6, 3);
-    }
-    const cp = CHECKPOINT_LEDGE;
-    const flagX = cp.c0 * TILE + 4;
-    g.fillStyle(0x505058).fillRect(flagX, cp.row * TILE - 28, 2, 28);
-    g.fillStyle(s.checkpoint ? 0x80e080 : 0x707078).fillRect(flagX + 2, cp.row * TILE - 28, 10, 7);
+    this.drawCables(g, CAPSTONE.cables, [camY - 8, camY + HEIGHT + 8], GREY.cable);
+    this.drawFlag(g, CHECKPOINT_LEDGE, s.checkpoint);
     const gate = ((TOP_LEDGE.c0 + TOP_LEDGE.c1 + 1) / 2) * TILE;
     const top = TOP_LEDGE.row * TILE;
     g.fillStyle(0x8a7a40).fillRect(gate - 16, top - 44, 32, 44);
@@ -205,36 +149,27 @@ export class SnesCapstoneScene extends Phaser.Scene {
 
   drawPlayer(g) {
     const { run, dying } = this.s;
-    for (const k of run.casts) {
-      if (k.kind === 'burst') g.lineStyle(1, 0xe0e0a0, 1 - k.age / k.rule.burstFrames).strokeCircle(k.x, k.y, k.rule.radius);
-      else g.fillStyle(0x80e080).fillRect(k.x - 3, k.y - 3, 6, 6);
-    }
+    this.drawCasts(g, run.casts);
     const p = run.player;
-    const h = p.crouch ? 20 : p.h;
-    if (dying || (p.invuln > 0 && p.invuln % 4 < 2)) return;
-    g.fillStyle(0xdcdcdc).fillRect(p.x - p.w / 2, p.y - h, p.w, h);
-    g.fillStyle(0x18181c).fillRect(p.facing > 0 ? p.x + 1 : p.x - 5, p.y - h + 6, 4, 4);
-    if (p.parry > 0) g.lineStyle(1, 0x80c0ff).strokeRect(p.x - p.w / 2 - 3, p.y - h - 3, p.w + 6, h + 6);
+    const h = this.drawAuditor(g, p, dying);
+    if (h && p.parry > 0) g.lineStyle(1, 0x80c0ff).strokeRect(p.x - p.w / 2 - 3, p.y - h - 3, p.w + 6, h + 6);
   }
 
   drawHud() {
     const { s } = this;
     const p = s.run.player;
-    const hud = this.hud.clear();
     const right = (text, y, c) => drawString(this.fill, text, WIDTH - 4 - measure(text), y, c);
-    const centre = (text, y, c) => drawString(this.fill, text, Math.round((WIDTH - measure(text)) / 2), y, c);
-    hud.fillStyle(0x111114).fillRect(4, 4, 4 + HEALTH * 6, 8);
-    for (let i = 0; i < HEALTH; i++) hud.fillStyle(i < p.health ? 0xd8d8d8 : 0x3a3a3e).fillRect(6 + i * 6, 6, 4, 4);
-    drawString(this.fill, `LIVES ${s.lives}`, 4, 16, DIM);
+    const centre = (text, y, c) => drawString(this.fill, text, centreX(text), y, c);
+    const lines = [[`LIVES ${s.lives}`, DIM]];
+    if (s.part === 'climb') {
+      const gap = Math.max(0, Math.round((s.shadow.y - p.y) / TILE));
+      lines.push([`FLOOR ${floorsClimbed(s)}/${FLOORS}`, DIM], [`SHADOW ${gap}`, gap < 5 ? RED : DIM]);
+    }
+    const hud = this.drawStatus(p, lines);
 
     if (s.part === 'climb') {
-      drawString(this.fill, `FLOOR ${floorsClimbed(s)}/${FLOORS}`, 4, 28, DIM);
-      const gap = Math.max(0, Math.round((s.shadow.y - p.y) / TILE));
-      drawString(this.fill, `SHADOW ${gap}`, 4, 40, gap < 5 ? RED : DIM);
       right('THE CAPSTONE', 6, WHITE);
-      if (s.events.some((e) => e.type === 'checkpoint')) this.cpShown = 90;
-      if (this.cpShown > 0 && this.cpShown--) right('CHECKPOINT', 18, rgb15(16, 28, 16));
-      else if (s.shadow.hand && !handReach(s.shadow.hand)) right('IT REACHES', 18, VIOLET);
+      if (!this.noticeCheckpoint(right) && s.shadow.hand && !handReach(s.shadow.hand)) right('IT REACHES', 18, VIOLET);
     } else {
       const b = s.fight;
       right('THE GREAT SEAL', 6, WHITE);
@@ -254,9 +189,7 @@ export class SnesCapstoneScene extends Phaser.Scene {
     if (s.part === 'choice') return this.drawChoice();
     const title = s.dying ? (s.dying === 'caught' ? 'THE SHADOW TOOK YOU' : 'WORN DOWN') : s.over && 'GAME OVER';
     if (!title) return;
-    hud.fillStyle(0x000000, 0.6).fillRect(0, HEIGHT / 2 - 20, WIDTH, 40);
-    centre(title, HEIGHT / 2 - 12, WHITE);
-    centre(s.over ? 'JUMP TO RETRY' : s.part === 'fight' ? 'BACK TO THE CROWN' : 'BACK TO THE CHECKPOINT', HEIGHT / 2 + 2, DIM);
+    this.banner(title, s.over ? 'JUMP TO RETRY' : s.part === 'fight' ? 'BACK TO THE CROWN' : 'BACK TO THE CHECKPOINT', centreX);
   }
 
   panel(w, h) {
@@ -264,7 +197,7 @@ export class SnesCapstoneScene extends Phaser.Scene {
     this.hud.fillStyle(0x000000, 0.6).fillRect(0, 0, WIDTH, HEIGHT);
     this.hud.fillStyle(0xe8e0c8).fillRect(x, y, w, h);
     this.hud.fillStyle(0x18181c).fillRect(x + 2, y + 2, w - 4, 1);
-    return (text, dy, c) => drawString(this.fill, text, Math.round((WIDTH - measure(text)) / 2), y + dy, c);
+    return (text, dy, c) => drawString(this.fill, text, centreX(text), y + dy, c);
   }
 
   // The placeholder final choice, two options and a cursor.
@@ -274,7 +207,7 @@ export class SnesCapstoneScene extends Phaser.Scene {
     const top = Math.round((HEIGHT - 88) / 2);
     line('THE SEAL IS IN YOUR HANDS', 8, INK);
     CHOICES.forEach((o, i) => {
-      const x = Math.round((WIDTH - measure(o.label)) / 2);
+      const x = centreX(o.label);
       const y = top + 32 + i * 16;
       if (i === c.pick) this.fill(x - 12, y + 1, 6, 6, PLUM);
       drawString(this.fill, o.label, x, y, i === c.pick ? PLUM : rgb15(16, 16, 18));

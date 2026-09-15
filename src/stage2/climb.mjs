@@ -2,21 +2,19 @@
 // paper flood, past Associates and falling paper, through one checkpoint to the Records Custodian's arena
 // at the top. Reaching it stops the flood and starts the boss fight; beating him clears the stage.
 // Grey-box logic on Stage 2's real run (player, casting, Associates). Pure.
-import { createRun, stepRun } from './core.mjs';
-import { HEALTH, INVULN } from './player.mjs';
+import { createRun } from './core.mjs';
+import { INVULN } from './player.mjs';
 import { TILE } from './physics.mjs';
 import { CUSTODIAN, createCustodian, stepCustodian, stepParry } from './summit.mjs';
+import { COLS, LIVES, VIEW_H, follow, frameSpent, ledgeY, loseLife, passCheckpoint, restorePlayer, runFrame, wornDown } from '../climb/course.mjs';
 
-export const COLS = 16;
-export const LIVES = 3;
-export const VIEW_H = 224;
+export { COLS, LIVES, RESPAWN_FRAMES, VIEW_H } from '../climb/course.mjs';
 export const LEDGES = 100;
 export const CHECKPOINT_LEDGE = 50;
 export const LANDING_LEDGE = LEDGES + 1;
 export const ARENA_LEDGE = LEDGES + 2;
 export const FLOOD = { gap: 120, maxGap: 184, speed: 0.26, ramp: 0.000012, grace: 120 };
 export const DROP = { speed: 1.5, w: 10, h: 12, period: 150, x: 128 };
-export const RESPAWN_FRAMES = 60;
 
 // Ledges two rows apart, bottom to top, four tiles wide. The auditor is two rows tall, so the ledge two
 // above is the ceiling over a jump: the cycle keeps it clear of every takeoff. Above the last ledge a
@@ -46,10 +44,9 @@ function buildArchive() {
 
 export const ARCHIVE = buildArchive();
 
-const ledgeY = (k) => ARCHIVE.ledges[k].row * TILE;
-const ledgeMid = (k) => ((ARCHIVE.ledges[k].c0 + ARCHIVE.ledges[k].c1 + 1) / 2) * TILE;
+const rowY = (k) => ledgeY(ARCHIVE.ledges[k]);
 
-export const ARENA = { x0: ARENA_COLS[0] * TILE, x1: (ARENA_COLS[1] + 1) * TILE, y: ledgeY(ARENA_LEDGE) };
+export const ARENA = { x0: ARENA_COLS[0] * TILE, x1: (ARENA_COLS[1] + 1) * TILE, y: rowY(ARENA_LEDGE) };
 
 export function createArchive(who = 'ward', boss = CUSTODIAN) {
   const run = createRun(who, ARCHIVE.map);
@@ -58,7 +55,7 @@ export function createArchive(who = 'ward', boss = CUSTODIAN) {
     checkpoint: null, drops: [], events: [], fight: null,
     flood: { y: run.player.y + FLOOD.gap },
     camY: 0, best: run.player.y,
-    spawners: DROPS.map((k) => ({ x: DROP.x, y0: ledgeY(Math.min(LEDGES + 1, k + 4)), y1: ledgeY(k - 1) })),
+    spawners: DROPS.map((k) => ({ x: DROP.x, y0: rowY(Math.min(LEDGES + 1, k + 4)), y1: rowY(k - 1) })),
   };
   s.camY = cameraTarget(s);
   return s;
@@ -82,24 +79,14 @@ export function startAtSummit(s) {
 // Back at the checkpoint (or the floor), whole again, the flood its opening gap below. A lost fight
 // starts over against a Custodian at full health.
 function respawn(s) {
-  const p = s.run.player;
-  const at = s.checkpoint ?? s.run.area.start;
-  Object.assign(p, { x: at.x, y: at.y, vx: 0, vy: 0, grounded: true, health: HEALTH, invuln: INVULN, safe: { ...at } });
+  const p = restorePlayer(s);
   s.run.glyphs.length = 0;
-  s.run.casts.length = 0;
   s.drops.length = 0;
   s.flood.y = p.y + FLOOD.gap;
   s.frame = 0;
   s.dying = null;
   if (s.fight) s.fight = createCustodian(ARENA, s.boss);
   s.camY = cameraTarget(s);
-}
-
-function die(s, kind) {
-  s.lives -= 1;
-  s.events.push({ type: 'death', kind });
-  if (s.lives <= 0) s.over = { kind: 'game over', t: 0 };
-  else Object.assign(s, { dying: kind, respawn: RESPAWN_FRAMES });
 }
 
 function stepDrops(s) {
@@ -134,23 +121,11 @@ function stepFight(s, pad) {
 
 // One frame of the climb.
 export function stepArchive(s, pad) {
-  s.events = [];
-  if (s.over) {
-    s.over.t += 1;
-    return s;
-  }
-  if (s.respawn > 0) {
-    s.respawn -= 1;
-    if (s.respawn === 0) respawn(s);
-    return s;
-  }
+  if (frameSpent(s, respawn)) return s;
   const { run } = s;
   const p = run.player;
   for (const f of run.foes) if (Math.abs(f.y - p.y) > VIEW_H / 2) f.rest = Math.max(f.rest, 20);
-  stepRun(run, pad);
-  s.events.push(...run.events);
-  if (run.paused || run.hitStop > 0) return s;
-  s.frame += 1;
+  if (!runFrame(s, pad)) return s;
 
   if (s.frame > FLOOD.grace && !s.fight) s.flood.y -= FLOOD.speed + s.frame * FLOOD.ramp;
   s.flood.y = Math.min(s.flood.y, p.y + FLOOD.maxGap);
@@ -158,11 +133,7 @@ export function stepArchive(s, pad) {
   stepDrops(s);
   s.best = Math.min(s.best, p.y);
 
-  const cp = { x: ledgeMid(CHECKPOINT_LEDGE), y: ledgeY(CHECKPOINT_LEDGE) };
-  if (!s.checkpoint && p.grounded && p.y <= cp.y) {
-    s.checkpoint = cp;
-    s.events.push({ type: 'checkpoint' });
-  }
+  passCheckpoint(s, ARCHIVE.ledges[CHECKPOINT_LEDGE], p.grounded);
   if (!s.fight && p.grounded && p.y <= ARENA.y) {
     s.fight = createCustodian(ARENA, s.boss);
     s.checkpoint = { x: p.x, y: p.y };
@@ -170,9 +141,9 @@ export function stepArchive(s, pad) {
   }
   if (s.fight) stepFight(s, pad);
   if (s.over) return s;
-  if (p.y - p.h / 2 > s.flood.y) die(s, 'caught');
-  else if (s.events.some((e) => e.type === 'lifeLost') || p.health <= 0) die(s, 'worn down');
-  s.camY += (cameraTarget(s) - s.camY) * 0.15;
+  if (p.y - p.h / 2 > s.flood.y) loseLife(s, 'caught');
+  else if (wornDown(s)) loseLife(s, 'worn down');
+  follow(s, cameraTarget(s));
   return s;
 }
 

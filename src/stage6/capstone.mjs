@@ -3,20 +3,20 @@
 // breathes, surging on each inhale and all but stopping on the ebb, and every so often it reaches a hand up
 // under the auditor. At the crown Bellwether is bound to the Seal; beaten, the Seal is in the auditor's
 // hands and the final choice picks the ending. Grey-box logic on Stage 2's real player and casting. Pure.
-import { createRun, stepRun } from '../stage2/core.mjs';
-import { HEALTH, INVULN } from '../stage2/player.mjs';
+import { createRun } from '../stage2/core.mjs';
+import { INVULN } from '../stage2/player.mjs';
 import { TILE } from '../stage2/physics.mjs';
 import { stepParry } from '../stage2/summit.mjs';
-import { climb, grab, hangPad } from '../stage4/shaft.mjs';
+import {
+  COLS, LIVES, VIEW_H, buildCourse, checkpointLedge, climb, floorCount, follow, frameSpent, grab, ledgeY, loseLife,
+  passCheckpoint, restorePlayer, runFrame, wornDown,
+} from '../climb/course.mjs';
 import { BELLWETHER, createBellwether, stepBellwether } from './bellwether.mjs';
 
-export const COLS = 16;
-export const LIVES = 3;
-export const VIEW_H = 224;
+export { COLS, LIVES, RESPAWN_FRAMES, VIEW_H, floorsClimbed } from '../climb/course.mjs';
 export const CYCLES = 12;
 export const SHADOW = { gap: 150, maxGap: 200, speed: 0.22, swell: 0.7, ebb: 0.4, breath: 240, grace: 150 };
 export const HAND = { every: 420, warn: 50, rise: 16, hold: 30, height: 60, w: 20 };
-export const RESPAWN_FRAMES = 60;
 export const CHOICES = [{ key: 'good', label: 'STAMP THE NOTICE' }, { key: 'bad', label: 'KEEP THE SEAL' }];
 export const CHOICE_DELAY = 40;
 export const ENDINGS = {
@@ -24,51 +24,11 @@ export const ENDINGS = {
   bad: ['YOU KEEP THE SEAL', 'THE PAYROLL KEEPS WORKING', 'THE TOP CHAIR IS YOURS'],
 };
 
-// One leg flips the auditor from one side ledge to the other: a hop crosses on a girder, a cable climbs
-// eight rows to a girder beside its top. Built like the elevator shaft, without its cars.
-const LEFT = [1, 4];
-const RISE = { hop: 4, cable: 10 };
-const TOP = 4;
-const mirror = ([a, b]) => [COLS - 1 - b, COLS - 1 - a];
-
-function buildCapstone() {
-  const legs = Array.from({ length: CYCLES }, () => ['hop', 'cable']).flat();
-  const floor = TOP + legs.reduce((n, leg) => n + RISE[leg], 0);
-  const grid = Array.from({ length: floor + 1 }, () => ['#', ...'.'.repeat(COLS - 2), '#']);
-  grid[floor].fill('#');
-  const route = [];
-  const ledges = [];
-  const cables = [];
-  const ledge = (row, [c0, c1], side = false) => {
-    const l = { kind: 'ledge', k: ledges.length, row, c0, c1, side };
-    ledges.push(l);
-    route.push(l);
-  };
-  ledge(floor, [1, COLS - 2], true);
-  let row = floor;
-  let left = true;
-  for (const leg of legs) {
-    if (leg === 'hop') ledge(row - 2, left ? [7, 10] : [5, 8]);
-    if (leg === 'cable') {
-      const col = left ? 5 : 10;
-      const cable = { kind: 'cable', k: cables.length, col, x: col * TILE + TILE / 2, top: (row - 8) * TILE, bottom: row * TILE };
-      cables.push(cable);
-      route.push(cable);
-      ledge(row - 8, [6, 9]);
-    }
-    row -= RISE[leg];
-    left = !left;
-    ledge(row, left ? LEFT : mirror(LEFT), true);
-  }
-  ledges.at(-1).top = true;
-  for (const l of ledges) for (let c = l.c0; c <= l.c1; c++) grid[l.row][c] = '#';
-  grid[floor - 1][3] = 'P';
-  return { map: grid.map((r) => r.join('')), route, ledges, cables, cars: [] };
-}
-
-export const CAPSTONE = buildCapstone();
+// Built like the elevator shaft, without its cars.
+export const CAPSTONE = buildCourse(['hop', 'cable'], CYCLES);
 export const TOP_LEDGE = CAPSTONE.ledges.at(-1);
-export const CHECKPOINT_LEDGE = CAPSTONE.ledges.find((l) => l.side && l.row <= (CAPSTONE.ledges[0].row + TOP_LEDGE.row) / 2);
+export const CHECKPOINT_LEDGE = checkpointLedge(CAPSTONE);
+export const FLOORS = floorCount(CAPSTONE);
 
 // The crown: one screen of floor between two walls, the Seal hanging over it.
 const ARENA_ROWS = VIEW_H / TILE;
@@ -77,9 +37,6 @@ export const ARENA_MAP = Array.from({ length: ARENA_ROWS }, (_, r) => {
   return `#${(r === ARENA_ROWS - 2 ? '..P' : '...').padEnd(COLS - 2, '.')}#`;
 });
 export const ARENA = { x0: TILE, x1: (COLS - 1) * TILE, y: (ARENA_ROWS - 1) * TILE };
-
-const ledgeY = (l) => l.row * TILE;
-const ledgeMid = (l) => ((l.c0 + l.c1 + 1) / 2) * TILE;
 
 export function createCapstone(who = 'ward', boss = BELLWETHER) {
   const run = createRun(who, CAPSTONE.map);
@@ -120,21 +77,13 @@ function respawn(s) {
     s.run.player.invuln = INVULN;
     return;
   }
-  const p = s.run.player;
-  const at = s.checkpoint ?? s.run.area.start;
-  Object.assign(p, { x: at.x, y: at.y, vx: 0, vy: 0, grounded: true, health: HEALTH, invuln: INVULN, safe: { ...at } });
-  s.run.casts.length = 0;
+  const p = restorePlayer(s);
   Object.assign(s.shadow, { y: p.y + SHADOW.gap, clock: 0, hand: null });
   Object.assign(s, { frame: 0, hang: null, regrab: 0 });
   s.camY = cameraTarget(s);
 }
 
-function die(s, kind) {
-  s.lives -= 1;
-  s.events.push({ type: 'death', kind });
-  if (s.lives <= 0) s.over = { kind: 'game over', t: 0 };
-  else Object.assign(s, { dying: kind, respawn: RESPAWN_FRAMES, hang: null });
-}
+const LET_GO = { hang: null };
 
 // How far the shadow's hand is up, 0 to 1: still under the surface through its warning, then rising,
 // holding and sinking back.
@@ -180,7 +129,7 @@ function stepFight(s, pad) {
   if (events.some((e) => e.type === 'bossDown')) {
     Object.assign(s, { part: 'choice', choice: { pick: 0, t: 0 } });
     s.events.push({ type: 'sealTaken' });
-  } else if (s.events.some((e) => e.type === 'lifeLost') || run.player.health <= 0) die(s, 'worn down');
+  } else if (wornDown(s)) loseLife(s, 'worn down', LET_GO);
   return s;
 }
 
@@ -202,24 +151,10 @@ function stepChoice(s, pad) {
 
 // One frame of the finale.
 export function stepCapstone(s, pad) {
-  s.events = [];
-  if (s.over) {
-    s.over.t += 1;
-    return s;
-  }
-  if (s.respawn > 0) {
-    s.respawn -= 1;
-    if (s.respawn === 0) respawn(s);
-    return s;
-  }
+  if (frameSpent(s, respawn)) return s;
   if (s.part === 'choice') return stepChoice(s, pad);
-  const { run } = s;
-  const p = run.player;
-  if (s.hang) p.vx = p.vy = 0;
-  stepRun(run, s.hang ? hangPad(pad) : pad);
-  s.events.push(...run.events);
-  if (run.paused || run.hitStop > 0) return s;
-  s.frame += 1;
+  const p = s.run.player;
+  if (!runFrame(s, pad)) return s;
   if (s.part === 'fight') return stepFight(s, pad);
 
   if (s.hang) climb(s, pad);
@@ -228,16 +163,10 @@ export function stepCapstone(s, pad) {
   s.best = Math.min(s.best, p.y);
 
   const settled = p.grounded && !s.hang;
-  if (!s.checkpoint && settled && p.y <= ledgeY(CHECKPOINT_LEDGE)) {
-    s.checkpoint = { x: ledgeMid(CHECKPOINT_LEDGE), y: ledgeY(CHECKPOINT_LEDGE) };
-    s.events.push({ type: 'checkpoint' });
-  }
-  if (caught(s)) die(s, 'caught');
-  else if (s.events.some((e) => e.type === 'lifeLost') || p.health <= 0) die(s, 'worn down');
+  passCheckpoint(s, CHECKPOINT_LEDGE, settled);
+  if (caught(s)) loseLife(s, 'caught', LET_GO);
+  else if (wornDown(s)) loseLife(s, 'worn down', LET_GO);
   else if (settled && p.y <= ledgeY(TOP_LEDGE)) return enterFight(s), s;
-  s.camY += (cameraTarget(s) - s.camY) * 0.15;
+  follow(s, cameraTarget(s));
   return s;
 }
-
-export const floorsClimbed = (s) => Math.max(0, Math.floor((s.run.area.start.y - s.best) / (4 * TILE)));
-export const FLOORS = Math.floor((CAPSTONE.ledges[0].row - TOP_LEDGE.row) / 4);
