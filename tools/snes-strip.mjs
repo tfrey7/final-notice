@@ -5,7 +5,7 @@
 // player: it presses on through menus and scenes, moves each stage to its boss checkpoint, clears
 // the stage, forces one game over and continues, and fast-forwards the ending's clock.
 import { next, showFlow } from '/src/flow.mjs';
-import { CREDITS_AT, creditsEnd } from '/src/story/ending.mjs';
+import { CREDITS_AT, endAt } from '/src/snes/ending.mjs';
 
 const W = 256;
 const H = 224;
@@ -64,8 +64,8 @@ on('stage2').scene.restart(); await frames(220); snap('great seal');
 go('stage2', { type: 'stageClear' }); await frames(40);
 go('scene3', { type: 'start' }); await frames(110); snap('evidence');
 const ending = on('ending');
-ending.frame = Math.round(CREDITS_AT + (creditsEnd() - CREDITS_AT) * 0.6); await frames(4); snap('credits, lights going out');
-ending.frame = creditsEnd(); await frames(4); snap('the end');
+ending.frame = Math.round(CREDITS_AT + (endAt() - CREDITS_AT) * 0.6); await frames(4); snap('credits, lights going out');
+ending.frame = endAt(); await frames(4); snap('the end');
 
 const img = document.createElement('img');
 img.id = 'strip';
