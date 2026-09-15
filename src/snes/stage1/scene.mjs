@@ -1,9 +1,11 @@
 // Stage 1 on the SNES: the shared brawler logic (src/stage1) drawn at 56-64 px over each area's Mode 1
 // background (parallax and the hdma floor), the SNES HUD fading when idle, and the throw-into-camera
-// finisher on an area's last foe. Areas 1-4; Vellum's office is card 1931.
+// finisher on an area's last foe. Area 5 is Vellum's locked office: his memo title card and voice
+// line, the boss bar, his fangs as a colour-math red flash, and his slump into Scene 2.
 /* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { hex, rgb15 } from '../color.mjs';
+import { colorMath, fromRgba, screen, toRgba } from '../fx.mjs';
 import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
 import { drawHud, hudBrightness, hudLayout, hudWatch } from '../hud.mjs';
@@ -19,16 +21,22 @@ import { STAGE, areaFor, newStage, stepAreas } from '../../stage1/areas.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { mountTunePanel, registerTuning } from '../../tune.mjs';
 import { fastOn, cheapen } from '../../fast.mjs';
+import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
+import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
 const STAGE_START_MS = 2400;
 const BACKGROUNDS = [CLAIMS.areas[0], CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
+const OFFICE_BG = CLAIMS2.areas[2];
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
+  fangs: 'alarm', telegraph: 'blip',
 };
+const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
+const MEMO = { paper: rgb15(29, 28, 23), rule: rgb15(18, 16, 12), ink: rgb15(3, 3, 6), stamp: rgb15(26, 3, 3) };
 const BODY_H = 60;
 const WHITE = rgb15(31, 31, 31);
 const FOE_PALETTES = {
@@ -54,18 +62,27 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.fast = fastOn();
     const params = new URLSearchParams(location.search);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
+    this.office = state.checkpoint === OFFICE;
     playSong('stageStart');
     this.time.delayedCall(STAGE_START_MS, () => { if (this.paused) this.resume = SONGS.stage1; else playSong(SONGS.stage1); });
 
     this.who = state.auditor;
     this.base = registerTuning(`snes-brawl-${this.who}`, tuneFor(this.who), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
-    this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint));
     this.fin = null;
+    if (this.office) {
+      this.world = enterOffice(newFloor(this.who, this.tune), this.tune);
+      poseOffice(this.world, params.get('pose'));
+      // A staged pose (?pose=rush, ?pose=fangs) skips the title card; ?card holds the card still.
+      this.card = params.get('pose') ? null : { t: params.has('card') ? Number(params.get('card')) : 0, still: params.has('card') };
+    } else {
+      this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint));
+    }
 
-    await loadArt('ward').catch(() => null);
+    await Promise.all([loadArt('ward').catch(() => null), ...(this.office ? [loadArt('vellum').catch(() => null)] : [])]);
     this.ward = artOr(this, 'ward');
-    this.baked = BACKGROUNDS.map(bakeScene);
+    this.baked = this.office ? [bakeScene(OFFICE_BG)] : BACKGROUNDS.map(bakeScene);
+    this.buf15 = screen();
     this.tex = this.textures.exists('snes-stage1-bg') ? this.textures.get('snes-stage1-bg') : this.textures.createCanvas('snes-stage1-bg', WIDTH, HEIGHT);
     this.pixels = this.tex.context.createImageData(WIDTH, HEIGHT);
     this.add.image(0, 0, 'snes-stage1-bg').setOrigin(0);
@@ -91,17 +108,36 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.fast) cheapen(this.world.fighters);
 
     const w = this.world;
+    if (this.card) {
+      const step = cardFrame(this.card.t);
+      if (step.stampNow) sfx('stamp');
+      if (step.voiceNow) sfx(CARD.voice);
+      if (step.done) this.card = null;
+      else if (!this.card.still) this.card.t++;
+      this.draw(time);
+      return;
+    }
+    const boss = this.office && vellum(w);
+    const p = w.fighters.find((f) => f.team === 'player');
+    const bossHp = boss?.hp;
+    const playerHp = p.hp;
     const before = livingFoes(w);
     stepFloor(w, pad, this.tune);
-    const target = finisherTarget(w, before);
+    if (boss) w.hitStop = bossHitStop(w, boss, bossHp, playerHp, p);
+    const target = !this.office && finisherTarget(w, before);
     if (target) this.startFinisher(target);
-    stepAreas(w, this.tune);
+    if (!this.office) stepAreas(w, this.tune);
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
     for (const e of w.events) {
       if (SOUND[e]) sfx(SOUND[e]);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
-      // Vellum's office is its own card (1931); until then the door ends the stage.
-      if (e === 'toOffice') { showFlow(this, next(this.registry.get('flow'), { type: 'stageClear' })); return; }
+      if (e === 'bossDown') { w.shake = this.tune.shakeFrames; playSong('stageClear'); }
+      if (e === 'bossBeaten') { showFlow(this, next(this.registry.get('flow'), { type: 'stageClear' })); return; }
+      if (e === 'toOffice') {
+        this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: OFFICE }));
+        this.scene.restart();
+        return;
+      }
       if (e === 'lifeLost') {
         const after = next(this.registry.get('flow'), { type: 'lifeLost' });
         if (after.screen !== 'stage1') { showFlow(this, after); return; }
@@ -130,7 +166,22 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
   }
 
+  // Vellum stands in until his art lands: a taller dark suit, flashing white on a telegraph and
+  // lit by the same red colour math as the room while his fangs are out.
+  vellumSprites(v, sx, ms, red) {
+    if (v.invuln > 0 && v.invuln % 4 < 2 && v.state !== 'fangs') return [];
+    const lying = ['down', 'slumped', 'knockdown'].includes(v.state);
+    const h = lying ? 28 : 66;
+    const w = lying ? 60 : 36;
+    const flash = v.state === 'windup' && v.t % 8 < 2;
+    const tint = red ?? (v.fangs ? rgb15(4, 0, 0) : 0);
+    const palette = flash ? [WHITE, WHITE, WHITE] : VELLUM_PALETTE.map((c) => colorMath(c, tint, 'add'));
+    const name = `foe:vellum:${lying ? 'down' : 'up'}:${flash ? 'flash' : tint}`;
+    return artOr(this, name, { w, h, palette }).frame('stand', ms, Math.round(sx - w / 2), Math.round(v.y - h - v.z), v.facing < 0);
+  }
+
   foeSprites(f, sx, ms) {
+    if (f.kind === 'vellum') return this.vellumSprites(f, sx, ms, fangFlash(f, this.game.loop.frame));
     if (f.state === 'ko' && f.t > 16 && Math.floor(f.t / 3) % 2) return [];
     if (f.invuln > 0 && f.invuln % 4 < 2) return [];
     const lying = ['down', 'ko'].includes(f.state);
@@ -157,8 +208,19 @@ export class SnesStage1Scene extends Phaser.Scene {
     const w = this.world;
     const shake = shakeOffset(w, this.tune);
     const cam = Math.round(w.cameraX);
-    const area = Math.max(0, STAGE.starts.findLastIndex((s) => cam + WIDTH / 2 >= s));
-    composeFrame(BACKGROUNDS[area], this.baked[area], cam - STAGE.starts[area] + shake.x, 0, this.pixels.data);
+    if (this.office) {
+      composeFrame(OFFICE_BG, this.baked[0], shake.x, 0, this.pixels.data);
+      // His fangs: the red sub-screen added to the whole room, clamped per 5-bit channel.
+      const red = fangFlash(vellum(w), this.game.loop.frame);
+      if (red) {
+        const buf = fromRgba(this.pixels.data, this.buf15);
+        for (let i = 0; i < buf.length; i++) buf[i] = colorMath(buf[i], red, 'add');
+        toRgba(buf, this.pixels.data);
+      }
+    } else {
+      const area = Math.max(0, STAGE.starts.findLastIndex((s) => cam + WIDTH / 2 >= s));
+      composeFrame(BACKGROUNDS[area], this.baked[area], cam - STAGE.starts[area] + shake.x, 0, this.pixels.data);
+    }
     this.tex.context.putImageData(this.pixels, 0, 0);
     this.tex.refresh();
     this.cameras.main.setScroll(0, shake.y);
@@ -205,9 +267,11 @@ export class SnesStage1Scene extends Phaser.Scene {
     const w = this.world;
     const flow = this.registry.get('flow');
     const p = w.fighters.find((f) => f.team === 'player');
-    const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter };
+    const v = this.office && vellum(w);
+    const boss = v && !this.card ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
+    const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
     const layout = hudLayout(state);
-    const alpha = this.paused || w.run?.prompt ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
+    const alpha = this.paused || w.run?.prompt || boss ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
     this.g.clear();
     drawHud(this.fill, layout);
     const { portrait } = layout;
@@ -225,5 +289,39 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
     if (this.paused) centred('PAUSE', 100);
+    if (this.card) this.drawCard(cardFrame(this.card.t));
+  }
+
+  // The boss title card as a filed memo, in the manner of Sunset Riders' wanted posters: it drops in,
+  // FILED is stamped across it, and his line runs as a subtitle under it.
+  drawCard(step) {
+    const w = 206;
+    const h = 104;
+    const x = (WIDTH - w) >> 1;
+    const y = Math.round(44 + step.rise * 150);
+    const fill = this.fill;
+    const ink = (text, tx, ty, colour = MEMO.ink) => drawString(fill, text, tx, ty, colour, null);
+    fill(x + 3, y + 3, w, h, rgb15(1, 1, 2));
+    fill(x, y, w, h, MEMO.paper);
+    fill(x + 8, y + 22, w - 16, 1, MEMO.rule);
+    ink('INTEROFFICE MEMORANDUM', x + 8, y + 9);
+    ink('RE: FINAL NOTICE', x + 8, y + 30);
+    ink('FROM:', x + 8, y + 46);
+    ink(CARD.name, x + 8, y + 57);
+    ink('DEPT:', x + 8, y + 73);
+    ink(CARD.department, x + 8, y + 84);
+    if (step.stamped) {
+      const sw = measure(CARD.stamp) + 12;
+      const sx = x + w - sw - 10;
+      const sy = y + 32;
+      fill(sx, sy, sw, 16, MEMO.stamp);
+      fill(sx + 2, sy + 2, sw - 4, 12, MEMO.paper);
+      ink(CARD.stamp, sx + 6, sy + 4, MEMO.stamp);
+    }
+    if (step.subtitle) {
+      const tw = measure(CARD.subtitle);
+      fill(((WIDTH - tw) >> 1) - 6, 170, tw + 12, 14, rgb15(1, 1, 2));
+      drawString(fill, CARD.subtitle, (WIDTH - tw) >> 1, 173);
+    }
   }
 }
