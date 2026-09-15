@@ -3,7 +3,7 @@
 import { noteToMidi } from '../../../audio/apu.mjs';
 import { fold, nameOf, transpose } from '../../../audio/songs/kit.mjs';
 
-const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
+const QUALITY = { '': [0, 4, 7], m: [0, 3, 7], dim: [0, 3, 6, 9], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
 
 // 'Bb', 'Dm' or 'B7': the bass root between C2 and B2 and the chord's tones.
 export function triad(symbol) {

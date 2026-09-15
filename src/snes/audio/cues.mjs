@@ -7,4 +7,9 @@ export const SEAL_SONG = 'seal';
 export const SCENE3_SONG = 'scene3';
 export const DISPOSAL_AREA = AREAS.findIndex((a) => a.name === 'disposalLine');
 
-export const stage2Song = (x) => (areaAt(x) >= DISPOSAL_AREA ? 'disposal' : 'stage2');
+// Vellum's duel theme, and its faster pinch once he is down to a third of his health.
+export const VELLUM_SONG = 'vellum';
+export const VELLUM_PINCH = 'vellum-pinch';
+export const vellumPinch = (hp, maxHp) => hp > 0 && hp * 3 <= maxHp;
+
+export const stage2Song =(x) => (areaAt(x) >= DISPOSAL_AREA ? 'disposal' : 'stage2');

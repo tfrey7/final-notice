@@ -11,6 +11,7 @@ import { loadArt, artOr, SpriteLayer } from '../art.mjs';
 import { drainStep, drawHud, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
+import { VELLUM_PINCH, VELLUM_SONG, vellumPinch } from '../audio/cues.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
 import RECEPTION from '../bg/reception.mjs';
@@ -88,8 +89,12 @@ export class SnesStage1Scene extends Phaser.Scene {
     // ?paused opens Form 13-B on the first frame, for a screenshot.
     this.openOnReady = params.has('paused');
     this.office = state.checkpoint === OFFICE;
+    this.pinch = false;
     playSong('stageStart');
-    this.time.delayedCall(STAGE_START_MS, () => { if (this.paused) this.resume = SONGS.stage1; else playSong(SONGS.stage1); });
+    this.time.delayedCall(STAGE_START_MS, () => {
+      const song = this.pinch ? VELLUM_PINCH : this.office ? VELLUM_SONG : SONGS.stage1;
+      if (this.paused) this.resume = song; else playSong(song);
+    });
 
     this.who = state.auditor;
     weighShared();
@@ -182,6 +187,10 @@ export class SnesStage1Scene extends Phaser.Scene {
     const before = livingFoes(w);
     stepFloor(w, pad, this.tune);
     if (boss) w.hitStop = bossHitStop(w, boss, bossHp, playerHp, p);
+    if (boss && !this.pinch && vellumPinch(boss.hp, boss.maxHp)) {
+      this.pinch = true;
+      playSong(VELLUM_PINCH);
+    }
     const target = !this.office && finisherTarget(w, before);
     if (target) this.startFinisher(target);
     if (!this.office) stepAreas(w, this.tune);
