@@ -78,31 +78,42 @@ function speak({ rate = 8000, line, drive: k = 2, seed }) {
   });
 }
 
+// A state-variable band-pass; `damp` is 1/Q.
+function bandpass(hz, damp, rate) {
+  const f = 2 * Math.sin((Math.PI * hz) / rate);
+  let low = 0;
+  let band = 0;
+  return (x) => {
+    low += f * band;
+    band += f * (x - low - damp * band);
+    return band;
+  };
+}
+
+// The brawl's hits in the Capcom manner, at 11 kHz like Final Fight's: a pitch-dropping body driven
+// nearly square, a band of noise for the slap of the blow, and a click on the front.
+function impact({ seed, seconds, from, to, fall, ring, slap, drive: k, crush }) {
+  const n = noise(seed);
+  const bands = slap.map(([hz, damp]) => bandpass(hz, damp, 11025));
+  let p = 0;
+  return hit({
+    rate: 11025, seconds,
+    fn: (t) => {
+      p += (TAU * (to + (from - to) * decay(t, fall))) / 11025;
+      const body = (Math.sin(p) + 0.3 * Math.sin(2 * p)) * decay(t, ring);
+      const w = n();
+      const smack = bands.reduce((s, bp, j) => s + slap[j][2] * bp(w) * decay(t, slap[j][3]), 0);
+      return (body + smack + 0.5 * w * decay(t, 350)) * Math.min(1, (seconds - t) * 25);
+    },
+    post: (w) => drive(k)(norm(w)).map((x) => Math.round(x * crush) / crush),
+  });
+}
+
 export const FX_SAMPLES = {
-  punch: (() => {
-    const n = noise(101);
-    let p = 0;
-    return hit({
-      rate: 16000, seconds: 0.14,
-      fn: (t) => {
-        p += (TAU * (55 + 70 * decay(t, 40))) / 16000;
-        return Math.sin(p) * decay(t, 22) + 0.8 * n() * decay(t, 90);
-      },
-      post: lowpass(0.5),
-    });
-  })(),
-  hit: (() => {
-    const n = noise(103);
-    let p = 0;
-    return hit({
-      rate: 16000, seconds: 0.24,
-      fn: (t) => {
-        p += (TAU * (40 + 90 * decay(t, 25))) / 16000;
-        return Math.sin(p) * decay(t, 12) + n() * decay(t, 28);
-      },
-      post: (w) => drive(2.5)(norm(lowpass(0.45)(w))),
-    });
-  })(),
+  // A jab: a quick smack with a punchy body under it.
+  punch: impact({ seed: 101, seconds: 0.17, from: 260, to: 70, fall: 45, ring: 18, slap: [[1800, 0.7, 5, 50], [3200, 0.9, 2, 90]], drive: 2.5, crush: 48 }),
+  // A strong blow: a deep boom that holds, a wooden thwack and a slap on top.
+  hit: impact({ seed: 103, seconds: 0.4, from: 200, to: 42, fall: 26, ring: 6, slap: [[650, 0.5, 1.6, 20], [2100, 0.7, 1.4, 42]], drive: 7, crush: 32 }),
   whoosh: (() => {
     const n = noise(107);
     let lo = 0;
@@ -335,19 +346,19 @@ export const SFX = {
   custodianLine: line('custodianLine'),
   sealLine: line('sealLine', 57),
 
-  // The brawl, in the Streets of Rage 2 manner: a light hit snaps, a heavy one crunches, a finisher
-  // lands an orchestra hit on the crunch.
+  // The brawl, in the Final Fight and Street Fighter II manner: a jab smacks, a heavy blow booms and
+  // crunches, and the finisher, the KO and room clear land an orchestra hit on the boom.
   swing: fx(layer([[{ ...I.whoosh, vol: 84 }, 67, 10, 74]])),
-  hitLight: fx(layer(run(I.punch, [[62, 8]])), layer(run({ ...I.click, vol: 80 }, [[48, 3]]))),
-  hitHeavy: fx(layer(run(I.hit, [[57, 16]])), layer(run(I.crunch, [[52, 12]]))),
-  finisher: fx(layer(run(I.crunch, [[46, 22]])), layer(run({ ...I.orch, vol: 110 }, [[53, 24]]), 1)),
-  thud: fx(layer(run({ ...I.kick, vol: 127 }, [[45, 14]])), layer(run(I.hit, [[41, 18]]))),
-  hurt: fx(layer(run(I.hit, [[52, 14]])), layer([[{ ...I.bass, vol: 100 }, 55, 12, 40]])),
-  ko: fx(layer(run(I.crunch, [[43, 20]])), layer([[I.bass, 48, 30, 24]], 2)),
-  block: fx(layer(run({ ...I.clang, vol: 64 }, [[60, 6]])), layer(run(I.punch, [[70, 5]]))),
-  guardSmash: fx(layer(run(I.hit, [[50, 18]])), layer([[null, 0, 2], ...run(I.crunch, [[60, 12]])])),
-  objection: fx(layer(run({ ...I.clang, vol: 120 }, [[72, 40]])), layer([...run(I.stamp, [[55, 15]]), [I.bass, 43, 12, 31]])),
-  roomClear: fx(layer([...run(I.crunch, [[45, 6]]), ...run({ ...I.orch, vol: 127 }, [[57, 30]])]), layer([...run(I.brass, [[65, 4], [70, 4]]), [{ ...I.brass, vol: 110 }, 77, 26, 74]])),
+  hitLight: fx(layer(run(I.punch, [[60, 11]])), layer(run({ ...I.kick, vol: 96 }, [[57, 8]]))),
+  hitHeavy: fx(layer(run(I.hit, [[57, 24]])), layer(run(I.crunch, [[50, 13]]))),
+  finisher: fx(layer(run(I.hit, [[50, 30]])), layer([...run(I.crunch, [[45, 4]]), ...run({ ...I.orch, vol: 127 }, [[53, 30]])])),
+  thud: fx(layer(run({ ...I.kick, vol: 127 }, [[45, 14]])), layer(run(I.hit, [[45, 26]]))),
+  hurt: fx(layer(run(I.hit, [[54, 20]])), layer([[{ ...I.bass, vol: 110 }, 55, 14, 38]])),
+  ko: fx(layer(run(I.hit, [[43, 40]])), layer([...run(I.crunch, [[40, 10]]), [{ ...I.orch, vol: 120 }, 41, 34, 36]])),
+  block: fx(layer(run({ ...I.clang, vol: 80 }, [[62, 10]])), layer(run(I.punch, [[67, 8]]))),
+  guardSmash: fx(layer(run(I.hit, [[50, 26]])), layer([[null, 0, 2], ...run(I.crunch, [[55, 16]])])),
+  objection: fx(layer([...run(I.punch, [[64, 4]]), ...run({ ...I.clang, vol: 127 }, [[74, 44]])]), layer([...run(I.hit, [[60, 10]]), [{ ...I.orch, vol: 90 }, 65, 26]])),
+  roomClear: fx(layer([...run({ ...I.orch, vol: 127 }, [[57, 8]]), [null, 0, 3], ...run({ ...I.orch, vol: 127 }, [[62, 34]])]), layer([...run(I.hit, [[55, 11]]), ...run(I.brass, [[70, 4]]), [{ ...I.brass, vol: 120 }, 77, 30, 74]])),
   telegraph: fx(layer([[I.bell, 96, 2], [null, 0, 3], [I.bell, 96, 6]])),
   staplerHit: fx(layer(run({ ...I.clang, vol: 80 }, [[79, 8]])), layer(run(I.punch, [[67, 6]]))),
   binderHit: fx(layer(run(I.paper, [[72, 6]])), layer(run(I.punch, [[58, 8]]))),
