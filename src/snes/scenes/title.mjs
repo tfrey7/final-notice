@@ -1,15 +1,16 @@
-// The SNES title: FINAL NOTICE presses in by Mode 7 over the parallax night skyline, then PUSH START
-// pulses; Start during the reveal skips to the settled title. After 20 idle seconds the title fades to
-// the opening as its attract loop. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
+// The SNES title: Astra's rain-soaked plaza with Ward and Mercer passing the notice, the tower crown
+// glowing up through the piano intro; FINAL NOTICE presses in by Mode 7, then PUSH START pulses;
+// Start during the reveal skips to the settled title. After 20 idle seconds the title fades to the
+// opening as its attract loop. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
 // NEW AUDIT hands over to select, which wipes in by file drawer.
 /* global Phaser */
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
-import { bakeLayer, bakeScene, composeFrame } from '../layers.mjs';
-import { LEVELS, screen, fromRgba, mathPass, mode7Pass, mode7Matrix, brightness } from '../fx.mjs';
-import { FLOORS, KEPT_WINDOWS, afterHours, glintBand, logo, logoPalette, logoReading, setFloors } from '../bg/ui.mjs';
-import { INTRO_FRAMES, TITLE_BPM, lightsOut } from '../lights.mjs';
-import { clerkDesk, pastDue, skyFor } from '../clock.mjs';
+import { LEVELS, screen, mathPass, mode7Pass, mode7Matrix, brightness } from '../fx.mjs';
+import { logoPalette, logoReading } from '../bg/ui.mjs';
+import { INTRO_FRAMES } from '../lights.mjs';
+import { pastDue } from '../clock.mjs';
+import { LOGO, logoTexture, paintArt } from '../titlepaint.mjs';
 import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
@@ -19,18 +20,15 @@ import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { FrontScreen, ZOOM_FRAMES, bufferFill, logoZoom, mode7Texture } from './front.mjs';
 
-const PAN = 20 / 60;
 const FADE_FRAMES = 24;
 const fadeUp = (f) => Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES));
-const LOGO_CENTRE = [WIDTH >> 1, 76];
+// Where the painting keeps its logo: top left, over the storm sky.
+const LOGO_CENTRE = [6 + (LOGO.w >> 1), 4 + (LOGO.h >> 1)];
 // The press starts 20 frames before the downbeat of bar 5 so it lands on it.
 const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
 const FLASH = screen(rgb15(9, 8, 5));
 const PROMPT = 'PUSH START';
-const PROMPT_Y = 150;
-
-const CLERK = ['.##.', '####', '####'];
-const CLERK_COLOUR = rgb15(4, 3, 3);
+const PROMPT_Y = 208;
 const PAST_DUE = logoReading('PAST DUE');
 
 const MEMO_SOUNDS = { move: 'pencil', new: 'stampOk', continue: 'stampOk', open: 'stampOk', change: 'stampOk', back: 'paperSlide', done: 'paperSlide' };
@@ -70,16 +68,12 @@ export class SnesTitleScene extends Phaser.Scene {
     if (params.has('memo')) {
       this.memo = { ...openMemo(this.settings, hasSave(storage()), params.get('memo') === 'settings' ? 'settings' : 'memo'), slide: SLIDE_FRAMES };
     }
-    // &hour=<0-23> pins the player's clock for the sky; &pastdue opens on the after-midnight title.
+    // &pastdue opens on the after-midnight title.
     this.opened = new Date();
     this.pastDue = params.has('pastdue');
-    this.sky = afterHours(skyFor(params.has('hour') ? Number(params.get('hour')) : this.opened.getHours()));
-    this.baked = bakeScene(this.sky);
-    this.lit = null;
     this.logo = null;
     this.main = screen();
     this.out = screen();
-    this.rgba = new Uint8ClampedArray(this.main.length * 4);
     this.view = new FrontScreen(this, 'snes-title');
   }
 
@@ -119,19 +113,9 @@ export class SnesTitleScene extends Phaser.Scene {
 
     if (!this.pastDue && this.pinned == null && f % 60 === 0 && pastDue(this.opened)) {
       this.pastDue = true;
-      this.glint = null;
+      this.logo = null;
       sfx('relay');
     }
-    // Lights out: one palette write a beat through the piano intro, then the logo zoom.
-    const lights = lightsOut(f, TITLE_BPM);
-    const lit = this.pastDue ? -1 : lights.dark;
-    if (lit !== this.lit) {
-      this.lit = lit;
-      setFloors(this.sky.palettes, this.pastDue ? FLOORS : lights.dark, this.pastDue);
-      const i = this.baked.findIndex((b) => b.layer.bg === 1);
-      this.baked[i] = bakeLayer(this.sky, this.baked[i].layer);
-    }
-    if (lights.clunk && this.pinned == null) sfx('relay');
     if (f === INTRO_FRAMES && this.pinned == null) sfx('brassHit');
     const frame = paintTitle(this, f);
     if (this.leaving != null) {
@@ -151,17 +135,11 @@ function drawPrompt(frame, level) {
   drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y, brightness(ink, level), brightness(shadow, level));
 }
 
-// The title at frame `f`: the skyline panning, the logo zoom, and the memo or prompt over it.
+// The title at frame `f`: the painting in the rain, the logo zoom, and the memo or prompt over it.
 function paintTitle(s, f) {
-  composeFrame(s.sky, s.baked, Math.floor(f * PAN), 0, s.rgba);
-  fromRgba(s.rgba, s.main);
-  if (!s.pastDue) drawClerk(s.main, clerkDesk(f, KEPT_WINDOWS.count));
+  paintArt(s.main, f, INTRO_FRAMES);
+  s.logo ??= mode7Texture(s.pastDue ? { ...PAST_DUE, palette: logoPalette(0) } : logoTexture());
   const zoom = logoZoom(f - PRESS_AT);
-  const band = glintBand(f - INTRO_FRAMES);
-  if (s.glint !== band) {
-    s.glint = band;
-    s.logo = mode7Texture({ ...(s.pastDue ? PAST_DUE : logo), palette: logoPalette(band) });
-  }
   let frame = f < PRESS_AT ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, 0), LOGO_CENTRE, s.main, s.out);
   // The landing frame: the whole screen brightens once by fixed-colour add.
   if (f === INTRO_FRAMES) frame = mathPass(frame, FLASH, { op: 'add' });
@@ -175,18 +153,8 @@ function paintTitle(s, f) {
   return frame;
 }
 
-// The clerk working late: a head and shoulders against the lamp in one window of the lit floor.
-function drawClerk(buf, desk) {
-  const x = KEPT_WINDOWS.x + desk * KEPT_WINDOWS.step;
-  const y = KEPT_WINDOWS.y + KEPT_WINDOWS.size - CLERK.length;
-  CLERK.forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') buf[(y + j) * WIDTH + x + i] = CLERK_COLOUR; }));
-}
-
 // The settled title with the memo up, for select's `&wipe=<frame>` screenshot of the drawer.
 export function titleStill(memo, f = INTRO_FRAMES + 120) {
-  const sky = afterHours();
-  setFloors(sky.palettes, lightsOut(f, TITLE_BPM).dark);
-  const main = screen();
-  const s = { sky, baked: bakeScene(sky), logo: null, main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: newTitle(f), memo };
+  const s = { logo: null, main: screen(), out: screen(), t: newTitle(f), memo };
   return paintTitle(s, f).slice();
 }
