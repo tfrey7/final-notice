@@ -6,9 +6,11 @@ import { ArtScene } from './nes/artscene.mjs';
 import { SCREENS, jumpTo } from './flow.mjs';
 import { PlaceholderScene } from './scenes/placeholder.mjs';
 import { EscapeScene } from './stage2/scene.mjs';
+import { Stage1Scene } from './scenes/stage1.mjs';
 
 // One scene per screen of the game, keyed by its flow name; a real scene replaces its placeholder here.
 const SCENES = Object.fromEntries(SCREENS.map((key) => [key, new PlaceholderScene(key)]));
+SCENES.stage1 = new Stage1Scene();
 SCENES.stage2 = new EscapeScene();
 
 // ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen.
