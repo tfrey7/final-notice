@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_CHANNELS as CHANNELS, VRC6_CHANNELS, FRAME_HZ, noteToMidi } from '../src/audio/apu.mjs';
 import { compileSong, parseRows } from '../src/audio/player.mjs';
-import title, { MELODY, CHORDS, KEY, WAVE_CHORDS, VOICINGS } from '../src/audio/songs/title.mjs';
+import { MELODY, CHORDS, KEY, WAVE_CHORDS, VOICINGS } from '../src/audio/songs/title.mjs';
+import title from '../src/audio/songs/title-v2.mjs';
 import scene from '../src/audio/songs/scene.mjs';
 import titleV1 from '../src/audio/songs/title-v1.mjs';
 import sceneV1 from '../src/audio/songs/scene-v1.mjs';
@@ -10,7 +11,7 @@ import sceneV1 from '../src/audio/songs/scene-v1.mjs';
 const inKey = new Set(KEY.map((n) => noteToMidi(`${n}4`) % 12));
 const seconds = (song) => (song.length * song.tempo) / FRAME_HZ;
 
-for (const [name, def] of [['title', title], ['scene', scene], ['title-v1', titleV1], ['scene-v1', sceneV1]]) {
+for (const [name, def] of [['title-v2', title], ['scene', scene], ['title-v1', titleV1], ['scene-v1', sceneV1]]) {
   test(`${name}: every channel is whole 8-row bars and ends with the others`, () => {
     const song = compileSong(def);
     assert.equal(song.length % 8, 0);
@@ -56,7 +57,7 @@ test('the corporate wave harmony lands on each bar\'s root, with ii-V approaches
   for (const v of VOICINGS.flat()) assert.ok(v.third >= 55 && v.seventh <= 75, v.symbol);
 });
 
-test('title has all seven channels; scene is thinner, slower and plays the same melody', () => {
+test('title (v2) has all seven channels; scene is thinner, slower and plays the same melody', () => {
   const t = compileSong(title);
   for (const ch of CHANNELS) assert.ok(t.channels[ch].some(Boolean), ch);
   assert.ok(scene.tempo > title.tempo);

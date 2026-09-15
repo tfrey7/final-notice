@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { CHANNELS, FRAME_HZ, noteToMidi } from '../src/audio/apu.mjs';
 import { compileSong, parseRows } from '../src/audio/player.mjs';
 import { KEY } from '../src/audio/songs/title.mjs';
-import boss from '../src/audio/songs/boss.mjs';
-import ending from '../src/audio/songs/ending.mjs';
+import boss from '../src/audio/songs/boss-v1.mjs';
+import ending from '../src/audio/songs/ending-v1.mjs';
 
 const inKey = new Set(KEY.map((n) => noteToMidi(`${n}4`) % 12));
 const seconds = (song, from = 0) => ((song.length - from) * song.tempo) / FRAME_HZ;
 
-for (const [name, def] of [['boss', boss], ['ending', ending]]) {
+for (const [name, def] of [['boss (v1)', boss], ['ending (v1)', ending]]) {
   test(`${name}: every channel's rows add up to whole bars and all channels end together`, () => {
     const song = compileSong(def);
     for (const ch of CHANNELS) {
@@ -37,7 +37,7 @@ const pitches = (text) =>
   parseRows('pulse1', text, 'x').filter((n, i, a) => n && a.indexOf(n) === i).map((n) => n.pitch);
 const hook = pitches('C5 F5 A5 G5 F5 E5 C5');
 
-test('boss loops a 30-45 s ostinato built from the hook', () => {
+test('boss (v1) loops a 30-45 s ostinato built from the hook', () => {
   const song = compileSong(boss);
   assert.ok(song.loop > 0 && song.loop % 8 === 0);
   const s = seconds(song, song.loop);
@@ -46,7 +46,7 @@ test('boss loops a 30-45 s ostinato built from the hook', () => {
   assert.deepEqual(cell.map((p) => p - cell[0]), hook.map((p) => p - hook[0]));
 });
 
-test('ending plays the melody once, about 60 s, and stops unresolved', () => {
+test('ending (v1) plays the melody once, about 60 s, and stops unresolved', () => {
   const song = compileSong(ending);
   assert.equal(song.loop, null);
   const s = seconds(song);

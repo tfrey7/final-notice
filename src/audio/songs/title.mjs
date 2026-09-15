@@ -1,8 +1,16 @@
-// The Final Notice theme (docs/THEME.md): F major, 24 bars of eighth notes, loops. Every other cue
-// arranges MELODY over CHORDS. This arrangement is corporate wave on the 2A03 plus VRC6
-// (docs/MUSIC.md); the first 2A03-only one is title-v1.mjs.
+// The Final Notice theme (docs/THEME.md): F major, 24 bars of eighth notes. Other cues import MELODY
+// and CHORDS from here; the earlier title arrangements are title-v1.mjs and title-v2.mjs.
+//
+// The title song itself is its own track (docs/MUSIC.md): a late-NES corporate wave anthem in Eb major
+// at 128 BPM on sixteenth rows. Four-on-the-floor DPCM kick, a gated noise snare, off-beat pumping
+// 2A03 chords, a Sunsoft-style octave saw bass, and a glassy VRC6 pulse lead with a detuned echo. The
+// hook (C F A G F E C, here Bb Eb G F Eb D Bb) opens the intro nod, the A section and the return.
+//
+// 48 bars, 90 s: intro 4 | A 8 | A' 8 | B 8 | bridge 8 | return up a tone 8 | tag 4, looping to the end
+// of the intro.
 
 import { noteToMidi } from '../apu.mjs';
+import * as kit from './kit.mjs';
 
 // One string per bar, 8 rows each. Sections: A 1-8, A' 9-16, B 17-20, A'' 21-24.
 export const MELODY = [
@@ -79,53 +87,171 @@ export const held = (note, inst, len) => [`${nameOf(note)}:${inst}`, ...Array(le
 export const vibrato = (depth, period, delay = 0) =>
   Array.from({ length: 400 }, (_, f) => (f < delay ? 0 : +(depth * Math.sin((2 * Math.PI * (f - delay)) / period)).toFixed(3)));
 
-const PHRASE_ENDS = [3, 7, 11, 15, 19, 23];
+// ---- The title song ----
 
-const bars = (fn) => VOICINGS.map((parts, bar) => fn(parts, bar)).join(' | ');
+const { REST, chord, echo, fold, pitchClasses, play, tag, thirdBelow, transpose } = kit;
 
-const bed = (key, inst) => bars((parts) => parts.map((p) => held(p[key], inst, p.len)).join(' '));
+export const SCALE = ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'D'];
+export const HOOK = 'Bb4 - Eb5 - G5 - - F5 - - Eb5 - D5 - Bb4 -';
 
-// The pad holds the colour tone; a phrase end swaps its last two rows for a synth brass hit.
-const saw = bars((parts, bar) => {
-  const rows = parts.map((p) => held(p.color, 'pad', p.len)).join(' ').split(' ');
-  if (PHRASE_ENDS.includes(bar)) {
-    const last = parts[parts.length - 1];
-    rows.splice(6, 2, `${nameOf(last.root + 24)}:brass`, '.');
-  }
-  return rows.join(' ');
+const INTRO_CHORDS = ['Ebmaj9', 'Ebmaj9', 'Abmaj9', 'Bb9'];
+const INTRO_LEAD = [REST, REST, HOOK, 'D5 - - - - - - - . . . . . . . .'];
+
+const A_CHORDS = ['Ebmaj9', 'Gm7', 'Abmaj9', 'Bb9', 'Ebmaj9', 'Cm9', 'Fm9', 'Bb9'];
+const A_LEAD = [
+  HOOK,
+  'D5 - - - - - . F5 - . G5 - Bb5 - - -',
+  'C6 - - Bb5 - - G5 - - Ab5 - G5 - Eb5 - -',
+  'F5 - - - - - - - . . D5 - F5 - Ab5 -',
+  'G5 - - - Bb5 - - G5 - - F5 - Eb5 - - -',
+  'Eb5 - - - - - . . C5 - Eb5 - G5 - Bb5 -',
+  'Ab5 - - G5 - - F5 - - Eb5 - - F5 - G5 -',
+  'F5 - - - - - - - - - - - . . . .',
+];
+// The second pass answers instead of quoting, and climbs out of its last two bars.
+const A2_LEAD = [
+  'G5 - - F5 - - Eb5 - Bb5 - - - G5 - - -',
+  ...A_LEAD.slice(1, 6),
+  'Ab5 - Bb5 - C6 - D6 - Eb6 - - - D6 - C6 -',
+  'D6 - - - - - - - Bb5 . C6 . D6 . F6 .',
+];
+
+const B_CHORDS = ['Cm9', 'Abmaj9', 'Ebmaj9', 'Bb9', 'Cm9', 'Abmaj9', 'Fm9', 'Bb9'];
+const B_LEAD = [
+  'Eb6 - - - - - - D6 - - - - C6 - - -',
+  'C6 - - - - - Bb5 - - - - - G5 - Ab5 -',
+  'Bb5 - - - - - - - - - G5 - Bb5 - D6 -',
+  'D6 - - - - - - - C6 - - - Bb5 - - -',
+  'G5 - - - C6 - - - Eb6 - - - D6 - C6 -',
+  'C6 - - - - - - - Bb5 - Ab5 - G5 - Eb5 -',
+  'F5 - - - Ab5 - - - C6 - - - Eb6 - - -',
+  'D6 - - - - - - - . . . . . . . .',
+];
+
+const BRIDGE_CHORDS = ['Abmaj9', 'Abmaj9', 'Gm7', 'Gm7', 'Fm9', 'Fm9', 'Bb9', 'Bb9'];
+const BRIDGE_LEAD = [
+  REST,
+  'G5 - - - - - - - F5 - - - Eb5 - - -',
+  REST,
+  'D5 - - - - - - - Bb4 - - - D5 - - -',
+  REST,
+  'C5 - - - Eb5 - - - F5 - - - Ab5 - - -',
+  'Bb5 . Bb5 . Bb5 . Bb5 . C6 - D6 - Eb6 - F6 -',
+  'F6 - - - - - - - . . . . . . . .',
+];
+
+const TAG_CHORDS = ['Abmaj9', 'Bb9', 'Abmaj9', 'Bb9'];
+const TAG_LEAD = [
+  'C6 - Bb5 - Ab5 - G5 - Ab5 - Bb5 - C6 - Eb6 -',
+  'D6 - - - - - - - F5 - G5 - Ab5 - Bb5 -',
+  'C6 - Bb5 - Ab5 - G5 - F5 - Eb5 - D5 - Eb5 -',
+  'F5 - - - - - - - - - - - . . . .',
+];
+
+const section = (part, chords, leads, shift = 0) =>
+  chords.map((symbol, i) => ({ part, symbol, lead: leads[i], shift, last: i === chords.length - 1 }));
+
+export const FORM = [
+  ...section('intro', INTRO_CHORDS, INTRO_LEAD),
+  ...section('A', A_CHORDS, A_LEAD),
+  ...section("A'", A_CHORDS, A2_LEAD),
+  ...section('B', B_CHORDS, B_LEAD),
+  ...section('bridge', BRIDGE_CHORDS, BRIDGE_LEAD),
+  ...section('return', A_CHORDS, A_LEAD, 2),
+  ...section('tag', TAG_CHORDS, TAG_LEAD),
+];
+export const LOOP_BAR = 4;
+export const LEAD = 'vrc6p1';
+
+const leads = FORM.map((b) => transpose(b.lead, b.shift));
+const LEAD_INST = { intro: 'nod', A: 'lead', "A'": 'lead', B: 'sing', bridge: 'sing', return: 'lead', tag: 'lead' };
+const vrc6p1 = FORM.map((b, i) => tag(leads[i], LEAD_INST[b.part]));
+
+// The echo trails the lead; the return swaps it for a harmony a third below, the thing that changes.
+const echoes = echo(leads, 3, 'echo');
+const vrc6p2 = FORM.map((b, i) => {
+  if (b.part !== 'return') return echoes[i];
+  const scale = pitchClasses(SCALE, b.shift);
+  return leads[i].split(' ').map((t) => (/^[A-G]/.test(t) ? `${thirdBelow(t, scale)}:harm` : t)).join(' ');
 });
 
-// Fretless: the root, an anticipation on the and of three, sliding up to the fifth.
-const triangle = bars((parts) =>
-  parts.length === 2
-    ? parts.map((p) => `${nameOf(p.root)} - - ${nameOf(p.root + 7)}`).join(' ')
-    : `${nameOf(parts[0].root)} - - - . ${nameOf(parts[0].root)} ${nameOf(parts[0].root + 7)} -`,
+// Off-beat pumping chords on the 2A03 pulses: the third and seventh, held pads in the bridge.
+const PUMP = '. . X - . . X - . . X - . . X -';
+const B_PUMP = '. . X - . . X - . . X - . X - X';
+const HOLD = 'X - - - - - - - - - - - - - - -';
+const guide = (b, tone, lo, hi) => {
+  const { root, tones } = chord(b.symbol, b.shift);
+  return kit.nameOf(fold(root + tones[tone], lo, hi));
+};
+const pumps = (tone, lo, hi, inst, pad) =>
+  FORM.map((b, i) => {
+    const note = guide(b, tone, lo, hi);
+    const [pattern, name] =
+      b.part === 'bridge' || (b.part === 'intro' && i < 2) ? [HOLD, pad] : [b.part === 'B' ? B_PUMP : PUMP, inst];
+    return pattern.split(' ').map((t) => (t === 'X' ? `${note}:${name}` : t)).join(' ');
+  });
+
+// The Sunsoft bass: octave jumps on the sixteenths, a slide into the fifth at a phrase end.
+const BASS = {
+  drive: 'R . O R . R O . R . O R . R O R',
+  fill: 'R . O R . R O . F . O F S . O F',
+  bridge: 'R - - - - - - - R - - - O - - -',
+  intro: 'R - - - - - - - - - - - . . . .',
+};
+const saw = FORM.map((b, i) => {
+  const c = chord(b.symbol, b.shift);
+  if (b.part === 'intro') return play(i < 2 ? BASS.intro : i === 3 ? BASS.fill : BASS.drive, c, 'bass');
+  if (b.part === 'bridge') return play(b.last ? BASS.fill : BASS.bridge, c, 'bass');
+  return play(b.last ? BASS.fill : BASS.drive, c, 'bass');
+});
+
+const triangle = FORM.map((b, i) =>
+  b.part === 'bridge' || (b.part === 'intro' && i < 2) ? REST : play('L - . . L - . . L - . . L - . .', chord(b.symbol, b.shift), 'thump'),
 );
 
-const BEAT = 'C . 0:hat . 6:gate . 0:hat 0:hat';
-const FILL = 'C . 0:hat . 6:gate . 6:gate 5:gate';
-const noise = VOICINGS.map((_, bar) => (PHRASE_ENDS.includes(bar) ? FILL : BEAT)).join(' | ');
+const HATS = '. . 0:open - 1:hat . 0:open - . . 0:open - 1:hat . 0:open -';
+const noise = FORM.map((b, i) => {
+  if (b.part === 'intro') return i < 2 ? REST : i === 3 ? '. . . . 6:gate - . . 6:gate - 6:gate - 5:gate - 4:gate -' : HATS;
+  if (b.part === 'bridge') return b.last ? '. . . . . . . . 6:gate 6:gate 5:gate 5:gate 4:gate 4:gate 3:gate 3:gate' : '. . . . 6:gate - . . . . . . 6:gate - . .';
+  return b.part === 'B' ? '1:hat . 0:open - 6:gate - 1:hat 1:hat 1:hat . 0:open - 6:gate - 1:hat .' : '. . 0:open - 6:gate - 0:open - . . 0:open - 6:gate - 0:open -';
+});
+
+const FLOOR = 'F - - - F - - - F - - - F - - -';
+const dpcm = FORM.map((b, i) => {
+  if (b.part === 'intro') return i < 2 ? REST : i === 3 ? 'F - - - F - - - F:clap - F:clap - F:clap - F:clap -' : FLOOR;
+  if (b.part === 'bridge') return b.last ? 'F - - - F - - - F - F - F - F -' : 'F - - - - - - - - - - - F:clap - - -';
+  return b.last ? 'F - - - F - - - F - - F:clap - F:clap F:clap -' : FLOOR;
+});
+
+const join = (bars) => bars.join(' | ');
 
 export default {
-  tempo: 18,
-  loop: 0,
+  tempo: 7,
+  loop: LOOP_BAR * 16,
   instruments: {
-    lead: { duty: 1, env: [9, 11, 12, 12, 12, 11, 11, 11, 10, 10, 10, 10, 9], pitch: vibrato(0.15, 18, 20) },
-    chorus: { duty: 2, env: [0, 0, 0, 4, 5, 6, 6, 6, 5, 5, 5, 5, 4], pitch: vibrato(0.1, 25).map((v) => +(v + 0.1).toFixed(3)) },
-    bass: { env: [15], glide: 5, pitch: vibrato(0.12, 22, 24) },
-    bed: { duty: 2, env: [3, 4, 5, 6, 6, 6, 6, 5], pitch: vibrato(0.06, 23) },
-    bed2: { duty: 3, env: [3, 4, 5, 5, 5, 5, 5, 4], pitch: vibrato(0.06, 31) },
-    pad: { env: [2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 9, 9, 8] },
-    brass: { env: [14, 13, 12, 11, 10, 9, 8, 6, 4, 2, 0] },
-    kick: { env: [10, 8, 5, 2, 0], pitch: [0, 1, 2] },
-    gate: { env: [12, 11, 11, 10, 10, 10, 9, 9, 9, 9, 0] },
-    hat: { short: true, env: [3, 2, 1, 0] },
+    nod: { duty: 1, env: [7, 8, 9, 9, 8, 8, 7, 7, 6], pitch: vibrato(0.1, 20, 14) },
+    lead: { duty: 3, env: [11, 13, 14, 14, 13, 13, 12, 12, 12, 11], pitch: vibrato(0.15, 14, 14), glide: 2 },
+    sing: { duty: 7, env: [8, 10, 12, 13, 13, 12, 12, 11, 11, 10], pitch: vibrato(0.22, 16, 16) },
+    echo: { duty: 3, env: [5, 5, 4, 4, 3, 3, 2, 2, 1, 0], pitch: [0.12] },
+    harm: { duty: 5, env: [7, 8, 8, 7, 7, 6, 6, 6, 5] },
+    pump: { duty: 1, env: [9, 8, 7, 5, 4, 3, 2, 1, 0] },
+    pump2: { duty: 2, env: [7, 6, 5, 4, 3, 2, 1, 0], pitch: [0.08] },
+    pad1: { duty: 1, env: [2, 3, 4, 5, 6, 6, 6, 6, 5], pitch: vibrato(0.07, 23) },
+    pad2: { duty: 2, env: [2, 3, 4, 4, 5, 5, 5, 5, 4], pitch: vibrato(0.07, 31) },
+    bass: { env: [15, 14, 13, 12, 11, 10, 9, 8, 8, 7, 7, 6], glide: 1 },
+    thump: { env: [15, 15, 15, 15, 15, 15, 0], pitch: [7, 4, 2, 1, 0] },
+    hat: { short: true, env: [4, 2, 1, 0] },
+    open: { short: true, env: [5, 4, 4, 3, 3, 2, 2, 1, 0] },
+    gate: { env: [11, 11, 10, 10, 10, 9, 9, 9, 0] },
+    kick: { sample: 'kick' },
+    clap: { sample: 'clap', env: [14] },
   },
-  pulse1: { inst: 'lead', rows: MELODY.join(' | ') },
-  pulse2: { inst: 'chorus', rows: MELODY.join(' | ') },
-  triangle: { inst: 'bass', rows: triangle },
-  noise: { inst: 'kick', rows: noise },
-  vrc6p1: { inst: 'bed', rows: bed('third', 'bed') },
-  vrc6p2: { inst: 'bed2', rows: bed('seventh', 'bed2') },
-  saw: { inst: 'pad', rows: saw },
+  pulse1: { inst: 'pump', rows: join(pumps(1, 60, 72, 'pump', 'pad1')) },
+  pulse2: { inst: 'pump2', rows: join(pumps(3, 63, 75, 'pump2', 'pad2')) },
+  triangle: { inst: 'thump', rows: join(triangle) },
+  noise: { inst: 'hat', rows: join(noise) },
+  vrc6p1: { inst: 'lead', rows: join(vrc6p1) },
+  vrc6p2: { inst: 'echo', rows: join(vrc6p2) },
+  saw: { inst: 'bass', rows: join(saw) },
+  dpcm: { inst: 'kick', rows: join(dpcm) },
 };

@@ -20,7 +20,12 @@ go easy on it, and make every track a banger that stands out in its own way. So:
 | Stage 1, funk brawl | 112 BPM, D dorian | sixteenth funk: saw slap bass, clav chops, DPCM kick and gated snare, a clap breakdown | 2A03 pulse, 25%, sliding, with an echo; a singing 50% pulse and a harmony in B | intro 4, A 8, B 8, A' 8, breakdown 8, A' up a tone 8, turnaround 4: 102 s |
 | Stage 2, escape chase | 180 BPM, C minor | driving triangle octaves, detuned VRC6 sixteenth arpeggios, broken-four DPCM drums, a half-time breakdown | VRC6 saw brass, with pulse offbeat stabs and a harmony in B | intro 4, A 16, B 16, breakdown 8, A up a tone 16, B up a tone 8, tag 4: 96 s |
 
-The first versions stay on the sound test as stage1 (v1) and stage2 (v1).
+| Title, corporate wave anthem | 128 BPM, Eb major | four-on-the-floor DPCM kick, gated noise snare, off-beat pumping 2A03 chords, Sunsoft octave saw bass, a triangle thump | VRC6 pulse, 25%, glassy, with a detuned echo; a 50% singing tone in B and the bridge; a harmony in the return | intro 4, A 8, A' 8, B 8, bridge 8, return up a tone 8, tag 4: 90 s. The hook opens the intro, A and the return |
+| Boss, the fight | 150 BPM, E minor with a phrygian F | relentless sixteenth saw bass, VRC6 tremolo that swells through the build, DPCM kick-snare with a closing roll | 2A03 pulse, 12.5%, screaming, sliding, fast vibrato | intro 4, riff 8, build 8, phase change (half time, E-F phrygian) 8, riff up a minor third 8, tag 4: 64 s, 58 s loop. One low hook nod in the intro |
+| Ending, the arc home | 90 BPM, D major | lazy DPCM backbeat, VRC6 pads opening into shimmering eighths in the choruses, fretless saw bass | 2A03 pulse, 50% flute with a late vibrato, brightening to 25% in the choruses; a harmony from the key change | intro 4, verse 8, chorus 8, bridge 4, chorus up a tone 8, outro 4: 96 s, no loop. The outro sings the hook once, slowly, then lands on a held tonic |
+
+The first versions stay on the sound test as stage1 (v1), stage2 (v1), boss (v1) and ending (v1); the
+title keeps both earlier arrangements, title (v1) and title (v2).
 
 ## DPCM drums
 

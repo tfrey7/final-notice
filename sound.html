@@ -48,9 +48,9 @@
     import { playSong, stopSong, sfx, hasSong, unlocked, currentSong, channelStatus } from './src/audio/player.mjs';
     import { SFX } from './src/audio/sfx.mjs';
 
-    const CUES = ['demo', 'title', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
-      'boss', 'ending', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'];
-    const LABELS = { 'title-v1': 'title (v1)', 'scene-v1': 'scene (v1)', 'stage1-v1': 'stage1 (v1)', 'stage2-v1': 'stage2 (v1)' };
+    const CUES = ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
+      'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'];
+    const LABELS = Object.fromEntries(CUES.filter((c) => /-v\d$/.test(c)).map((c) => [c, c.replace(/-(v\d)$/, ' ($1)')]));
     const songsEl = document.getElementById('songs');
     const effectsEl = document.getElementById('effects');
     const prompt = document.getElementById('prompt');

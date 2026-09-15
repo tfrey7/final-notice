@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CHANNELS, FRAME_HZ, noteToMidi } from '../src/audio/apu.mjs';
 import { compileSong, parseRows } from '../src/audio/player.mjs';
-import title, { MELODY, KEY } from '../src/audio/songs/title.mjs';
+import { MELODY, KEY } from '../src/audio/songs/title.mjs';
+import title from '../src/audio/songs/title-v2.mjs';
 import stage2 from '../src/audio/songs/stage2-v1.mjs';
 
 const inKey = new Set(KEY.map((n) => noteToMidi(`${n}4`) % 12));
