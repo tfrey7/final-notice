@@ -36,7 +36,7 @@ function bot(i, world, tune) {
   const foes = world.fighters.filter((f) => f.kind && f.state !== 'ko');
   const f = foes.sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
   const tape = world.tapes.some((o) => Math.abs(o.y - p.y) <= tune.depthReach && (p.x - o.x) * Math.sign(o.vx) > 0 && Math.abs(p.x - o.x) < 8 + Math.abs(o.vx) * 5);
-  const staffBlow = foes.some((o) => o.state === 'windup' && o.t >= tune.kinds[o.kind].windup - 5 && Math.abs(o.x - p.x) < 80);
+  const staffBlow = foes.some((o) => o.state === 'windup' && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - 5 && Math.abs(o.x - p.x) < 80);
   const parry = !p.parry && (tape || staffBlow);
   const altar = world.ritual && altarsInView(world).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
   if (altar && !p.weapon && !parry) {
@@ -142,7 +142,7 @@ for (const who of ['ward', 'mercer']) {
     const log = playthrough(who);
     console.log(`${who}: ${log.cleared ? 'cleared' : 'not cleared'} in ${(log.frames / 3600).toFixed(1)} min (${log.frames} frames), ${log.locks} locks, ${log.waves} waves, ${log.rituals} rituals, ${log.broken} broken, ${log.mended} hp mended, ${log.heals} heals, ${log.lives} lives lost (at locks ${log.lost.join(',')}), ${log.continues} continues`);
     assert.ok(log.cleared, `stuck after ${log.frames} frames: ${JSON.stringify(log.end)}`);
-    assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 6, 'a run with its continues takes minutes');
+    assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 8, 'a run with its continues takes minutes');
     assert.ok(log.locks >= 6, `${log.locks} locks`);
     assert.ok(log.rituals >= 2 && log.smashed >= chapelAltars(layout(CHAPEL).starts).length, 'both rituals are lit and every altar is smashed');
     assert.deepEqual([...log.foes].sort(), ['associate', 'counsel', 'manager', 'supervisor']);

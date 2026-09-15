@@ -38,7 +38,7 @@ function bot(i, world, tune) {
   if (!f) return { held: ['right'] };
   if (p.state === 'grab') return { held: [f.x >= p.x ? 'right' : 'left'], b: true };
   const tape = world.tapes.some((o) => Math.abs(o.y - p.y) <= tune.depthReach && (p.x - o.x) * Math.sign(o.vx) > 0 && Math.abs(p.x - o.x) < 8 + Math.abs(o.vx) * 5);
-  const staffBlow = foes.some((o) => o.state === 'windup' && o.t >= tune.kinds[o.kind].windup - 5 && Math.abs(o.x - p.x) < 80);
+  const staffBlow = foes.some((o) => o.state === 'windup' && o.t >= (o.attack?.windup ?? tune.kinds[o.kind].windup) - 5 && Math.abs(o.x - p.x) < 80);
   const open = OPEN.includes(f.state) && !f.armoured;
   const inReach = Math.abs(f.x - p.x) <= tune.punchReach - 2 && Math.abs(f.y - p.y) <= tune.depthReach;
   return { held: approach(p, f, tune.punchReach - 6), b: open && inReach && i % 4 === 0, parry: !p.parry && (tape || staffBlow) };

@@ -1,19 +1,21 @@
-// The SNES plays heavier than the NES, at Final Fight's pace (Tim, 2026-09-15): a slower stride, longer
-// wind-ups and recoveries, a longer hit-stop and fall, and foes that close in and swing slower. Each
-// table lists `scale`, a multiplier on speeds and distances, and `frames`, whole frames added to a time.
-// Only the SNES scenes read it, so the NES keeps its numbers. Estimates from memory, unverified.
+// The SNES plays heavier than the NES, at Final Fight's pace (Tim, 2026-09-15): a slower stride, a jab
+// about 5 frames out and 11 back, a 7-12 frame hit-stop, a knockdown of about a second and foes that wind
+// up for about half a second. Each table lists `scale`, a multiplier on speeds and distances, and `frames`,
+// whole frames added to a time. Only the SNES scenes read it, so the NES keeps its numbers. Estimates from
+// memory, unverified.
 import { BOSS, FOES } from '../stage1/tuning.mjs';
 import { TUNING as ESCAPE } from '../stage2/escape.mjs';
 import { ASSOCIATE } from '../stage2/foes.mjs';
+import { RITUAL } from './stage5/chapel.mjs';
 
 export const BRAWL_WEIGHT = {
-  scale: { walkX: 0.75, walkY: 0.8, runX: 0.8, knockback: 1.25, launchX: 1.25, foeSpeed: 0.8 },
+  scale: { walkX: 0.6, walkY: 0.65, runX: 0.7, knockback: 1.25, launchX: 1.25, foeSpeed: 0.65 },
   frames: {
-    landFrames: 1, punchStartup: 1, punchActive: 1, punchRecovery: 2,
-    finisherStartup: 2, finisherActive: 1, finisherRecovery: 6,
-    bufferFrames: 4, comboWindow: 6, hitStop: 1, hitStopHeavy: 3, hitStopFinish: 4, hitstun: 4,
-    hitFlashFrames: 6, heavyShakeFrames: 4,
-    downFrames: 12, getUpFrames: 6, throwFrames: 6, shakeFrames: 2, foeWindup: 6, foeCooldown: 15,
+    landFrames: 2, punchStartup: 2, punchActive: 1, punchRecovery: 4,
+    finisherStartup: 3, finisherActive: 1, finisherRecovery: 10, heavyStartup: 3, heavyRecovery: 6,
+    bufferFrames: 7, comboWindow: 10, hitStop: 4, hitStopHeavy: 5, hitStopFinish: 8, hitstun: 8,
+    hitFlashFrames: 12, heavyShakeFrames: 4,
+    downFrames: 24, getUpFrames: 10, throwFrames: 8, shakeFrames: 3, foeWindup: 10, foeCooldown: 30,
   },
 };
 
@@ -27,19 +29,19 @@ export const STAFF_WEIGHT = {
 // slower, and guards only about half a second between attacks, so the fight is his tells and your parries.
 // Pairs are [normal, fangs]; `guard` replaces his NES guard outright.
 export const VELLUM_WEIGHT = {
-  scale: { speed: BRAWL_WEIGHT.scale.foeSpeed, rushSpeed: 0.85 },
-  frames: { recover: 4, sweepFrames: 4 },
+  scale: { speed: BRAWL_WEIGHT.scale.foeSpeed, rushSpeed: 0.75 },
+  frames: { recover: 8, sweepFrames: 6 },
   guard: [30, 22],
 };
 
 export const FOES_WEIGHT = {
-  scale: { walkX: 0.8, walkY: 0.8, circleSpeed: 0.8, dodgeSpeed: 0.8, knockback: 1.25 },
-  frames: { tokenCooldown: 15, windupFrames: 6, recoverFrames: 6, staggerFrames: 4, knockdownFrames: 12 },
+  scale: { walkX: 0.65, walkY: 0.65, circleSpeed: 0.65, dodgeSpeed: 0.7, knockback: 1.25 },
+  frames: { tokenCooldown: 30, windupFrames: 10, recoverFrames: 10, staggerFrames: 6, knockdownFrames: 24 },
 };
 
 export const BOSS_WEIGHT = {
-  scale: { walk: 0.8, chargeSpeed: 0.85 },
-  frames: { restFrames: 10, enragedRest: 6, windupFrames: 6, enragedWindup: 4, heavyStagger: 4 },
+  scale: { walk: 0.65, chargeSpeed: 0.75 },
+  frames: { restFrames: 20, enragedRest: 12, windupFrames: 10, enragedWindup: 6, heavyStagger: 6 },
 };
 
 // Stage 2 keeps its top walk speed and jump, so every pit stays clearable; the ramp, the casts and the
@@ -54,6 +56,11 @@ export const ASSOCIATE_WEIGHT = {
   frames: { windUp: 6, rest: 20, down: 10 },
 };
 
+// The chapel's ritual counts absolute frames, so at the slower pace it mends and hastens more slowly too.
+export const RITUAL_WEIGHT = {
+  scale: { mendFrames: 1.6, haste: 0.65 },
+};
+
 export function weighed(table, { scale = {}, frames = {} }) {
   const out = { ...table };
   for (const [k, m] of Object.entries(scale)) if (k in out) out[k] = table[k] * m;
@@ -63,11 +70,11 @@ export function weighed(table, { scale = {}, frames = {} }) {
 
 let shared = false;
 
-// The shared foe and Stage 2 tables, weighed in place once per page; the SNES stage scenes call it.
+// The shared foe, Stage 2 and chapel tables, weighed in place once per page; the SNES stage scenes call it.
 export function weighShared() {
   if (shared) return;
   shared = true;
-  for (const [table, weight] of [[FOES, FOES_WEIGHT], [BOSS, BOSS_WEIGHT], [ESCAPE, ESCAPE_WEIGHT], [ASSOCIATE, ASSOCIATE_WEIGHT]]) {
+  for (const [table, weight] of [[FOES, FOES_WEIGHT], [BOSS, BOSS_WEIGHT], [ESCAPE, ESCAPE_WEIGHT], [ASSOCIATE, ASSOCIATE_WEIGHT], [RITUAL, RITUAL_WEIGHT]]) {
     Object.assign(table, weighed(table, weight));
   }
 }
