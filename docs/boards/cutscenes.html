@@ -1,0 +1,199 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Final Notice SNES: cutscene boards</title>
+<style>
+  body { background: #111; color: #ddd; font: 12px/1.35 monospace; margin: 16px; }
+  h2 { color: #f5d38a; margin: 18px 0 8px; font-size: 14px; }
+  section { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px; background: #1a1a1a; }
+  figure { margin: 0; width: 512px; }
+  canvas { width: 512px; height: 448px; image-rendering: pixelated; display: block; }
+  figcaption { padding: 4px 2px; white-space: pre-wrap; }
+  figcaption b { color: #f5d38a; }
+</style>
+<div id="boards"></div>
+<div id="done"></div>
+<script type="module">
+import { WIDTH, HEIGHT } from '../../src/snes/screen.mjs';
+import { rgb15, channels } from '../../src/snes/color.mjs';
+import { screen, brightnessPass, mosaicPass, mathPass, mode7Pass, mode7Matrix, windowPass, toRgba } from '../../src/snes/fx.mjs';
+import { drawTextBox, drawString, wrapText, measure } from '../../src/snes/text.mjs';
+import { paintBackdrop, paintPortrait } from '../../src/snes/cinema.mjs';
+
+const CLEAR = 0xffff;
+const filler = (buf, w = WIDTH, h = HEIGHT) => (x, y, rw, rh, c) => {
+  for (let j = Math.max(0, y); j < Math.min(h, y + rh); j++) for (let i = Math.max(0, x); i < Math.min(w, x + rw); i++) buf[j * w + i] = c;
+};
+const mix = (a, b, t) => rgb15(...channels(a).map((v, i) => Math.round(v + (channels(b)[i] - v) * t)));
+const grad = (f, x, y, w, h, top, bottom) => { for (let i = 0; i < h; i++) f(x, y + i, w, 1, mix(top, bottom, h > 1 ? i / (h - 1) : 0)); };
+
+const C = {
+  night: rgb15(1, 1, 5), dusk: rgb15(7, 3, 10), bldg: rgb15(2, 2, 4), bldg2: rgb15(3, 3, 6),
+  lit: rgb15(28, 24, 11), dim: rgb15(6, 6, 9), tube: rgb15(29, 31, 28), wall: rgb15(9, 12, 11),
+  carpet: rgb15(6, 6, 8), desk: rgb15(13, 9, 6), paper: rgb15(28, 28, 23), bar: rgb15(18, 26, 18),
+  ink: rgb15(3, 3, 6), red: rgb15(27, 4, 5), brass: rgb15(24, 18, 7), brassD: rgb15(12, 8, 3),
+  skin: rgb15(22, 16, 12), suit: rgb15(6, 7, 11), coat: rgb15(10, 9, 8), shirt: rgb15(27, 27, 26),
+  outline: rgb15(3, 2, 4), wax: rgb15(22, 3, 4), text: rgb15(31, 31, 31),
+};
+
+function skyline(f, off = 0, base = 150) {
+  grad(f, 0, 0, WIDTH, base, C.night, C.dusk);
+  for (let i = 0; i < 14; i++) {
+    const x = ((i * 23 + off) % 300) - 22, w = 16 + (i * 7) % 14, top = base - 30 - (i * 37) % 60;
+    f(x, top, w, base - top, C.bldg2);
+    for (let wy = top + 4; wy < base - 3; wy += 6) for (let wx = x + 3; wx < x + w - 3; wx += 4) if ((wx * 5 + wy * 3 + i) % 7 < 2) f(wx, wy, 2, 2, C.dim);
+  }
+  f(0, base, WIDTH, HEIGHT - base, C.bldg);
+}
+
+function tower(f, x, top, litFloor, w = 72) {
+  f(x - 1, top - 1, w + 2, HEIGHT - top + 1, C.outline);
+  f(x, top, w, HEIGHT - top, C.bldg);
+  for (let fl = 0, y = top + 6; y < HEIGHT; fl++, y += 9) {
+    for (let wx = x + 4; wx < x + w - 4; wx += 6) f(wx, y, 4, 4, fl === litFloor ? C.lit : ((wx + fl) % 11 === 0 ? C.dim : rgb15(3, 3, 6)));
+  }
+  f(x + (w >> 1) - 1, top - 14, 2, 14, C.outline);
+}
+
+function person(f, x, feet, { h = 56, suit = C.suit, skin = C.skin, hair = C.ink, tie = C.red, back = false, coat = false, slump = false } = {}) {
+  const head = Math.round(h * 0.17), body = Math.round(h * 0.4), legs = h - head - body;
+  const w = Math.round(h * 0.34), top = feet - h + (slump ? 6 : 0);
+  f(x - (w >> 1) - 1, top + head - 1, w + 2, body + legs + 2, C.outline);
+  f(x - (w >> 1), top + head, w, body, coat ? C.coat : suit);
+  f(x - (w >> 1) + 2, top + head + body, (w >> 1) - 3, legs, suit);
+  f(x + 1, top + head + body, (w >> 1) - 3, legs, suit);
+  if (!back) { f(x - 2, top + head, 4, body >> 2, C.shirt); f(x - 1, top + head + 1, 2, body >> 2, tie); }
+  f(x - (head >> 2) - 3, top - 1 + (slump ? 3 : 0), (head >> 1) + 6, head + 2, C.outline);
+  f(x - (head >> 2) - 2, top + (slump ? 3 : 0), (head >> 1) + 4, head, back ? hair : skin);
+  f(x - (head >> 2) - 2, top + (slump ? 3 : 0), (head >> 1) + 4, 3, hair);
+}
+
+function office(f) {
+  grad(f, 0, 0, WIDTH, 96, C.wall, mix(C.wall, 0, 0.5));
+  grad(f, 0, 96, WIDTH, HEIGHT - 96, mix(C.carpet, C.wall, 0.3), C.carpet);
+  for (let x = 12; x < WIDTH; x += 70) { f(x, 10, 50, 4, C.tube); f(x - 2, 14, 54, 1, mix(C.tube, C.wall, 0.6)); }
+  for (let row = 0; row < 4; row++) {
+    const y = 100 + row * 26, w = 38 + row * 8;
+    for (let x = 8 - row * 6; x < WIDTH; x += w + 18) { f(x, y, w, 8, C.desk); f(x, y + 8, w, 2, mix(C.desk, 0, 0.5)); f(x + 6, y - 10, 12, 10, rgb15(18, 18, 16)); f(x + 8, y - 8, 8, 5, rgb15(4, 10, 6)); }
+  }
+}
+
+function textPage(f, speaker, line) { drawTextBox(f, { speaker, lines: wrapText(line)[0], shown: 999 }); }
+
+function stampTex(word, colour, w = measure(word) + 24, h = 28) {
+  const px = new Uint16Array(w * h).fill(CLEAR);
+  const f = filler(px, w, h);
+  f(0, 0, w, 3, colour); f(0, h - 3, w, 3, colour); f(0, 0, 3, h); f(0, 0, 3, h, colour); f(w - 3, 0, 3, h, colour);
+  drawString(f, word, 12, 10, colour, null);
+  return { w, h, px };
+}
+
+function pictureOnly(buf, backdrop, portrait) {
+  const f = filler(buf);
+  f(0, 0, WIDTH, HEIGHT, 0);
+  paintBackdrop(f, backdrop);
+  if (portrait) paintPortrait(buf, portrait);
+  return f;
+}
+
+const BOARDS = [
+  { scene: 'OPENING (wordless, 40 s; Start skips to the title)', boards: [
+    { id: 'O1', t: '0:00-0:05', draw: (b) => { const f = filler(b); skyline(f); tower(f, 150, 40, 5); return brightnessPass(b, 6); },
+      cam: 'still; fade in from black, brightness 0 to 15 over 32 frames', sfx: 'a clock tick on the closed hat, nothing else', fx: 'INIDISP fade; HDMA sky gradient on the backdrop colour' },
+    { id: 'O2', t: '0:05-0:10', draw: (b) => { const f = filler(b); skyline(f, 40, 200); tower(f, 92, -10, 12); return b; },
+      cam: 'tilt up the tower: BG1 scrolls 160 px in 4 s, the skyline (BG2) at half speed', sfx: 'tick continues; warm pad swells in', fx: 'two-layer parallax; one floor stays lit' },
+    { id: 'O3', t: '0:10-0:16', draw: (b) => { const f = filler(b); office(f); person(f, 196, 118, { h: 40, back: true }); return mosaicPass(b, 8); },
+      cam: 'mosaic 16 to 1 onto the lit floor: rows of desks, one clerk working late, back to us', sfx: 'a dot-matrix printer on the noise channel; EP chord of the melody', fx: 'mosaic in over 16 frames' },
+    { id: 'O4', t: '0:16-0:24', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, C.ink); for (let y = 0; y < HEIGHT; y += 24) { f(40, y, 176, 12, C.paper); f(40, y + 12, 176, 12, C.bar); } f(40, 0, 6, HEIGHT, rgb15(22, 22, 20)); f(210, 0, 6, HEIGHT, rgb15(22, 22, 20)); drawString(f, 'ACCOUNT 000047', 60, 64, C.ink, null); drawString(f, 'LIFETIMES BILLED:  47', 60, 88, C.ink, null); drawString(f, 'BALANCE DUE', 60, 112, C.ink, null); return b; },
+      cam: 'insert, the bill feeds up the screen (BG1 scrolls 1 px a frame); the count ticks 01 to 47', sfx: 'printer; a blip per tick', fx: 'green-bar paper is two tile rows; text on BG3, no window' },
+    { id: 'O5', t: '0:24-0:28', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, C.ink); for (let y = 0; y < HEIGHT; y += 24) { f(40, y, 176, 12, C.paper); f(40, y + 12, 176, 12, C.bar); } const under = b.slice(); const out = mode7Pass(stampTex('APPROVED', C.red), mode7Matrix(1.5, -0.1), [128, 104], under); person(filler(out), 128, 60, { h: 30, suit: C.suit, back: true }); return out; },
+      cam: 'a hand brings a stamp down: APPROVED lands at 150% and settles; 2 px shake for 6 frames', sfx: 'the stamp; the music stops dead, one second of silence', fx: 'Mode 7 scale on the stamp, red ink by colour add' },
+    { id: 'O6', t: '0:28-0:34', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, rgb15(4, 4, 5)); f(56, 20, 144, 204, C.brassD); f(60, 24, 136, 200, rgb15(8, 8, 9)); f(84, 30, 88, 16, C.ink); ['B3', 'B2', 'B1', 'L'].forEach((s, i) => drawString(f, s, 90 + i * 20, 34, i === 2 ? C.lit : C.dim, null)); f(127, 60, 2, 164, C.ink); return b; },
+      cam: 'still on closed lift doors; the floor indicator climbs from below ground: B3, B2, B1', sfx: 'a low hum; one lift chime per floor, the melody\'s first three notes', fx: 'indicator lamps are a palette cycle' },
+    { id: 'O7', t: '0:34-0:40', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, rgb15(4, 4, 5)); f(60, 24, 136, 200, rgb15(26, 22, 14)); person(f, 108, 214, { h: 64, coat: true }); person(f, 150, 214, { h: 60, coat: true, suit: rgb15(12, 6, 6) }); const lit = screen(rgb15(6, 4, 1)); return windowPass(mathPass(b, lit, { op: 'add' }), [{ left: 60, right: 195 }], { colour: rgb15(4, 4, 5) }); },
+      cam: 'doors part from the centre (window widens 0 to 136 px in 1 s): two auditors in coats, backlit', sfx: 'the gated snare and slap bass enter: the title melody begins', fx: 'window mask for the doors, warm light by fixed-colour add' },
+    { id: 'O8', t: '0:40', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, 0); drawString(f, 'FINAL NOTICE', 128 - (measure('FINAL NOTICE') >> 1), 108, C.text); return b; },
+      cam: 'fade to black on the melody\'s downbeat; the title logo zooms in (card 1926\'s title)', sfx: 'title theme continues unbroken', fx: 'hands over to the title scene' },
+  ] },
+  { scene: 'SCENE 1: THE ASSIGNMENT (after select, about 50 s)', boards: [
+    { id: 'S1-1', t: '0:00-0:04', draw: (b) => { const f = pictureOnly(b, 'bellwether-office'); person(f, 60, 104, { h: 60, back: true, hair: rgb15(24, 24, 25) }); person(f, 230, 140, { h: 60, coat: true }); return brightnessPass(b, 11); },
+      cam: 'fade in on Bellwether at the window, back turned; the auditor walks in from the right and stops', sfx: 'scene cue: the melody slowed on EP; rain on the glass (noise, low)', fx: 'no text box: 4 s of acting first' },
+    { id: 'S1-2', t: '0:04-0:12', draw: (b) => { const f = pictureOnly(b, 'bellwether-office', 'bellwether'); textPage(f, 'BELLWETHER', 'They billed one customer for forty-seven lifetimes.'); return b; },
+      cam: 'he turns (3 frames), cut to his portrait; box slides up from below', sfx: 'typewriter blip per letter', fx: 'box on BG3, half-blend window gradient' },
+    { id: 'S1-3', t: '0:12-0:16', draw: (b) => { const f = pictureOnly(b, 'bellwether-office', 'ward'); textPage(f, 'WARD', 'He died on Tuesday.'); return b; },
+      cam: 'cut to the auditor\'s portrait (Mercer: "Forty-seven?")', sfx: 'music drops to the pad alone under this line', fx: 'hard cut; no mosaic inside a conversation' },
+    { id: 'S1-4', t: '0:16-0:26', draw: (b) => { const f = pictureOnly(b, 'bellwether-office'); f(70, 96, 120, 20, C.paper); f(70, 96, 120, 3, C.bar); drawString(f, 'LIFETIMES: 47', 90, 104, C.ink, null); textPage(f, 'BELLWETHER', "I read it. That's why you're here. Get the original ledger."); return b; },
+      cam: 'insert: the O4 bill slid across the desk toward camera (sprite, 8 frames)', sfx: 'paper flutter', fx: 'the prop from the opening returns: the plot in one object' },
+    { id: 'S1-5', t: '0:26-0:36', draw: (b) => { const f = pictureOnly(b, 'bellwether-office', 'bellwether'); textPage(f, 'BELLWETHER', 'If they lean on you, they answer to me.'); const glow = screen(0); filler(glow)(150, 40, 106, 104, rgb15(5, 3, 0)); return mathPass(b, glow, { op: 'add' }); },
+      cam: 'portrait, the desk lamp on his right side', sfx: 'bass note on "me"', fx: 'lamp glow: fixed colour add in a window' },
+    { id: 'S1-6', t: '0:36-0:48', draw: (b) => { const f = pictureOnly(b, 'bellwether-office'); person(f, 60, 104, { h: 60, back: true, hair: rgb15(24, 24, 25) }); textPage(f, 'BELLWETHER', 'And call before you make the evening news.'); return brightnessPass(b, 7); },
+      cam: 'back to the room: he turns to the window again while speaking; the auditor leaves; fade out 24 frames', sfx: 'stage-start jingle over the fade', fx: 'brightness to 0, then Stage 1 fades in' },
+  ] },
+  { scene: 'BOSS INTRODUCTIONS (4-8 s each, Start skips, the pad returns on the last frame)', boards: [
+    { id: 'B1', t: 'Vellum, 8 s', draw: (b) => { const f = pictureOnly(b, 'vellum-desk'); person(f, 128, 124, { h: 62, suit: rgb15(3, 3, 5), skin: rgb15(23, 23, 25) }); person(f, 40, 200, { h: 60, coat: true, back: true }); f(112, 150, 136, 40, C.paper); f(112, 150, 136, 3, C.red); drawString(f, 'DEPUTY DIRECTOR', 120, 158, C.ink, null); drawString(f, 'VELLUM', 120, 172, C.red, null); return b; },
+      cam: 'the camera pans right into the locked office (BG1 scroll 96 px); Vellum stands from the desk; a memo slip slides in from the right and holds 2 s', sfx: 'music cuts; FILED stamp, then his voice line "You\'re overdue." (card 1931\'s); the boss cue hits on the stamp', fx: 'memo on BG3 slid by a window edge; the subtitle uses the same slip' },
+    { id: 'B2', t: 'Records Custodian, 4 s', draw: (b) => { const f = pictureOnly(b, 'archive-button'); f(104, 60, 48, 60, rgb15(8, 8, 9)); f(112, 50, 32, 10, C.brass); person(f, 128, 150, { h: 40, suit: rgb15(9, 11, 9) }); f(16, 16, 108, 34, C.paper); drawString(f, 'RECORDS CUSTODIAN', 22, 22, C.ink, null); drawString(f, 'ORIGINAL COPY', 22, 36, C.red, null); return b; },
+      cam: 'no pan (mid-boss): the Custodian steps between the auditor and the ledger stand; slip drops in top-left', sfx: 'no voice; a filing drawer slams; boss cue', fx: 'shorter slip, same look, so the Great Seal\'s feels bigger' },
+    { id: 'B3', t: 'The Great Seal, 8 s', draw: (b) => { const f = filler(b); grad(f, 0, 0, WIDTH, 170, rgb15(6, 4, 3), rgb15(2, 1, 1)); f(0, 170, WIDTH, 54, rgb15(8, 6, 4)); const press = new Uint16Array(96 * 96).fill(CLEAR); const pf = filler(press, 96, 96); pf(10, 0, 76, 70, C.brass); pf(14, 4, 68, 62, C.brassD); pf(0, 70, 96, 20, C.brass); pf(36, 20, 24, 24, C.wax); const shadow = screen(0); filler(shadow)(64, 176, 128, 12, rgb15(6, 6, 6)); const out = mathPass(b, shadow, { op: 'sub' }); const p = mode7Pass({ w: 96, h: 96, px: press }, mode7Matrix(1.4, 0), [128, 96], out); const pf2 = filler(p); pf2(8, 190, 180, 28, C.paper); drawString(pf2, 'RETENTION DIRECTOR', 14, 194, C.ink, null); drawString(pf2, 'THE GREAT SEAL', 14, 206, C.red, null); return p; },
+      cam: 'the press lowers out of the dark: Mode 7 scale 0.6 to 1.4 in 2 s, its shadow grows under it; slip at the bottom', sfx: 'a pneumatic hiss, then (proposed) "Everything here is permanent."; boss cue', fx: 'Mode 7 press + colour-subtract shadow (the fight\'s own set piece)' },
+  ] },
+  { scene: 'SCENE 2: THE INCIDENT (in Vellum\'s office after the fight, about 45 s)', boards: [
+    { id: 'S2-1', t: '0:00-0:04', draw: (b) => { const f = pictureOnly(b, 'vellum-desk'); person(f, 128, 124, { h: 62, suit: rgb15(3, 3, 5), skin: rgb15(23, 23, 25), slump: true }); person(f, 200, 200, { h: 60, coat: true, back: true }); return b; },
+      cam: 'no cut from play: Vellum slumps in his chair, the HUD fades, the auditor walks to the desk', sfx: 'boss cue ends on its last hit; the office hum', fx: 'HUD brightness out; play sprites act' },
+    { id: 'S2-2', t: '0:04-0:12', draw: (b) => { const f = pictureOnly(b, 'vellum-desk', 'vellum'); textPage(f, 'VELLUM', 'The original records were destroyed in the incident.'); return b; },
+      cam: 'he straightens his tie (2 frames), cut to portrait', sfx: 'scene cue, low', fx: 'portrait on BG1 over his desk backdrop' },
+    { id: 'S2-3', t: '0:12-0:15', draw: (b) => { const f = pictureOnly(b, 'vellum-desk', 'ward'); textPage(f, 'WARD', 'What incident?'); return b; },
+      cam: 'auditor portrait (Mercer: "Which incident?")', sfx: 'music stops', fx: 'silence before the hit' },
+    { id: 'S2-4', t: '0:15-0:18', draw: (b) => { const f = pictureOnly(b, 'archive-button'); textPage(f, 'VELLUM', 'This one.'); return b; },
+      cam: 'insert: his hand on the RETENTION button', sfx: 'a click; nothing for 12 frames', fx: 'hard cut' },
+    { id: 'S2-5', t: '0:18-0:19', draw: (b) => { const f = pictureOnly(b, 'vellum-desk'); const tex = { w: WIDTH, h: HEIGHT, px: b.slice() }; const out = mode7Pass(tex, mode7Matrix(0.8, 1.1), [128, 72], screen(rgb15(4, 0, 0))); return mathPass(out, screen(rgb15(10, 0, 0)), { op: 'add' }); },
+      cam: 'the room spins one turn in a second (card 1927\'s spin), red flash every 8 frames; no box: Mode 7 leaves no BG3', sfx: 'alarm sample loops', fx: 'Mode 7 rotate + scale; colour add red' },
+    { id: 'S2-6', t: '0:19-0:30', draw: (b) => { const f = filler(b); f(0, 0, WIDTH, HEIGHT, 0); grad(f, 0, 0, WIDTH, 144, rgb15(3, 5, 4), rgb15(1, 2, 2)); f(108, 60, 40, 30, C.paper); const glow = screen(0); filler(glow)(88, 40, 80, 70, rgb15(8, 7, 2)); const out = mathPass(b, glow, { op: 'add' }); textPage(filler(out), 'WARD', 'The original is downstairs.'); return out; },
+      cam: 'the ledger far below, glowing through the floor grille (Mercer: "Then I\'m going downstairs.")', sfx: 'alarm muffled under the scene cue', fx: 'glow by add in a window' },
+    { id: 'S2-7', t: '0:30-0:40', draw: (b) => { const f = pictureOnly(b, 'break-room', 'speaker'); textPage(f, 'BELLWETHER', 'Get yourself out. With the ledger if you can.'); return mosaicPass(b, 4); },
+      cam: 'radio: a handset portrait, the red LED lit while he talks; mosaic out to Stage 2', sfx: 'radio crackle (noise burst) at each page', fx: 'mosaic 1 to 16, then Stage 2 mosaics in' },
+  ] },
+  { scene: 'SCENE 3: ORIGINAL DOCUMENTS (after the exit run, about 55 s)', boards: [
+    { id: 'S3-1', t: '0:00-0:05', draw: (b) => { const f = pictureOnly(b, 'break-room'); f(80, 118, 96, 10, C.desk); f(112, 110, 30, 8, C.paper); person(f, 60, 144, { h: 56, coat: true }); return b; },
+      cam: 'a quiet break room; the auditor sits, the ledger on the table', sfx: 'no music: fluorescent buzz and a vending machine hum', fx: 'the Super Metroid silence' },
+    { id: 'S3-2', t: '0:05-0:15', draw: (b) => { const f = pictureOnly(b, 'ledger-page'); textPage(f, 'WARD', 'Every transfer was approved.'); return b; },
+      cam: 'insert: the page scrolls up (BG1, 1 px a frame) from YEARS to ACCOUNT ZERO, stopping on the seal (Mercer: "Signed off at the top.")', sfx: 'scene cue enters, sparse', fx: 'vertical scroll on one layer' },
+    { id: 'S3-3', t: '0:15-0:25', draw: (b) => { const f = pictureOnly(b, 'break-room', 'speaker'); textPage(f, 'SPEAKER', 'Your inspection is suspended. Surrender the original documents.'); return mathPass(b, screen(rgb15(4, 4, 4)), { op: 'sub', where: (x, y) => y < 144 }); },
+      cam: 'the wall speaker; the room dims while it talks', sfx: 'music cuts; the voice is a filtered noise tone per letter', fx: 'colour subtract over the picture only' },
+    { id: 'S3-4', t: '0:25-0:30', draw: (b) => { const f = pictureOnly(b, 'break-room', 'ward'); textPage(f, 'WARD', 'An unusually prompt response.'); return b; },
+      cam: 'auditor portrait (Mercer: "That didn\'t take long.")', sfx: 'pad returns', fx: 'lights back up' },
+    { id: 'S3-5', t: '0:30-0:42', draw: (b) => { const f = pictureOnly(b, 'bellwether-office', 'bellwether'); textPage(f, 'BELLWETHER', 'You did your job. Now let me do mine. Bring me the ledger.'); return b; },
+      cam: 'phone: Bellwether in his office, night outside', sfx: 'phone ring, pickup; the melody whole for the first time since the title', fx: 'mosaic between rooms' },
+    { id: 'S3-6', t: '0:42-0:50', draw: (b) => { const f = pictureOnly(b, 'break-room', 'ward'); textPage(f, 'WARD', 'The scope has expanded.'); return b; },
+      cam: 'the auditor stands, takes the ledger (Mercer: "We\'re going to need a bigger file.")', sfx: 'one bass note, then silence', fx: 'hard cut to the ending' },
+  ] },
+  { scene: 'ENDING (after Scene 3; about 25 s, then credits)', boards: [
+    { id: 'E1', t: '0:00-0:06', draw: (b) => { const f = filler(b); grad(f, 0, 0, WIDTH, HEIGHT, rgb15(12, 8, 5), rgb15(6, 4, 2)); f(48, 48, 160, 128, rgb15(24, 19, 10)); f(48, 40, 60, 10, rgb15(24, 19, 10)); f(60, 60, 136, 104, C.paper); drawString(f, 'FILE: ACCOUNT ZERO', 72, 72, C.ink, null); return b; },
+      cam: 'top-down on Bellwether\'s desk: a manila file; the ledger is laid in it (sprite, 12 frames)', sfx: 'ending cue: the title melody, slow', fx: 'desk on BG2, file on BG1' },
+    { id: 'E2', t: '0:06-0:10', draw: (b) => { const f = filler(b); grad(f, 0, 0, WIDTH, HEIGHT, rgb15(12, 8, 5), rgb15(6, 4, 2)); f(48, 48, 160, 128, rgb15(24, 19, 10)); f(60, 60, 136, 104, C.paper); drawString(f, 'FILE: ACCOUNT ZERO', 72, 72, C.ink, null); const out = mode7Pass(stampTex('EVIDENCE', C.red), mode7Matrix(1.8, -0.15), [128, 120], b.slice()); return mathPass(out, screen(rgb15(3, 3, 3)), { op: 'add' }); },
+      cam: 'EVIDENCE stamps down: scale 3.0 to 1.8 in 10 frames, a one-frame white flash, 2 px shake', sfx: 'the stamp; music holds its chord', fx: 'Mode 7 stamp, fixed-colour add flash: the O5 APPROVED stamp answered' },
+    { id: 'E3', t: '0:10-0:16', draw: (b) => { const f = filler(b); grad(f, 0, 0, WIDTH, HEIGHT, rgb15(12, 8, 5), rgb15(6, 4, 2)); f(48, 48, 160, 128, rgb15(24, 19, 10)); return mosaicPass(b, 12); },
+      cam: 'the file closes; mosaic out', sfx: 'paper; the melody\'s unresolved last phrase begins', fx: 'mosaic 1 to 16' },
+    { id: 'E4', t: 'credits', draw: (b) => { const f = filler(b); skyline(f); tower(f, 150, 40, -1); const out = windowPass(b, (y) => (y > 120 ? [{ left: 0, right: 255 }] : [{ left: 0, right: 149 }]), { colour: C.night }); ['FINAL NOTICE', '', 'DESIGN', 'TIM'].forEach((s, i) => drawString(filler(out), s, 20, 40 + i * 12)); return out; },
+      cam: 'credits scroll on BG3 over the night tower; its lit windows go out floor by floor, top down, one floor per credit', sfx: 'ending cue', fx: 'window masks per scanline band (HDMA on WH0/WH1)' },
+    { id: 'E5', t: 'last', draw: (b) => { const f = filler(b); skyline(f); tower(f, 150, 40, 18); drawString(f, 'THE END', 128 - (measure('THE END') >> 1), 190); return brightnessPass(b, 9); },
+      cam: 'one window stays lit (a clerk working late, from O3); THE END; fade', sfx: 'the clock tick from O1, alone', fx: 'fade to black, back to the title' },
+  ] },
+];
+
+const root = document.getElementById('boards');
+for (const [n, group] of BOARDS.entries()) {
+  const wrap = document.createElement('div'); wrap.id = `g${n}`; root.append(wrap);
+  const h = document.createElement('h2'); h.textContent = group.scene; wrap.append(h);
+  const sec = document.createElement('section'); wrap.append(sec);
+  for (const bd of group.boards) {
+    const fig = document.createElement('figure');
+    const cv = document.createElement('canvas'); cv.width = WIDTH; cv.height = HEIGHT;
+    const out = bd.draw(screen(0));
+    cv.getContext('2d').putImageData(new ImageData(toRgba(out), WIDTH, HEIGHT), 0, 0);
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<b>${bd.id}  ${bd.t}</b>\nCAMERA ${bd.cam}\nSOUND  ${bd.sfx}\nSNES   ${bd.fx}`;
+    fig.append(cv, cap); sec.append(fig);
+  }
+}
+document.getElementById('done').textContent = 'boards ready';
+</script>
