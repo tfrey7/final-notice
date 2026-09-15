@@ -1,0 +1,90 @@
+// The brawl lab's dials, the pure half: which feel numbers the panel shows, their ranges, stepping
+// one by pad, the attack-turn gate and the settings text Tim copies into the room.
+// Dials change the lab's live tables only; nothing here writes the game's defaults.
+import { TUNING } from '../stage1/moves.mjs';
+import { KINDS } from '../stage1/staff.mjs';
+
+// Dials the brawl design will want but the fighting does not have yet; shown and copied, not wired.
+export const PLANNED = {
+  parryFrames: [8, 1, 30, 1],
+  injunctionCooldown: [600, 60, 1800, 30],
+};
+
+// Lab-only dials on top of TUNING: enemy speed and wind-up across every kind, and attack turns.
+export const LAB = {
+  foeWalkScale: [1, 0.25, 3, 0.125],
+  foeWindupAdd: [0, -20, 40, 1],
+  maxAttackers: [3, 1, 4, 1],
+  meterFull: [0, 0, 1, 1],
+};
+
+export const MAX_OF_KIND = 6;
+
+// Every dial in panel order, grouped. `value` is the lab's starting point for that dial.
+export function buildDials(base) {
+  const group = (name, table, values) => Object.entries(table).map(([key, [value, min, max, step]]) => {
+    const v = values?.[key] ?? value;
+    return { group: name, key, value: v, start: v, min: Math.min(min, v), max: Math.max(max, v), step };
+  });
+  return [
+    ...group('lab', LAB),
+    ...group('moves', TUNING, base),
+    ...group('planned', PLANNED),
+  ];
+}
+
+const decimals = (step) => (String(step).split('.')[1] ?? '').length;
+
+// Nudges a dial by `dir` steps, clamped to its range and snapped to its step.
+export function nudge(dial, dir) {
+  const raw = dial.value + dir * dial.step;
+  const snapped = Number((Math.round(raw / dial.step) * dial.step).toFixed(decimals(dial.step)));
+  dial.value = Math.min(dial.max, Math.max(dial.min, snapped));
+  return dial.value;
+}
+
+// The spawn order for a wave: each kind as many times as its count, interleaved so kinds mix.
+export function waveKinds(counts) {
+  const out = [];
+  const kinds = Object.keys(KINDS);
+  for (let i = 0; i < MAX_OF_KIND; i++) for (const k of kinds) if ((counts[k] ?? 0) > i) out.push(k);
+  return out;
+}
+
+// KINDS with the lab's speed scale and wind-up offset applied to each kind's own numbers.
+export function labKinds(original, { foeWalkScale, foeWindupAdd }) {
+  return Object.fromEntries(Object.entries(original).map(([k, v]) => [k, {
+    ...v, speed: v.speed * foeWalkScale, windup: Math.max(1, v.windup + foeWindupAdd),
+  }]));
+}
+
+const ATTACKING = ['windup', 'punch'];
+
+// After a foe's think: one that has just started a wind-up while `max` others are already swinging
+// steps back and waits its turn.
+export function takeTurns(world, f, max, wait = 20) {
+  if (f.state !== 'windup' || f.t !== 0) return false;
+  const busy = world.fighters.filter((o) => o !== f && o.team === 'foe' && ATTACKING.includes(o.state)).length;
+  if (busy < max) return false;
+  f.state = 'idle';
+  f.cooldown = Math.max(f.cooldown, wait);
+  return true;
+}
+
+// The text "copy settings" puts on the clipboard: changed dials first, then everything.
+export function settingsText(dials, counts, who) {
+  const line = (d) => `${d.key}: ${d.value}`;
+  const changed = dials.filter((d) => d.value !== d.start);
+  const byGroup = (g) => dials.filter((d) => d.group === g).map(line).join('\n');
+  return [
+    `Brawl lab settings (${who})`,
+    `wave: ${Object.entries(counts).filter(([, n]) => n > 0).map(([k, n]) => `${k} x${n}`).join(', ') || 'none'}`,
+    `changed: ${changed.length ? changed.map((d) => `${d.key} ${d.start} -> ${d.value}`).join(', ') : 'none'}`,
+    '',
+    '[lab]', byGroup('lab'),
+    '',
+    '[moves] (before the SNES 1.5x pixel scale)', byGroup('moves'),
+    '',
+    '[planned, not wired yet]', byGroup('planned'),
+  ].join('\n');
+}

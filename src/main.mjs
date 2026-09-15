@@ -21,6 +21,7 @@ import { SnesOpeningScene } from './snes/scenes/opening.mjs';
 import { opensWithOpening } from './snes/opening.mjs';
 import { SnesStage1Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
+import { SnesLabScene } from './snes/lab/scene.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -55,7 +56,9 @@ const session = () => { try { return sessionStorage; } catch { return null; } };
 // The opening is also the title's attract loop, so it is always registered under ?snes.
 if (snes) scene = opensWithOpening(params, session()) ? [new SnesOpeningScene(), ...scene] : [...scene, new SnesOpeningScene()];
 const debug = snes && debugScene(params);
-if (debug) scene = [debug];
+// ?snes&go=lab is the brawl lab: Stage 1's fighting in a grey-box room with live dials.
+if (snes && params.get('go') === 'lab') scene = [new SnesLabScene()];
+else if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
 
