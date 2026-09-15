@@ -1,11 +1,14 @@
-// Stage 2's test run: the auditor, the seals, target boxes and the camera on one small built-in area. Pure.
+// Stage 2's test run: the auditor, the enchantments, Associates, boxes and the camera on one small built-in area. Pure.
 import { stepCasts } from './casting.mjs';
+import { createAssociate, stepFoes, stepGlyphs } from './foes.mjs';
 import { parseArea } from './physics.mjs';
+import { createPickups, dropExtra, inHand, marks, stepPickups, swapHand } from './pickups.mjs';
 import { createPlayer, stepPlayer } from './player.mjs';
 
 export const SCREEN_W = 256;
 
 // Until the archive art lands: 48x15 tiles, a HUD band on top, three pits, ledges and boxes to break.
+// C, T and M float a Carbon Copy, Red Tape or Margin of Error ledger; A is an Associate; W a wax lock.
 export const TEST_MAP = [
   '',
   '',
@@ -18,8 +21,8 @@ export const TEST_MAP = [
   '..................B',
   '..........................................####',
   '......B.........#####',
-  '..............................B',
-  '..P...........B..............B.........B',
+  '....C.........T...............M',
+  '..P...........B..........A.A..B.....W..A...W',
   '##############....#############.....########...##',
   '##############....#############.....########...##',
 ].map((r) => r.padEnd(49, '.'));
@@ -32,7 +35,11 @@ export function createRun(auditor = 'ward', map = TEST_MAP) {
     area, frame: 0, camX: 0, paused: false,
     player: createPlayer(auditor, area.start),
     casts: [],
-    targets: area.targets.map((t) => ({ ...t, w: 16, h: 16, hp: 2, flash: 0 })),
+    targets: area.targets.map((t) => ({ ...t, w: 16, h: 16, hp: 2, flash: 0, frozen: 0 })),
+    locks: marks(map, 'W').map(({ x, y }) => ({ x, y, w: 16, h: 32, hp: 1, flash: 0, lock: true })),
+    foes: marks(map, 'A').map(createAssociate),
+    glyphs: [],
+    pickups: createPickups(map),
     carried: ['notice', null],
     hand: 0,
     events: [],
@@ -44,10 +51,18 @@ export function stepRun(w, pad) {
   if (pad.pressed.has('start')) w.paused = !w.paused;
   if (w.paused) return w;
   w.frame += 1;
-  if (pad.pressed.has('select') && w.carried[1 - w.hand]) w.hand = 1 - w.hand;
+  if (pad.pressed.has('select') && swapHand(w)) w.events.push({ type: 'swap', name: inHand(w) });
+  w.player.spell = inHand(w);
   w.events.push(...stepPlayer(w.player, pad, w.area, w.casts));
-  for (const t of w.targets) t.flash = Math.max(0, t.flash - 1);
-  w.events.push(...stepCasts(w.casts, w.area, w.targets, { x0: w.camX, x1: w.camX + SCREEN_W }));
+  w.events.push(...stepPickups(w));
+  for (const t of [...w.targets, ...w.locks]) {
+    t.flash = Math.max(0, t.flash - 1);
+    t.frozen = Math.max(0, (t.frozen ?? 0) - 1);
+  }
+  w.events.push(...stepFoes(w.foes, w.glyphs, w.player, w.area));
+  w.events.push(...stepCasts(w.casts, w.area, [...w.targets, ...w.locks, ...w.foes, ...w.glyphs], { x0: w.camX, x1: w.camX + SCREEN_W }));
+  w.events.push(...stepGlyphs(w.glyphs, w.player, w.area));
+  if (w.events.some((e) => e.type === 'lifeLost')) dropExtra(w);
   w.camX = Math.max(0, Math.min(w.area.width - SCREEN_W, Math.round(w.player.x - SCREEN_W / 2 + 16)));
   return w;
 }

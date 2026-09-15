@@ -1,6 +1,6 @@
 // The chosen auditor on Stage 2's platforms: run, jump, crouch, cast, and the pit's price. Pure.
 import { TUNING } from './escape.mjs';
-import { COOLDOWN, aim, spawnCast } from './casting.mjs';
+import { COOLDOWN, aim, cooldownOf, spawnSpell } from './casting.mjs';
 import { fullySupported, moveBody } from './physics.mjs';
 
 export const BODY = { w: 12, h: 32 };
@@ -51,11 +51,12 @@ export function stepPlayer(p, pad, area, casts, t = TUNING) {
   p.invuln = Math.max(0, p.invuln - 1);
   if (b && (pad.pressed.has('b') || p.cooldown === 0)) {
     const dir = aim(pad.held, { facing: p.facing, grounded: p.grounded, walking: p.walking && pad.pressed.has('b') });
-    if (spawnCast(casts, p.auditor, p.x, p.y - (p.crouch ? 10 : 20), dir)) {
-      p.cooldown = COOLDOWN;
+    const spell = p.spell ?? 'notice';
+    if (spawnSpell(casts, spell, p.auditor, p.x, p.y - (p.crouch ? 10 : 20), dir, p.facing)) {
+      p.cooldown = cooldownOf(spell);
       p.castPose = COOLDOWN + 2;
       p.castDir = dir;
-      events.push({ type: 'cast', dir });
+      events.push({ type: spell === 'notice' ? 'cast' : spell, dir });
     }
   }
 

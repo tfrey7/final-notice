@@ -5,12 +5,26 @@ import { nes } from '../nes/palette.mjs';
 import { drawText } from '../scenes/placeholder.mjs';
 import { HEALTH } from './player.mjs';
 
-const C = { back: nes(0x0f), text: nes(0x30), pip: nes(0x16), empty: nes(0x00), frame: nes(0x28), wax: nes(0x16), gold: nes(0x38), dim: nes(0x2d) };
+const C = { back: nes(0x0f), text: nes(0x30), pip: nes(0x16), empty: nes(0x00), frame: nes(0x28), wax: nes(0x16), gold: nes(0x38), dim: nes(0x2d), ink: nes(0x02) };
 
 const ICONS = {
   notice: (g, x, y) => {
     g.fillStyle(C.wax).fillRect(x + 3, y + 2, 10, 12).fillRect(x + 2, y + 3, 12, 10);
     g.fillStyle(C.gold).fillRect(x + 6, y + 5, 4, 6).fillRect(x + 5, y + 6, 6, 4);
+  },
+  carbonCopy: (g, x, y) => {
+    g.fillStyle(C.dim).fillRect(x + 2, y + 5, 8, 10);
+    g.fillStyle(C.text).fillRect(x + 6, y + 1, 8, 10);
+    g.fillStyle(C.dim).fillRect(x + 8, y + 4, 4, 1).fillRect(x + 8, y + 7, 4, 1);
+  },
+  redTape: (g, x, y) => {
+    g.fillStyle(C.wax);
+    for (let i = 0; i < 14; i += 2) g.fillRect(x + 1 + i, y + 7 + (i % 4 ? 2 : -1), 2, 3);
+    g.fillRect(x + 6, y + 3, 3, 10);
+  },
+  margin: (g, x, y) => {
+    g.fillStyle(C.text).fillRect(x + 3, y + 2, 10, 12);
+    g.fillStyle(C.ink).fillRect(x + 6, y + 5, 4, 6).fillRect(x + 4, y + 7, 8, 2);
   },
 };
 

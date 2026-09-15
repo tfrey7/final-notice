@@ -8,14 +8,15 @@ import { pollPad } from '../input.mjs';
 import { AUDITORS as WHO, jumpTo, next } from '../flow.mjs';
 import { drawText, showFlow } from '../scenes/placeholder.mjs';
 import { mountTunePanel } from '../tune.mjs';
-import { AUDITORS } from './casting.mjs';
 import { TILE, solidAt } from './physics.mjs';
+import { drawActors, loadActorArt } from './draw.mjs';
+import { carry, inHand, swapHand } from './pickups.mjs';
 import { createRun, stepRun } from './core.mjs';
 import { drawStage2Hud } from './hud.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup' };
 const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
 
 // The art cards' Stage 2 names, as ward.mjs exports them; an auditor without them is a 16x32 stand-in.
@@ -42,6 +43,8 @@ export class EscapeScene extends Phaser.Scene {
     this.run = createRun(flow.auditor);
     // ?at=<x> starts the auditor further along the floor, for a quick look at one spot.
     if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
+    // ?spell=<name> starts with that enchantment in hand.
+    if (params.has('spell')) carry(this.run, params.get('spell')), swapHand(this.run);
     window.finalNoticeStage2 = this.run;
     playSong('stage2');
 
@@ -51,7 +54,7 @@ export class EscapeScene extends Phaser.Scene {
     this.hud = this.add.graphics().setDepth(20);
     if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
     this.who = await loadAuditor(this, flow.auditor);
-    this.spells = artOr(this, 'spells', { w: 8, h: 8, palette: [0x16, 0x28, 0x38] });
+    this.actors = loadActorArt(this, artOr);
     this.ready = true;
   }
 
@@ -116,18 +119,9 @@ export class EscapeScene extends Phaser.Scene {
       }
       sprites.push(...this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip));
     }
-    const fx = this.fx.clear();
-    for (const c of run.casts) {
-      if (c.kind === 'burst') {
-        const reach = AUDITORS[c.auditor].radius * Math.min(1, (c.age + 3) / 6);
-        fx.fillStyle(C.burst);
-        for (let i = 0; i < 8; i++) fx.fillRect(Math.round(c.x - cx + Math.cos(i * Math.PI / 4) * reach) - 1, Math.round(c.y + Math.sin(i * Math.PI / 4) * reach) - 1, 3, 3);
-      } else {
-        sprites.push(...this.spells.frame('notice', 0, Math.round(c.x - 4 - cx), Math.round(c.y - 4)));
-      }
-    }
+    drawActors(run, this.actors, this.fx.clear(), sprites);
     this.layer.draw(sprites);
     drawStage2Hud(this.hud.clear(), run, flow);
-    if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
+    if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
   }
 }
