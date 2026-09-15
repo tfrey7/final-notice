@@ -195,6 +195,9 @@ export function createDsp() {
   const setPitch = (i, pitch) => {
     voices[i].pitch = pitch;
   };
+  const setVolume = (i, volL, volR) => {
+    Object.assign(voices[i], { volL, volR });
+  };
 
   function voiceSample(v, prevOut) {
     if (v.env === 0 && v.phase === 'release') return 0;
@@ -261,5 +264,5 @@ export function createDsp() {
     }
   }
 
-  return { voices, reg, setEcho, keyOn, keyOff, setPitch, render };
+  return { voices, reg, setEcho, keyOn, keyOff, setPitch, setVolume, render };
 }

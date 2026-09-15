@@ -140,6 +140,31 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 (the licence text is the `COPYING` file at https://github.com/pianobooster/fluid-soundfont). The
 generated `src/snes/audio/recorded-brr.mjs` carries the notice in its header.
 
+## SNES expression, rooms and layers
+
+Tim (13:15 EDT 2026-09-15): "cute little chip tunes not epic FF6 or donkey kong country style
+bangers". The player (`src/snes/audio/player.mjs`) now writes the ornament AKAO wrote note by note,
+and a song chooses its room (`docs/research/snes-composition.md`, sections 3-5).
+
+- **Note marks**, each after a `/` on a note token, combinable (`C5:lead/p4/v`):
+  - `v` or `v<frames>`: delayed vibrato. Starts after the delay (default 12 frames), fades in over one
+    period; the instrument's `vibrato: { delay, period, depth }` (frames, frames, semitones) sets its
+    shape, default `{ 12, 10, 0.3 }`.
+  - `p` or `p<frames>`: portamento from the voice's previous note (default the instrument's `glide`, or 6).
+  - `b+2`, `b-1.5`: bends that many semitones across the note.
+  - `@90` or `@90>30`: the note's volume, ramped to the second value over the note: accents, swells, fades.
+- **Rooms.** `echo: { room: 'hall' }` takes a preset; the song's own `evol`, `efb`, `edl`, `fir` or
+  `mvol` still win. `room` (48 ms, dry), `studio` (96 ms, the old default), `hall` (144 ms, warm
+  low-pass), `cathedral` (208 ms, dark, feedback $60) and `cave` (240 ms, bright and ringing). Feedback
+  never passes $60 and every FIR sums to 128.
+- **Parts.** `v3: { rows, pan: -50, vol: 70, echo: false }` overrides that part's instruments, so a
+  shared instrument can sit on either side of the field.
+- **Layers leave and return.** `drops: [{ from: <row>, to: <row>, voices: ['v6', 'v8'] }]` keys those
+  voices off for the rows; they come back at `to`, on the next note or mid-note.
+- **Before and after.** `node tools/snes-hall-demo.mjs <dir> 32` renders the Great Seal as it ships
+  and the same notes in the cathedral, panned apart, with vibrato on long brass notes, slides into
+  leaps, drums out for the intro, hats out for the first A and the bell only at phrase heads.
+
 ## Lessons
 
 - **A recorded sample's loop must be a whole number of periods AND a whole number of BRR blocks.**

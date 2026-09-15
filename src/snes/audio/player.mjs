@@ -56,20 +56,67 @@ export const SAMPLES = (() => {
   };
 })();
 
+// A note's expression marks, each after a '/': v[delay] delayed vibrato, p[frames] portamento from
+// the voice's last note, b<+-semitones> a bend across the note, @<vol>[><vol>] its volume, ramped.
+function parseMark(voice, row, mark, note) {
+  let m;
+  if ((m = /^v(\d*)$/.exec(mark))) note.vibrato = m[1] === '' ? true : Number(m[1]);
+  else if ((m = /^p(\d*)$/.exec(mark))) note.glide = m[1] === '' ? true : Number(m[1]);
+  else if ((m = /^b([+-]\d+(?:\.\d+)?)$/.exec(mark))) note.bend = Number(m[1]);
+  else if ((m = /^@(\d+)(?:>(\d+))?$/.exec(mark))) [note.vol, note.volTo] = [Number(m[1]), m[2] === undefined ? undefined : Number(m[2])];
+  else throw new Error(`${voice} row ${row}: cannot read mark "/${mark}"`);
+}
+
 export function parseRows(voice, text, defaultInst) {
   const tokens = String(text ?? '').split(/\s+/).filter((t) => t && t !== '|');
   let current = null;
+  let last = null;
   return tokens.map((token, row) => {
     if (token === '-') {
       if (current) current.len += 1;
       return current;
     }
     if (token === '.') return (current = null);
-    const [name, inst = defaultInst] = token.split(':');
+    const [head, ...marks] = token.split('/');
+    const [name, inst = defaultInst] = head.split(':');
     const pitch = noteToMidi(name);
     if (pitch === null) throw new Error(`${voice} row ${row}: cannot read "${token}"`);
-    return (current = { start: row, pitch, inst, len: 1 });
+    current = { start: row, pitch, inst, len: 1 };
+    for (const mark of marks) parseMark(voice, row, mark, current);
+    if (current.glide !== undefined) current.from = last ?? pitch;
+    last = pitch;
+    return current;
   });
+}
+
+// Echo presets a song picks with echo.room; its own evol, efb, edl or fir still win. Feedback stays
+// at or under $60 and each FIR sums to 128, so no room runs away (docs/research/snes-composition.md §3).
+export const ROOMS = {
+  room: { evol: 30, efb: 48, edl: 3, fir: [127, 0, 0, 0, 0, 0, 0, 0] },
+  studio: { evol: 45, efb: 70, edl: 6, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
+  hall: { evol: 42, efb: 84, edl: 9, fir: [0, 24, 40, 40, 24, 0, 0, 0] },
+  cathedral: { evol: 46, efb: 96, edl: 13, fir: [8, 20, 28, 32, 24, 12, 4, 0] },
+  cave: { evol: 38, efb: 92, edl: 15, fir: [64, 32, 16, 8, 4, 2, 1, 1] },
+};
+
+function resolveEcho({ room, ...echo } = {}) {
+  if (room === undefined) return echo;
+  if (!ROOMS[room]) throw new Error(`no room "${room}"`);
+  return { ...ROOMS[room], ...echo };
+}
+
+// drops: [{ from, to, voices: ['v6', ...] }] silences those voices on rows from..to-1, so a layer
+// leaves at a section boundary and comes back at the next.
+function dropMask(drops = [], length) {
+  const mask = VOICE_NAMES.map(() => new Uint8Array(length));
+  for (const { from, to = length, voices } of drops) {
+    for (const v of voices) {
+      const i = VOICE_NAMES.indexOf(v);
+      if (i < 0) throw new Error(`drop names no voice "${v}"`);
+      mask[i].fill(1, Math.max(0, from), Math.min(length, to));
+    }
+  }
+  return mask;
 }
 
 export function compileSong(def) {
@@ -81,8 +128,40 @@ export function compileSong(def) {
   });
   const loop = def.loop ?? null;
   if (loop !== null && (loop < 0 || loop >= length)) throw new Error(`loop row ${loop} is outside the song`);
-  return { tempo: def.tempo ?? 6, loop, length, voices, instruments: def.instruments ?? {}, echo: def.echo ?? {} };
+  // A part's own pan, vol or echo send outranks its instrument's.
+  const parts = VOICE_NAMES.map((v) => {
+    const { pan, vol, echo } = def[v] ?? {};
+    return Object.fromEntries(Object.entries({ pan, vol, echo }).filter(([, x]) => x !== undefined));
+  });
+  return {
+    tempo: def.tempo ?? 6, loop, length, voices, parts, dropped: dropMask(def.drops, length),
+    instruments: def.instruments ?? {}, echo: resolveEcho(def.echo),
+  };
 }
+
+const VIBRATO = { delay: 12, period: 10, depth: 0.3 };
+
+// A note's pitch in semitones and its volume on frame f: the instrument's pitch list, then the note's marks.
+export function expression(note, inst, f, tempo) {
+  let midi = note.pitch;
+  if (inst.pitch) midi += inst.pitch[Math.min(f, inst.pitch.length - 1)];
+  if (note.glide !== undefined) {
+    const frames = note.glide === true ? inst.glide ?? 6 : note.glide;
+    if (f < frames) midi += (note.from - note.pitch) * (1 - f / frames);
+  }
+  if (note.bend !== undefined) midi += note.bend * Math.min(1, f / Math.max(1, note.len * tempo - 1));
+  if (note.vibrato !== undefined) {
+    const vib = { ...VIBRATO, ...inst.vibrato };
+    const delay = note.vibrato === true ? vib.delay : note.vibrato;
+    const t = f - delay;
+    if (t > 0) midi += vib.depth * Math.min(1, t / vib.period) * Math.sin((2 * Math.PI * t) / vib.period);
+  }
+  let vol = note.vol;
+  if (note.volTo !== undefined) vol += (note.volTo - note.vol) * Math.min(1, f / Math.max(1, note.len * tempo - 1));
+  return { midi, vol };
+}
+
+const moves = (note, inst) => !!inst.pitch || note.glide !== undefined || note.bend !== undefined || note.vibrato !== undefined;
 
 // An instrument as the DSP keys it, and the 16-bit pitch that sounds a MIDI note on it.
 export function dspInstrument(inst) {
@@ -233,24 +312,29 @@ export function createSequencer(dsp = createDsp()) {
     const row = Math.floor(pos / song.tempo);
     for (let i = 0; i < VOICES; i++) {
       if (owners[i]) continue;
-      if (solo && !solo.has(i)) {
+      if ((solo && !solo.has(i)) || song.dropped?.[i][row]) {
         if (keyed[i]) release(i);
         continue;
       }
       const note = song.voices[i][row];
       const id = note ? `${pass}:${note.start}` : null;
-      const inst = note && song.instruments[note.inst];
-      if (id !== keyed[i]) {
-        if (!note) release(i);
-        else {
-          dsp.keyOn(i, dspInstrument(inst), notePitch(inst, note.pitch));
-          keyed[i] = id;
-        }
+      const inst = note && { ...song.instruments[note.inst], ...song.parts?.[i] };
+      if (!note) {
+        if (keyed[i]) release(i);
+        continue;
       }
-      // An instrument's `pitch` list bends each note by semitones a frame, its last entry held.
-      if (inst?.pitch) {
-        const f = pos - note.start * song.tempo;
-        dsp.setPitch(i, notePitch(inst, note.pitch + inst.pitch[Math.min(f, inst.pitch.length - 1)]));
+      const f = pos - note.start * song.tempo;
+      const { midi, vol } = expression(note, inst, f, song.tempo);
+      const keyedInst = vol === undefined ? inst : { ...inst, vol };
+      if (id !== keyed[i]) {
+        dsp.keyOn(i, dspInstrument(keyedInst), notePitch(inst, midi));
+        keyed[i] = id;
+      } else {
+        if (moves(note, inst)) dsp.setPitch(i, notePitch(inst, midi));
+        if (note.volTo !== undefined) {
+          const { volL, volR } = dspInstrument(keyedInst);
+          dsp.setVolume(i, volL, volR);
+        }
       }
     }
     pos++;
