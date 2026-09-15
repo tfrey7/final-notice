@@ -165,7 +165,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.def.step?.(w, this.tune);
     }
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
-    soundFrame(this.voices, w, { frames, loopFrame, target, hurt: p.hp < playerHp });
+    soundFrame(this.voices, w, { frames, loopFrame, target, hurt: p.hp < playerHp, before: said });
     for (const e of w.events) {
       if (e === 'heal') this.receipt = postReceipt(this.receipt, time);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
