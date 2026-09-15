@@ -184,6 +184,9 @@ call a name before its sound exists.
 
 ## 10. Art list
 
+Every art card follows `docs/NES-ART-BIBLE.md`. The Stage 1 idle, walk, punch and hurt of Ward,
+Mercer and the Security Associate are already drawn to it in `src/art/cast.mjs` (names
+`ward.walk`, `mercer.punch`, `associate.hurt`...); gameplay takes them with `artOr(scene, 'cast')`.
 All art is hand-authored as data in code: text grids of `0-3` per 8x8 tile, a palette of NES indices,
 and frame tables of tile placements (`src/nes/art.mjs` bakes them to Phaser textures and the tests
 check every limit). Spritesmith may be tried for a sheet if its output passes Tim's eye; no card waits
