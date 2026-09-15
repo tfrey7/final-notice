@@ -29,7 +29,7 @@ test('every cutscene beat is a voice line in a cast voice', () => {
 
 test('the takes a cutscene needs are recorded, both auditors', async () => {
   const lines = allVoiceLines();
-  assert.equal(lines.length, 21);
+  assert.equal(lines.length, 23);
   for (const line of lines) assert.ok(existsSync(takePath(line.who, line.text)), `${line.who}: ${line.text}`);
 });
 

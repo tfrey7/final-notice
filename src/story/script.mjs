@@ -7,6 +7,7 @@ export const SPEAKERS = {
   bellwether: 'BELLWETHER',
   vellum: 'VELLUM',
   speaker: 'SPEAKER',
+  tuesday: 'TUESDAY',
   ward: 'WARD',
   mercer: 'MERCER',
 };
@@ -30,6 +31,8 @@ export const SCENES = {
       { picture: 'retention-button', speaker: 'vellum', line: 'This one.', sound: 'alarm' },
       { picture: 'ledger-glow', speaker: 'auditor', ward: 'The original is downstairs.', mercer: "Then I'm going downstairs." },
       { picture: 'ledger-glow', speaker: 'bellwether', line: 'Get yourself out. With the ledger if you can.' },
+      { picture: 'vellum-desk', speaker: 'tuesday', line: "You're from the agency? I'm the one they billed. I wrote the billing myself." },
+      { picture: 'vellum-desk', speaker: 'tuesday', line: "I'm sorry. Everything that matters is upstairs. Please don't leave me at this desk." },
     ],
   },
   documents: {
