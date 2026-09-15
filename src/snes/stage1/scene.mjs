@@ -29,7 +29,7 @@ import { STAGE1 } from '../../stage1/tuning.mjs';
 import { mountTunePanel, registerTuning } from '../../tune.mjs';
 import { fastOn, cheapen } from '../../fast.mjs';
 import { PROFILES } from '../../platform.mjs';
-import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
+import { createSlowdown, pairs, slowdownTick } from '../../slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
 import { SNES_STAGE1 } from './waves.mjs';

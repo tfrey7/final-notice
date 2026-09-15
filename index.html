@@ -20,7 +20,7 @@
 <body>
   <div id="game"></div>
   <script src="vendor/phaser-4.2.1.min.js"></script>
-  <script type="module" src="src/main.mjs"></script>
+  <script type="module">import(new URLSearchParams(location.search).has('snes') ? './src/main.mjs' : './src/nes/main.mjs');</script>
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { keep } from '../nes/limits.mjs';
-import { createSlowdown, slowdownTick } from '../nes/slowdown.mjs';
+import { createSlowdown, slowdownTick } from '../slowdown.mjs';
 import { NesDebug, nesDebugOn } from '../nes/debug.mjs';
 import { playSong, sfx, stopSong } from '../audio/player.mjs';
 import { cheapen, fastOn } from '../fast.mjs';

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PROFILES } from '../src/platform.mjs';
-import { createSlowdown, pairs, slowdownTick } from '../src/nes/slowdown.mjs';
+import { createSlowdown, pairs, slowdownTick } from '../src/slowdown.mjs';
 
 const brawl = (fighters, props, sprites) => ({ objects: fighters + props, collisions: pairs(fighters) + fighters * props, sprites });
 const updatesIn = (frames, work, budget) => {

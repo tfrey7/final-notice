@@ -1,4 +1,4 @@
-// NES slowdown. The 6502 gets one NTSC frame of 29,780 cycles; when a frame's work (moving objects,
+// Frame slowdown, shared by both builds. The NES's 6502 gets one NTSC frame of 29,780 cycles; when a frame's work (moving objects,
 // checking collisions, filling the sprite table) overruns it, the game misses the next frame's
 // update and runs at half speed until the work fits again, as Double Dragon II and Mega Man 2 did
 // when the screen got busy. Music runs off the audio clock, so it keeps its tempo meanwhile. The SNES

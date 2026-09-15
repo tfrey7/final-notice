@@ -18,7 +18,7 @@ import { cheapen, fastOn } from '../../fast.mjs';
 import { AUDITORS as WHO, jumpTo, next, showFlow } from '../../flow.mjs';
 import { mountTunePanel } from '../../tune.mjs';
 import { PROFILES } from '../../platform.mjs';
-import { createSlowdown, slowdownTick } from '../../nes/slowdown.mjs';
+import { createSlowdown, slowdownTick } from '../../slowdown.mjs';
 import { HITS_PER_SEGMENT } from '../../injunction.mjs';
 import { TILE, solidAt } from '../../stage2/physics.mjs';
 import { carry, swapHand } from '../../stage2/pickups.mjs';

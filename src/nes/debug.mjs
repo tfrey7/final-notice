@@ -3,7 +3,7 @@
 import { WIDTH, HEIGHT, SAFE } from './screen.mjs';
 import { nes } from './palette.mjs';
 import { MAX_PER_LINE, MAX_SPRITES, MAX_PALETTES } from './limits.mjs';
-import { FRAME_CYCLES } from './slowdown.mjs';
+import { FRAME_CYCLES } from '../slowdown.mjs';
 
 const BAR = 3;
 const STRIP = 96;

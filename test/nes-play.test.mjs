@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_SPRITES, frameSprites, lineDemand, visibleSprites } from '../src/nes/limits.mjs';
-import { FRAME_CYCLES, COST, createSlowdown, frameCost, pairs, slowdownTick } from '../src/nes/slowdown.mjs';
+import { FRAME_CYCLES, COST, createSlowdown, frameCost, pairs, slowdownTick } from '../src/slowdown.mjs';
 
 const row = (n, extra = {}) => Array.from({ length: n }, (_, i) => ({ x: i * 12, y: 100, palette: 'a', ...extra }));
 

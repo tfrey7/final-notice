@@ -6,7 +6,7 @@ import { artOr as nesArt } from './nes/art.mjs';
 import * as snesScreen from './snes/screen.mjs';
 import { hex } from './snes/color.mjs';
 import { artOr as snesArt } from './snes/art.mjs';
-import { FRAME_CYCLES } from './nes/slowdown.mjs';
+import { FRAME_CYCLES } from './slowdown.mjs';
 
 export const PROFILES = {
   nes: {
