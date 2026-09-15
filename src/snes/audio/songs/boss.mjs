@@ -125,7 +125,7 @@ const v8 = FORM.map((b) => {
 export default {
   tempo: 7,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 76, evol: 48, efb: 76, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
+  echo: { mvol: 66, evol: 42, efb: 76, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
   instruments: {
     lead: { ...INSTRUMENTS.brass, adsr: [13, 3, 6, 6], vol: 110, pan: -8, pitch: vibrato(0.25, 14, 16) },
     counter: { ...INSTRUMENTS.strings, vol: 68, pan: 38, pitch: vibrato(0.15, 16, 20) },

@@ -110,6 +110,9 @@ export const ROOMS = {
   studio: { evol: 45, efb: 70, edl: 6, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
   hall: { evol: 42, efb: 84, edl: 9, fir: [0, 24, 40, 40, 24, 0, 0, 0] },
   cathedral: { evol: 46, efb: 96, edl: 13, fir: [8, 20, 28, 32, 24, 12, 4, 0] },
+  // Stone close by: a quick first reflection, a tail that dies in about a second, and a wide
+  // low-pass that darkens each repeat so the organ and choir never pile up into a wash.
+  chapel: { evol: 40, efb: 70, edl: 7, fir: [2, 8, 18, 30, 32, 22, 12, 4] },
   cave: { evol: 38, efb: 92, edl: 15, fir: [64, 32, 16, 8, 4, 2, 1, 1] },
 };
 

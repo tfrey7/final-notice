@@ -21,7 +21,7 @@ test('every line is baked from a recorded take, and one partner fits the sound R
 
 test('a line holds voice 6 while punches take 7 and 8, and it sounds unclipped', () => {
   const seq = createSequencer();
-  seq.play(compileSong({ tempo: 6, loop: 0, instruments: { k: { sample: 'epiano' } }, v6: { inst: 'k', rows: 'C4 - - -' } }));
+  seq.play(compileSong({ tempo: 6, loop: 0, echo: { mvol: 70 }, instruments: { k: { sample: 'epiano' } }, v6: { inst: 'k', rows: 'C4 - - -' } }));
   assert.deepEqual(seq.sfx(barkEffect('ward-parry-0')), [BARK_VOICE]);
   assert.deepEqual(seq.sfx(SFX.hit), [7, 6]);
   assert.deepEqual(seq.sfx(SFX.punch), [7]);

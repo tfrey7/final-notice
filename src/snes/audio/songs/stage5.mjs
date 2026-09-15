@@ -151,11 +151,11 @@ export function chapelDrops(form) {
 
 export const INSTRUMENTS_USED = {
   lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 58, vibrato: { delay: 8, period: 11, depth: 0.25 } },
-  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 39 },
+  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 39, echo: false },
   choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 35 },
   bell: { ...INSTRUMENTS.bell, vol: 29 },
   timpani: { ...INSTRUMENTS.timpani, vol: 50 },
-  pedal: { ...INSTRUMENTS.pedal, adsr: [13, 4, 7, 3], vol: 60 },
+  pedal: { ...INSTRUMENTS.pedal, adsr: [13, 4, 7, 3], vol: 60, echo: false },
   kick: { ...INSTRUMENTS.gkick, vol: 48 },
   snare: { ...INSTRUMENTS.gsnare, vol: 33 },
   htom: { ...INSTRUMENTS.htom, vol: 40 },
@@ -165,12 +165,12 @@ export const INSTRUMENTS_USED = {
 
 const parts = arrange(FORM);
 
-// Voices sit at half level so the sum and the echo buffer stay under the chip's clamp; the master
-// volume makes up the loudness after it.
+// The churning figuration and the pedal stay out of the echo, so only the lead, choir, bell and
+// timpani ring in the stone.
 export default {
   tempo: 7,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 70, room: 'hall', evol: 30, efb: 72, edl: 7 },
+  echo: { mvol: 70, room: 'chapel', evol: 56 },
   instruments: INSTRUMENTS_USED,
   drops: chapelDrops(FORM),
   v1: { rows: bars(parts.v1, BAR_ROWS), pan: -20 },

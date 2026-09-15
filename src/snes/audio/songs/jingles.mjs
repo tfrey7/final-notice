@@ -53,7 +53,7 @@ export function port(nes) {
   const song = {
     tempo: nes.tempo,
     loop: null,
-    echo: { mvol: 84, evol: 30, efb: 50, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
+    echo: { mvol: 72, evol: 26, efb: 50, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
     instruments: INSTRUMENTS,
   };
   for (const [channel, voice] of Object.entries(VOICE_OF)) {

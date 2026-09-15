@@ -159,7 +159,7 @@ export function arrange(form, { phase = 1 } = {}) {
 const SETTINGS = {
   1: {
     tempo: 9,
-    echo: { mvol: 60, room: 'hall', evol: 44 },
+    echo: { mvol: 52, room: 'hall', evol: 38 },
     instruments: {
       lead: { ...INSTRUMENTS.strings, adsr: [12, 3, 6, 6], vol: 104, vibrato: { delay: 12, period: 11, depth: 0.3 } },
       organ: { ...INSTRUMENTS.organ, adsr: [10, 2, 6, 2], vol: 100 },
@@ -173,7 +173,7 @@ const SETTINGS = {
   },
   2: {
     tempo: 5,
-    echo: { mvol: 60, room: 'studio', evol: 32 },
+    echo: { mvol: 54, room: 'studio', evol: 29 },
     instruments: {
       lead: { ...INSTRUMENTS.strings, adsr: [14, 3, 6, 10], vol: 108, glide: 3 },
       organ: { ...INSTRUMENTS.organ, adsr: [15, 5, 5, 14], vol: 96 },
@@ -188,7 +188,7 @@ const SETTINGS = {
   },
   3: {
     tempo: 7,
-    echo: { mvol: 62, room: 'hall', evol: 38 },
+    echo: { mvol: 48, room: 'hall', evol: 30 },
     instruments: {
       lead: { ...INSTRUMENTS.brass, adsr: [13, 3, 6, 6], vol: 112, vibrato: { delay: 10, period: 9, depth: 0.35 }, glide: 4 },
       organ: { ...INSTRUMENTS.organ, adsr: [14, 4, 6, 8], vol: 94 },

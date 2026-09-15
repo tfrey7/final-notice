@@ -13,6 +13,7 @@ export const RATES = [
 ];
 
 const clamp16 = (x) => (x > 32767 ? 32767 : x < -32768 ? -32768 : x);
+const over = (x) => x > 32767 || x < -32768;
 
 // 512 weights for the four taps, oldest to newest at fraction f of 256: g[255-f], g[511-f], g[256+f], g[f].
 export const GAUSS = (() => {
@@ -144,7 +145,7 @@ export function noiseStep(lfsr) {
 export function firStep(history, taps) {
   let sum = 0;
   for (let i = 0; i < 8; i++) sum += history[i] * taps[i];
-  return clamp16(sum >> 7);
+  return sum >> 7;
 }
 
 // A tone whose 16-bit pitch plays the sample's root at 0x1000; pitch modulation scales it by the
@@ -160,20 +161,21 @@ export function createDsp() {
     volL: 0, volR: 0, echo: false, noise: false, pmod: false, out: 0, peak: 0, tick: 0,
   }));
   const reg = { mvol: 127, evol: 0, efb: 0, edl: 4, fir: [127, 0, 0, 0, 0, 0, 0, 0], noiseRate: 20 };
-  let echoL = new Int16Array(4 * 512);
-  let echoR = new Int16Array(4 * 512);
+  let echoL = new Int32Array(4 * 512);
+  let echoR = new Int32Array(4 * 512);
   let echoPos = 0;
   const firL = new Array(8).fill(0);
   const firR = new Array(8).fill(0);
   let lfsr = 0x4000;
   let tick = 0;
+  let clipped = 0;
 
   function setEcho({ mvol = reg.mvol, evol = reg.evol, efb = reg.efb, edl = reg.edl, fir = reg.fir } = {}) {
     Object.assign(reg, { mvol, evol, efb, fir });
     if (edl !== reg.edl) {
       reg.edl = edl;
-      echoL = new Int16Array(Math.max(1, edl * 512));
-      echoR = new Int16Array(Math.max(1, edl * 512));
+      echoL = new Int32Array(Math.max(1, edl * 512));
+      echoR = new Int32Array(Math.max(1, edl * 512));
       echoPos = 0;
     }
   }
@@ -256,13 +258,20 @@ export function createDsp() {
       firR.unshift(echoR[echoPos]);
       const fl = firStep(firL, reg.fir);
       const fr = firStep(firR, reg.fir);
-      echoL[echoPos] = clamp16(clamp16(inL) + ((fl * reg.efb) >> 7));
-      echoR[echoPos] = clamp16(clamp16(inR) + ((fr * reg.efb) >> 7));
+      echoL[echoPos] = inL + ((fl * reg.efb) >> 7);
+      echoR[echoPos] = inR + ((fr * reg.efb) >> 7);
       echoPos = (echoPos + 1) % echoL.length;
-      left[offset + k] = clamp16(((clamp16(mainL) * reg.mvol) >> 7) + ((fl * reg.evol) >> 7)) / 32768;
-      right[offset + k] = clamp16(((clamp16(mainR) * reg.mvol) >> 7) + ((fr * reg.evol) >> 7)) / 32768;
+      const oL = ((mainL * reg.mvol) >> 7) + ((fl * reg.evol) >> 7);
+      const oR = ((mainR * reg.mvol) >> 7) + ((fr * reg.evol) >> 7);
+      if (over(oL) || over(oR)) clipped++;
+      left[offset + k] = clamp16(oL) / 32768;
+      right[offset + k] = clamp16(oR) / 32768;
     }
   }
 
-  return { voices, reg, setEcho, keyOn, keyOff, setPitch, setVolume, render };
+  // The voice bus and echo run wide, so mvol and evol are real headroom and only the output can clip:
+  // this counts the samples that hit its 16-bit rails.
+  const clips = () => clipped;
+
+  return { voices, reg, setEcho, keyOn, keyOff, setPitch, setVolume, render, clips };
 }
