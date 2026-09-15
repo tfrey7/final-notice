@@ -39,3 +39,22 @@ smooth-jazz and muzak sources they name.
 
 The scene version keeps the thin 12.5% lead and no drums, and lays the VRC6 chord bed and a saw pad
 under it.
+
+## Lessons
+
+- **Swing needs its own row grid.** A song has one tempo, so swung eighths come from the grid: 24
+  rows a bar (6 a beat) lets the on-beat eighth take 4 rows and the off-beat 2, and every bar is
+  still a multiple of 8. Stage 1 runs this at 5 frames a row, 120 BPM.
+- **Ninth chords stay in key if you pick them per root.** In F major, F and Bb take maj9, C takes a
+  dominant 9, D and G take minor 9, and A only minor 7 (its ninth, B, is out of key). Cycle the
+  five tones a frame each on a short pulse 2 envelope and it reads as one lush stab.
+- **A soft echo is pulse 2 playing the lead 3 rows late** at volume 5 and falling, detuned 0.12 of
+  a semitone for a chorus shimmer. Let the chord stabs take pulse 2 on their rows; a stab's
+  envelope ends at 0, so the echo's holds after it stay silent instead of smearing.
+- **Leave rows empty on the noise channel.** A punch effect takes the noise channel for 9 frames;
+  a groove with a third of its rows open lets hits land without the beat falling apart.
+- **The offline render spikes when a note starts between WebAudio's 128-sample blocks.** Samples
+  reach 17 against a normal 0.4 peak, in the shared synth, for any song. To judge a song's own
+  levels and loop seam, render at a sample rate where one row is a whole number of blocks, since notes
+  start on rows (16-frame rows: 48000 Hz; 5- or 7-frame rows: 38400 Hz) and compare the RMS of the loop's first bar on the
+  first and second passes.
