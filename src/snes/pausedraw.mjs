@@ -101,6 +101,28 @@ function drawSlot(s, x, y, key, held) {
   }
 }
 
+// The four combo routes as SNES button caps (Y green, X blue) with each route's name beside them.
+function drawRoutes(s, routes, x, y) {
+  const keyW = (k) => Math.max(10, measure(k) + 4);
+  const nameX = x + Math.max(...routes.map((r) => r.keys.reduce((n, k) => n + keyW(k) + 2, 0))) + 4;
+  routes.forEach((r, i) => {
+    const ry = y + i * 13;
+    let cx = x;
+    r.keys.forEach((k, j) => {
+      const bw = keyW(k);
+      const face = !r.on ? c(20, 18, 14) : k === 'X' ? c(5, 9, 25) : k === 'Y' ? c(4, 18, 7) : c(9, 8, 11);
+      const lit = r.on && j < r.lit;
+      s.math(cx + 1, ry + 1, bw, 10, c(8, 8, 8), 'sub');
+      s.fill(cx, ry, bw, 10, lit ? mix(face, c(31, 31, 31), 0.4) : face);
+      s.fill(cx, ry, bw, 1, mix(face, c(31, 31, 31), 0.5));
+      drawString(s.fill, k, cx + ((bw - measure(k)) >> 1), ry + 1, c(31, 31, 30), null);
+      cx += bw + 2;
+    });
+    const done = r.on && r.lit > 0 && r.lit === r.keys.length;
+    s.text(r.name, nameX, ry + 1, !r.on ? c(18, 15, 9) : done ? RED : INK);
+  });
+}
+
 // menu: the state from ./pause.mjs; `frame` animates the pencil tick.
 export function drawPause(px, menu, frame = 0) {
   const s = painter(px);
@@ -142,19 +164,24 @@ export function drawPause(px, menu, frame = 0) {
     s.fill(px0 + 7, py0, 2, 5, c(26, 21, 14)); s.fill(px0 + 9, py0 + 1, 1, 3, c(26, 21, 14)); s.fill(px0 + 10, py0 + 2, 1, 1, OUT);
   };
 
-  s.text('ATTACHMENTS', X + 16, Y + 102, RED);
-  menu.carried.forEach((key, i) => {
-    drawSlot(s, slots[i], slotY, key, i === menu.hand);
-    s.text(i ? 'B' : 'A', slots[i] + 32, slotY + 2, RED);
-  });
-  const held = attachment(menu.carried[menu.hand]);
-  s.text(held.name, X + 16, Y + 150);
-  s.text(held.effect, X + 16, Y + 162);
+  if (menu.routes) {
+    s.text('COMBO ROUTES', X + 16, Y + 102, RED);
+    drawRoutes(s, menu.routes, X + 16, Y + 116);
+  } else {
+    s.text('ATTACHMENTS', X + 16, Y + 102, RED);
+    menu.carried.forEach((key, i) => {
+      drawSlot(s, slots[i], slotY, key, i === menu.hand);
+      s.text(i ? 'B' : 'A', slots[i] + 32, slotY + 2, RED);
+    });
+    const held = attachment(menu.carried[menu.hand]);
+    s.text(held.name, X + 16, Y + 150);
+    s.text(held.effect, X + 16, Y + 162);
+  }
 
   if (onAttachments(menu)) pencil(slots[menu.hand] - 13 + tick, slotY + 12);
   else pencil(X + 4 + tick, rowY(menu.cursor) + 1);
 
-  drawStamp(s, 'ON HOLD', X + 118, Y + 122, stampPose(menu.stampT));
+  drawStamp(s, 'ON HOLD', X + (menu.routes ? 136 : 118), Y + 122, stampPose(menu.stampT));
   s.fill(X + 2, Y + 172, W - 4, 1, c(18, 21, 27));
   s.text('START: RESUME   B: FILE AWAY', X + 10, Y + 176);
   return px;

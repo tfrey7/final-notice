@@ -38,6 +38,7 @@ import { CARD, OFFICE, bossHitStop, cardFrame, clearDone, clearLines, fangFlash 
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
 import { turnOwners } from '../../stage1/readout.mjs';
+import { routeLights } from '../../stage1/combo.mjs';
 import { drawReadout } from '../readout.mjs';
 import { drawCombo, drawSparks } from '../hitfx.mjs';
 
@@ -240,7 +241,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.paused) {
       holdMusic();
       const rows = holdings({ lives: this.registry.get('flow').lives, meter: this.world.meter });
-      this.menu = openPause(performance.now(), this.menu, { rows });
+      const p = this.world.fighters.find((f) => f.team === 'player');
+      this.menu = openPause(performance.now(), this.menu, { rows, routes: routeLights(p, this.tune) });
     } else {
       this.menu = closePause(this.menu, performance.now());
       endHold();
@@ -249,7 +251,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
   }
 
-  // Stage 1 carries no enchantments, so the attachments row holds Seal of Notice and an empty slot.
+  // Stage 1 carries no enchantments, so the form shows the combo routes where attachments would be.
   stepMenu(pad) {
     const { menu, action } = stepPause(this.menu, pad);
     this.menu = menu;

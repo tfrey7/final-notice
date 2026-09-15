@@ -21,15 +21,17 @@ export function holdings({ lives = 0, meter = 0 }) {
 }
 
 // `last` is the previous pause (or null): its closedMs decides whether the stamp lands again.
-export function openPause(now, last, { rows, carried = ['notice', null], hand = 0 }) {
+// `routes` (the combo-route lights, on a brawl stage) takes the attachments section's place.
+export function openPause(now, last, { rows, carried = ['notice', null], hand = 0, routes = null }) {
   const skip = last?.closedMs != null && now - last.closedMs < RESTAMP_MS;
-  return { rows, carried: [carried[0] ?? 'notice', carried[1] ?? null], hand, cursor: 0, stampT: skip ? STAMP_FRAMES : 0, closedMs: null };
+  return { rows, carried: [carried[0] ?? 'notice', carried[1] ?? null], hand, routes, cursor: 0, stampT: skip ? STAMP_FRAMES : 0, closedMs: null };
 }
 
 export const closePause = (menu, now) => ({ ...menu, closedMs: now });
 
-// The attachments row sits under the last item row.
-export const onAttachments = (menu) => menu.cursor === menu.rows.length;
+// The attachments row sits under the last item row; a form showing routes has none.
+export const onAttachments = (menu) => !menu.routes && menu.cursor === menu.rows.length;
+const lastRow = (menu) => (menu.routes ? menu.rows.length - 1 : menu.rows.length);
 
 // One paused frame. Answers the menu and what happened: 'resume' (Start), 'close' (B), 'swap',
 // 'move', 'thud' (the stamp landing) or null.
@@ -44,8 +46,8 @@ export function stepPause(menu, pad) {
     if (stampT === STAMP_FRAMES) action = 'thud';
   }
   if (has('up') && cursor > 0) cursor--, action = 'move';
-  else if (has('down') && cursor < menu.rows.length) cursor++, action = 'move';
-  else if ((has('left') || has('right')) && cursor === menu.rows.length && menu.carried[1 - hand]) {
+  else if (has('down') && cursor < lastRow(menu)) cursor++, action = 'move';
+  else if ((has('left') || has('right')) && onAttachments({ ...menu, cursor }) && menu.carried[1 - hand]) {
     hand = 1 - hand;
     action = 'swap';
   }

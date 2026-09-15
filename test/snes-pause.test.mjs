@@ -36,6 +36,14 @@ test('with one attachment there is nothing to swap to', () => {
   assert.notEqual(r.action, 'swap');
 });
 
+test('a form showing combo routes has no attachments row to walk to or swap on', () => {
+  let menu = openPause(0, null, { rows: holdings({ lives: 3, meter: 2 }), carried: ['notice', 'redTape'], routes: [] });
+  for (let i = 0; i < 5; i++) menu = stepPause(menu, pad('down')).menu;
+  assert.equal(menu.cursor, 1);
+  assert.ok(!onAttachments(menu));
+  assert.notEqual(stepPause(menu, pad('right')).action, 'swap');
+});
+
 test('Start resumes and B files it away', () => {
   assert.equal(stepPause(open(), pad('start')).action, 'resume');
   assert.equal(stepPause(open(), pad('b')).action, 'close');
