@@ -1,7 +1,7 @@
 // The SNES title: digitized live action of Ward and Mercer passing the notice in the rain, the tower crown
 // glowing up through the piano intro; FINAL NOTICE presses in by Mode 7, then PUSH START pulses;
 // Start during the reveal skips to the settled title. After 20 idle seconds the title fades to the
-// opening as its attract loop. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
+// attract intro. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
 // NEW AUDIT hands over to select, which wipes in by file drawer.
 /* global Phaser */
 import { WIDTH } from '../screen.mjs';
@@ -19,6 +19,7 @@ import { PROMPT_AT, fadeLevel, newTitle, promptLevel, titleTick } from '../title
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { FrontScreen, ZOOM_FRAMES, bufferFill, logoZoom, mode7Texture } from './front.mjs';
+import { TITLE_FROM } from '../attract.mjs';
 
 const FADE_FRAMES = 24;
 const fadeUp = (f) => Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES));
@@ -55,10 +56,14 @@ export class SnesTitleScene extends Phaser.Scene {
     // &t=<frames> pins the clock for a screenshot; &memo=memo|settings opens the slip on that page;
     // &attract=<frames> pins the fade into the attract loop.
     this.pinned = params.has('t') ? Number(params.get('t')) : null;
-    // Back from the attract loop: the settled title fades up with the prompt already pulsing.
-    this.back = this.registry.get('attractBack') === true;
+    // Skipped out of the intro: the settled title fades up with the prompt already pulsing. Run to its
+    // end: the title fades up just before the logo press, which lands on the melody the intro started.
+    const skipped = this.registry.get('attractBack') === true;
+    const handed = this.registry.get('introEnd') === true;
     this.registry.remove('attractBack');
-    this.t = newTitle(this.back ? PROMPT_AT : 0);
+    this.registry.remove('introEnd');
+    this.back = skipped || handed;
+    this.t = newTitle(skipped ? PROMPT_AT : handed ? TITLE_FROM : 0);
     if (params.has('attract')) this.t.fade = Number(params.get('attract'));
     this.shown = 0;
     this.leaving = null;
@@ -103,8 +108,7 @@ export class SnesTitleScene extends Phaser.Scene {
           this.t = { ...this.t, confirm: null };
         }
         if (this.t.event === 'attract') {
-          this.registry.set('attract', true);
-          this.scene.start('opening');
+          this.scene.start('attract');
           return;
         }
       }

@@ -17,7 +17,7 @@ import { SnesSelectScene } from './snes/scenes/select.mjs';
 import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 import { SnesEndingScene } from './snes/scenes/ending.mjs';
-import { SnesOpeningScene } from './snes/scenes/opening.mjs';
+import { SnesAttractScene } from './snes/scenes/attract.mjs';
 import { opensWithOpening } from './snes/opening.mjs';
 import { SnesStage1Scene, SnesStage3Scene, SnesStage5Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
@@ -66,10 +66,10 @@ if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 if (params.has('intro')) start.intro = true;
 const first = SCENES[sceneFor(start)];
 let scene = [first, ...[...SCREENS, 'intro'].map((k) => SCENES[k]).filter((s) => s !== first)];
-// ?snes plays the opening before the title once a session; ?snes&go=opening plays it every time.
+// ?snes plays the attract intro before the title once a session; ?snes&go=opening plays it every time.
 const session = () => { try { return sessionStorage; } catch { return null; } };
-// The opening is also the title's attract loop, so it is always registered under ?snes.
-if (snes) scene = opensWithOpening(params, session()) ? [new SnesOpeningScene(), ...scene] : [...scene, new SnesOpeningScene()];
+// The intro is also the title's attract loop, so it is always registered under ?snes.
+if (snes) scene = opensWithOpening(params, session()) ? [new SnesAttractScene(), ...scene] : [...scene, new SnesAttractScene()];
 const debug = snes && debugScene(params);
 // ?snes&go=lab is the brawl lab: Stage 1's fighting in a grey-box room with live dials.
 if (snes && params.get('go') === 'lab') scene = [new SnesLabScene()];
