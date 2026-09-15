@@ -14,8 +14,12 @@ const PEAK = 22000;
 const midiToHz = (m) => 440 * 2 ** ((m - 69) / 12);
 
 // rate: roughly the rate to store at; attack and loop in seconds; bright lifts the treble the
-// S-DSP's Gaussian filter takes off, kept small so the top stays soft; hit: a one-shot of that
+// S-DSP's Gaussian filter takes off, kept small so the top stays soft; cutoff: the band kept, as a
+// fraction of the stored Nyquist; ease: seconds of fade-in over the attack; hit: a one-shot of that
 // many seconds.
+//
+// The piano is cut to about 2.2 kHz with its hammer eased in: pitched up to C5-E6 the full-band
+// sample "tinks" (Tim, item 2244).
 export const RECIPES = {
   epiano: { program: 4, key: 60, rate: 16000, attack: 0.35, loop: 0.15, bright: 0.25 },
   pad: { program: 89, key: 60, rate: 12000, attack: 0.25, loop: 0.4, bright: 0.15 },
@@ -27,7 +31,7 @@ export const RECIPES = {
   strings: { program: 48, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
   choir: { program: 52, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
   sqlead: { program: 80, key: 72, rate: 16000, attack: 0.03, loop: 0.03, bright: 0 },
-  piano: { program: 0, key: 60, rate: 14000, attack: 0.45, loop: 0.25, bright: 0.1 },
+  piano: { program: 0, key: 60, rate: 10000, attack: 0.45, loop: 0.25, bright: 0.1, cutoff: 0.45, ease: 0.02 },
   slowstr: { program: 49, key: 60, rate: 12500, attack: 0.3, loop: 0.3, bright: 0 },
   subbass: { program: 35, key: 33, rate: 11000, attack: 0.2, loop: 0.1, bright: 0 },
   timpani: { program: 47, key: 43, rate: 11000, attack: 0.3, loop: 0.1, bright: 0 },
@@ -55,10 +59,10 @@ function unroll(s, seconds) {
   return out;
 }
 
-// Windowed-sinc resampling, band-limited to the lower of the two Nyquists.
-function resample(src, from, to, n) {
+// Windowed-sinc resampling, band-limited to the lower of the two Nyquists, times `cutoff`.
+function resample(src, from, to, n, cutoff = 1) {
   const ratio = to / from;
-  const cut = Math.min(1, ratio);
+  const cut = Math.min(1, ratio) * cutoff;
   const width = 8 / cut;
   const out = new Float64Array(n);
   for (let i = 0; i < n; i++) {
@@ -114,13 +118,15 @@ export function build(sf, recipe) {
   const fadeLen = Math.min(loop, Math.floor(len / 2));
   const n = loop + len;
   const src = unroll(s, (n + 16) / rate + 0.05);
-  const wave = resample(src, s.rate, rate, n);
+  const wave = resample(src, s.rate, rate, n, recipe.cutoff);
   const out = Float64Array.from(wave);
   for (let j = 0; j < fadeLen; j++) {
     const w = (j + 1) / fadeLen;
     const k = n - fadeLen + j;
     out[k] = (1 - w) * wave[k] + w * wave[loop - fadeLen + j];
   }
+  const ease = Math.round((recipe.ease ?? 0) * rate);
+  for (let i = 0; i < ease; i++) out[i] *= Math.sin(((i + 1) / ease) * (Math.PI / 2));
   const pcm = normalise(brighten(out, recipe.bright));
   return { s, rate, pcm, loop, rootHz: (f0 * DSP_HZ) / rate };
 }
