@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { CAST, castNames, digitize, parseWav, renderLine, voiceOf } from '../src/snes/audio/voice.mjs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { CAST, CRUSH, CRUSH_DEFAULT, CRUSH_LEVELS, VOICE_BUDGET, castNames, crushLevel, digitize, masterClip, parseWav, renderLine, voiceOf } from '../src/snes/audio/voice.mjs';
+import INTRO_BRR, { CRUSH_AT } from '../src/snes/audio/intro-brr.mjs';
+import { LINES } from '../src/snes/attract.mjs';
 import { takePath } from '../tools/voice.mjs';
 import { wav } from '../tools/snes-render.mjs';
 import { noise } from '../src/snes/audio/bank.mjs';
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const CHARACTERS = ['ward', 'mercer', 'vellum', 'bellwether', 'tuesday', 'associate', 'supervisor', 'manager', 'counsel', 'speaker'];
 
@@ -33,6 +39,49 @@ test('the same take and character always give the same sample', () => {
   assert.deepEqual(digitize('mercer', fakeTake()).pcm, a.pcm);
   assert.notDeepEqual(digitize('speaker', fakeTake()).pcm, a.pcm);
   assert.equal(a.pcm.length % 16, 0);
+});
+
+test('the crush is a dial, and it never touches the master', () => {
+  const master = fakeTake();
+  const before = Float64Array.from(master.pcm);
+  const samples = CRUSH_LEVELS.map((at) => digitize('ward', master, at));
+  assert.deepEqual(master.pcm, before, 'the master came back untouched');
+  const lengths = samples.map((s) => s.pcm.length);
+  assert.equal(new Set(lengths).size, lengths.length, 'each level stores the line at its own rate');
+  for (const at of CRUSH_LEVELS) assert.equal(voiceOf('ward', at).rate, CRUSH[at].rate);
+  assert.ok(CRUSH.light.rate > CRUSH.house.rate && CRUSH.house.rate > CRUSH.hard.rate);
+  assert.throws(() => digitize('ward', master, 'nope'), /no crush/);
+  assert.equal(crushLevel(), CRUSH_DEFAULT);
+});
+
+test('the clean master is kept whole, and is not what the game plays', () => {
+  const master = fakeTake();
+  const clean = masterClip(master);
+  assert.equal(clean.sampleRate, master.rate, 'a master keeps its own full rate');
+  assert.ok(clean.sampleRate > CRUSH[crushLevel()].rate, 'and it is higher than any crush');
+  const src = readdirSync(join(ROOT, 'src', 'snes', 'scenes')).concat(readdirSync(join(ROOT, 'src', 'snes')));
+  for (const name of src.filter((f) => f.endsWith('.mjs'))) {
+    for (const dir of ['scenes', '']) {
+      const path = join(ROOT, 'src', 'snes', dir, name);
+      if (!existsSync(path)) continue;
+      const text = readFileSync(path, 'utf8');
+      assert.ok(!/new URL\([^)]*assets\/voice/.test(text), `${name} fetches a clean master`);
+    }
+  }
+});
+
+test('every intro line is baked crushed, inside the 1 MB voice budget', () => {
+  assert.ok(CRUSH[CRUSH_AT], `baked at a real level: ${CRUSH_AT}`);
+  let bytes = 0;
+  for (const line of LINES) {
+    const baked = INTRO_BRR[line.clip];
+    assert.ok(baked, `${line.clip} baked`);
+    assert.equal(baked.who, line.who);
+    assert.ok(baked.frames > 0 && baked.brr.length > 0);
+    assert.ok(existsSync(join(ROOT, 'assets', 'voice', 'intro', `${line.clip}.wav`)), `${line.clip} master kept`);
+    bytes += (baked.brr.length * 3) / 4;
+  }
+  assert.ok(bytes < VOICE_BUDGET, `${(bytes / 1024).toFixed(0)} KB of ${VOICE_BUDGET / 1024} KB`);
 });
 
 test('a WAV reads back as the take it was written from', () => {

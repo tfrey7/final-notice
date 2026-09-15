@@ -1,9 +1,12 @@
-// The voice cast. Each character is a Kokoro 82M voice (Apache-2.0, run locally) whose takes are
-// kept in assets/voice/takes, then one digitizing chain crushes a take into an S-DSP sample: band
-// limit, 12 kHz, drive, 4-bit BRR blocks, played back pitched on a voice with a touch of echo.
-// Kokoro on the GPU is not bit-exact twice, so a take is recorded once and the chain is pure: the
-// same take, character and chain always give the same bytes. tools/voice.mjs records and renders.
-// The knowledge base recipe `final-notice-voice-cast` is the source of truth; keep them in step.
+// The voice cast. Each character is a voice model run locally whose takes are kept, full quality,
+// in assets/voice: those are the MASTERS, and nothing ever crushes one in place. The SNES version
+// is made from a master by one digitizing chain — band limit, low sample rate, drive, 4-bit BRR
+// blocks, played back pitched with a touch of echo — and that happens on the way into the game,
+// never at recording time. How hard it bites is the CRUSH setting below, so the house sound can
+// change without re-recording a line. The models are not bit-exact twice, so a take is recorded
+// once and the chain is pure: the same master, character and crush always give the same bytes.
+// tools/voice.mjs records and renders. The knowledge base recipe `final-notice-voice-cast` is the
+// source of truth; keep them in step.
 
 import { DSP_HZ, makeSample } from './spc.mjs';
 import { midiToHz } from '../../audio/apu.mjs';
@@ -15,6 +18,33 @@ export const CHAIN = {
   adsr: [15, 7, 7, 0], vol: 127,
   echo: { mvol: 100, evol: 24, efb: 30, edl: 3, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
 };
+
+// How hard the SNES crush bites, as one dial with three settings. `rate` is the sample rate the
+// line is stored at (the 1 MB voice budget is spent here: every second costs rate * 9/16 bytes of
+// BRR); `driveX` and `lowX` scale the character's own drive and top end; `bits` quantizes ahead of
+// BRR for extra grain, 0 for none. `master` is not a crush at all — it is the clean recording, and
+// only a bake-off or a listening test ever asks for it.
+export const CRUSH = {
+  light: { rate: 16000, driveX: 0.75, lowX: 1.25, bits: 0, notes: 'clearest: 16 kHz, softer bite, top end open' },
+  house: { rate: 12000, driveX: 1, lowX: 1, bits: 0, notes: '12 kHz, the chain as tuned per character' },
+  hard: { rate: 8000, driveX: 1.5, lowX: 0.72, bits: 6, notes: "grittiest: 8 kHz, 6-bit grain, hard drive — Tim's pick" },
+};
+
+export const CRUSH_LEVELS = Object.keys(CRUSH);
+
+// Tim picked `hard` off the four-way bake-off (item 2334, m10082): 8 kHz with real grain on it,
+// against the clean master and the two softer settings.
+export const CRUSH_DEFAULT = 'hard';
+
+let level = CRUSH_LEVELS.includes(globalThis.process?.env?.FINAL_NOTICE_CRUSH) ? globalThis.process.env.FINAL_NOTICE_CRUSH : CRUSH_DEFAULT;
+
+export const crushLevel = () => level;
+
+export function setCrush(name) {
+  if (!CRUSH[name]) throw new Error(`no crush "${name}"; the levels are ${CRUSH_LEVELS.join(', ')}`);
+  level = name;
+  return level;
+}
 
 // voice: Kokoro voice; speed: Kokoro pace; pitch: semitones the S-DSP plays the take at (the take
 // is recorded at speed / 2^(pitch/12) so the pace survives); drive, highHz and lowHz override CHAIN.
@@ -81,12 +111,17 @@ export const CAST = {
 
 export const castNames = () => Object.entries(CAST).flatMap(([k, c]) => [k, ...Object.keys(c.moods ?? {}).map((m) => `${k}:${m}`)]);
 
-export function voiceOf(who) {
+// The character's settings with the crush applied on top. `at` names the strength; left out it is
+// the house level, which is what everything in the game uses.
+export function voiceOf(who, at = level) {
   const [key, mood] = String(who).split(':');
   const base = CAST[key];
   if (!base || (mood && !base.moods?.[mood])) throw new Error(`no voice "${who}"; the cast is ${castNames().join(', ')}`);
   const { moods, ...rest } = base;
-  return { ...CHAIN, ...rest, ...(mood ? moods[mood] : {}), key: who };
+  const v = { ...CHAIN, ...rest, ...(mood ? moods[mood] : {}), key: who };
+  const crush = CRUSH[at];
+  if (!crush) throw new Error(`no crush "${at}"; the levels are ${CRUSH_LEVELS.join(', ')}`);
+  return { ...v, rate: crush.rate, drive: v.drive * crush.driveX, lowHz: v.lowHz * crush.lowX, bits: crush.bits, crush: at };
 }
 
 // The pace Kokoro is asked for, so the take lands at `speed` once the S-DSP pitches it.
@@ -152,9 +187,10 @@ function trim(x, rate) {
   return x.subarray(Math.max(0, a - pad), Math.min(x.length, b + pad));
 }
 
-// The digitizing chain: a take ({ pcm, rate }) in the character's voice, as an S-DSP sample.
-export function digitize(who, take) {
-  const v = voiceOf(who);
+// The digitizing chain: a master take ({ pcm, rate }) in the character's voice, as an S-DSP sample,
+// crushed at `at` (the house level by default). The master itself is never touched.
+export function digitize(who, take, at = level) {
+  const v = voiceOf(who, at);
   let x = trim(take.pcm, take.rate);
   x = lowpass(highpass(x, v.highHz, take.rate), v.lowHz, take.rate);
   const n = Math.ceil((x.length * v.rate) / take.rate / 16) * 16;
@@ -167,15 +203,19 @@ export function digitize(who, take) {
   let max = 0;
   for (const s of out) max = Math.max(max, Math.abs(s));
   const k = Math.tanh(v.drive);
-  const wave = out.map((s) => (Math.tanh((v.drive * s) / (max || 1)) / k) * v.peak);
+  let wave = out.map((s) => (Math.tanh((v.drive * s) / (max || 1)) / k) * v.peak);
+  if (v.bits) {
+    const step = (2 * v.peak) / 2 ** v.bits;
+    wave = wave.map((s) => Math.round(s / step) * step);
+  }
   return { ...makeSample(wave), rootHz: midiToHz(60 + 12 * Math.log2(DSP_HZ / v.rate)) };
 }
 
-// The take played through the S-DSP at the character's pitch with the chain's echo, 32 kHz stereo.
-export function renderLine(who, take) {
-  const v = voiceOf(who);
-  const sample = digitize(who, take);
-  const key = `voice:${who}`;
+// The master played through the S-DSP at the character's pitch with the chain's echo, 32 kHz stereo.
+export function renderLine(who, take, at = level) {
+  const v = voiceOf(who, at);
+  const sample = digitize(who, take, at);
+  const key = `voice:${who}:${at}`;
   SAMPLES[key] = sample;
   const seconds = sample.pcm.length / (v.rate * 2 ** (v.pitch / 12)) + 0.6;
   const seq = createSequencer();
@@ -187,3 +227,16 @@ export function renderLine(who, take) {
   seq.render(left, right, len);
   return { left, right, sampleRate: DSP_HZ };
 }
+
+// The master itself, untouched but for the silence trimmed off each end: the "before" in a crush
+// bake-off. It never reaches the game.
+export function masterClip(take) {
+  const x = trim(take.pcm, take.rate);
+  const mono = Float32Array.from(x);
+  return { left: mono, right: mono, sampleRate: take.rate };
+}
+
+// What a set of lines costs at a crush level: BRR is nine bytes per sixteen samples, so a second
+// of speech costs rate * 9/16 bytes. The SNES voice budget is 1 MB of sample data.
+export const VOICE_BUDGET = 1024 * 1024;
+export const crushBytes = (seconds, at = level) => Math.round(seconds * CRUSH[at].rate * (9 / 16));

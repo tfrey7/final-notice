@@ -7,7 +7,10 @@ import { WIDTH, HEIGHT } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
 import { screen } from '../fx.mjs';
 import { playSong, sfx, sfxDef, SAMPLES } from '../audio/player.mjs';
-import { CHAIN, digitize, parseWav, voiceOf } from '../audio/voice.mjs';
+import { CHAIN, voiceOf } from '../audio/voice.mjs';
+import { brrDecode } from '../audio/spc.mjs';
+import { unpack } from '../audio/recorded.mjs';
+import INTRO_BRR from '../audio/intro-brr.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, showFlow } from '../../flow.mjs';
 import { SEEN_KEY } from '../opening.mjs';
@@ -16,7 +19,6 @@ import { LINES, SHOTS, SHOT_H, SHOT_W, SUB_BAND, attractAt, attractCues, attract
 import { FrontScreen, bufferFill } from './front.mjs';
 
 const SHOTS_URL = new URL('../../../assets/intro/', import.meta.url);
-const VOICE_URL = new URL('../../../assets/voice/intro/', import.meta.url);
 const TOP = (HEIGHT - SHOT_H) >> 1;
 const LEFT = (WIDTH - SHOT_W) >> 1;
 const LINE_VOICE = 5;
@@ -37,18 +39,20 @@ async function loadShot(n) {
   pictures.set(n, px);
 }
 
-async function loadLine({ who, clip }) {
-  const bytes = new Uint8Array(await (await fetch(new URL(`${clip}.wav`, VOICE_URL))).arrayBuffer());
-  const sample = digitize(who, parseWav(bytes));
-  const { pitch, rate } = voiceOf(who);
-  SAMPLES[`intro:${clip}`] = sample;
-  voices.set(clip, { who, frames: Math.ceil((sample.pcm.length / (rate * 2 ** (pitch / 12))) * 60) + 6 });
+// The lines the intro speaks are the crushed samples baked by tools/voice-crush.mjs --bake. The
+// clean masters they were made from stay in assets/voice and are never fetched here.
+function loadLine({ who, clip }) {
+  const baked = INTRO_BRR[clip];
+  if (!baked) return;
+  const brr = { blocks: unpack(baked.brr), loop: null };
+  SAMPLES[`intro:${clip}`] = { brr, pcm: brrDecode(brr), loop: null, rootHz: baked.rootHz };
+  voices.set(clip, { who, frames: baked.frames });
 }
 
 let loading = null;
 const loadAll = () => (loading ??= Promise.all([
   ...SHOTS.map((_, i) => loadShot(i + 1).catch(() => {})),
-  ...LINES.map((line) => loadLine(line).catch(() => {})),
+  ...LINES.map((line) => Promise.resolve().then(() => loadLine(line)).catch(() => {})),
 ]));
 
 function sayLine(clip) {
