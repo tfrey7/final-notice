@@ -1,19 +1,17 @@
-// The SNES title picture from Astra's painting (src/snes/titleart.mjs): BG1 city and tower, far rain,
-// Ward and Mercer as sprites, near rain over them. The tower crown owns BG palette 7, so its glow
-// breathes by rewriting that palette alone; every pixel is baked as palette * 16 + slot and read
-// through a lookup table rebuilt when the glow level changes.
+// The SNES title picture, a digitized live-action still (src/snes/titleart.mjs): BG1 city and tower,
+// far rain, Ward and Mercer as sprites, near rain over them. The tower crown's tiles own the `glow`
+// palettes, so its glow breathes by rewriting those alone; every pixel is baked as palette * 16 + slot
+// and read through a lookup table rebuilt when the glow level changes.
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { rgb15 } from './color.mjs';
 import { TITLE_ART } from './titleart.mjs';
 
 const TILE = 8;
-const GLOW = 7;
+const GLOW = new Set(TITLE_ART.glow);
 const GLOW_STEPS = 8;
 const GLOW_PERIOD = 300;
 const CLEAR = 0xffff;
-
-export const LOGO = TITLE_ART.logo;
-export const logoTexture = () => ({ ...LOGO, palette: LOGO.palette.map(([r, g, b]) => rgb15(r, g, b)) });
+const BACKDROP = rgb15(...TITLE_ART.backdrop);
 
 function decode(layer) {
   const cols = WIDTH / TILE;
@@ -33,8 +31,8 @@ const frontLut = TITLE_ART.front.palettes.flatMap((pal) => [CLEAR, ...pal.map(([
 
 // The back palettes with the crown's scaled to glow step `k` of GLOW_STEPS, as palette * 16 + slot.
 function backLut(k) {
-  return TITLE_ART.back.palettes.flatMap((pal, p) => [0, ...pal.map((c) => {
-    const s = p === GLOW ? 0.55 + (0.45 * k) / GLOW_STEPS : 1;
+  return TITLE_ART.back.palettes.flatMap((pal, p) => [BACKDROP, ...pal.map((c) => {
+    const s = GLOW.has(p) ?0.55 + (0.45 * k) / GLOW_STEPS : 1;
     return rgb15(...c.map((v) => Math.min(31, Math.round(v * s))));
   })]);
 }

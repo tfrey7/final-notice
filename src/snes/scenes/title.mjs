@@ -1,4 +1,4 @@
-// The SNES title: Astra's rain-soaked plaza with Ward and Mercer passing the notice, the tower crown
+// The SNES title: digitized live action of Ward and Mercer passing the notice in the rain, the tower crown
 // glowing up through the piano intro; FINAL NOTICE presses in by Mode 7, then PUSH START pulses;
 // Start during the reveal skips to the settled title. After 20 idle seconds the title fades to the
 // opening as its attract loop. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
@@ -7,10 +7,10 @@
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
 import { LEVELS, screen, mathPass, mode7Pass, mode7Matrix, brightness } from '../fx.mjs';
-import { logoPalette, logoReading } from '../bg/ui.mjs';
+import { logo, logoPalette, logoReading } from '../bg/ui.mjs';
 import { INTRO_FRAMES } from '../lights.mjs';
 import { pastDue } from '../clock.mjs';
-import { LOGO, logoTexture, paintArt } from '../titlepaint.mjs';
+import { paintArt } from '../titlepaint.mjs';
 import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
@@ -22,8 +22,8 @@ import { FrontScreen, ZOOM_FRAMES, bufferFill, logoZoom, mode7Texture } from './
 
 const FADE_FRAMES = 24;
 const fadeUp = (f) => Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES));
-// Where the painting keeps its logo: top left, over the storm sky.
-const LOGO_CENTRE = [6 + (LOGO.w >> 1), 4 + (LOGO.h >> 1)];
+// The logo sits in the night sky above the partners and the tower crown.
+const LOGO_CENTRE = [WIDTH >> 1, 2 + (logo.h >> 1)];
 // The press starts 20 frames before the downbeat of bar 5 so it lands on it.
 const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
 const FLASH = screen(rgb15(9, 8, 5));
@@ -138,7 +138,7 @@ function drawPrompt(frame, level) {
 // The title at frame `f`: the painting in the rain, the logo zoom, and the memo or prompt over it.
 function paintTitle(s, f) {
   paintArt(s.main, f, INTRO_FRAMES);
-  s.logo ??= mode7Texture(s.pastDue ? { ...PAST_DUE, palette: logoPalette(0) } : logoTexture());
+  s.logo ??= mode7Texture({ ...(s.pastDue ? PAST_DUE : logo), palette: logoPalette(0) });
   const zoom = logoZoom(f - PRESS_AT);
   let frame = f < PRESS_AT ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, 0), LOGO_CENTRE, s.main, s.out);
   // The landing frame: the whole screen brightens once by fixed-colour add.
