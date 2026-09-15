@@ -466,9 +466,6 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.guide = guideStep(this.guide, this.guideOn ? liveRoutes(p, this.tune) : []);
       if (this.guide) drawGuide(this.g, this.fill, this.guide, { x: 8, y: 38 });
     }
-    const { portrait } = layout;
-    this.hudSprites.draw(artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
-      .frame('stand', 0, portrait.x + 2, portrait.y + 2));
     this.hudSprites.pool.forEach((img) => img.setAlpha(dim).setScrollFactor(0));
     this.g.setAlpha(dim);
 

@@ -10,6 +10,7 @@ import {
   hudLayout, hudBoxes, inScreen, overlaps, drainStep, blend15, fadeFill,
   PALE_FRAMES, DRAIN_PER_FRAME, HUD_COLOURS, drawHud,
 } from '../src/snes/hud.mjs';
+import { FACES } from '../src/snes/hudfaces.mjs';
 
 const inner = BOX.w - 2 * BOX.pad;
 
@@ -88,11 +89,36 @@ test('a text box draws inside the screen', () => {
 const play = { name: 'ward', hp: 5, lives: 3, meter: 2, carried: ['notice', 'redTape'], hand: 1, boss: { name: 'Vellum', hp: 7, maxHp: 12 } };
 
 test('the HUD layout stays on screen and nothing in it overlaps', () => {
-  const boxes = hudBoxes(hudLayout(play));
-  assert.ok(boxes.every(inScreen));
-  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-    assert.ok(!overlaps(boxes[i], boxes[j]), `${JSON.stringify(boxes[i])} and ${JSON.stringify(boxes[j])}`);
+  for (const state of [play, { ...play, name: 'mercer', score: 4200 }]) {
+    const boxes = hudBoxes(hudLayout(state)).map(({ face, ...b }) => b);
+    assert.ok(boxes.every(inScreen));
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      assert.ok(!overlaps(boxes[i], boxes[j]), `${JSON.stringify(boxes[i])} and ${JSON.stringify(boxes[j])}`);
+    }
   }
+});
+
+test('the score sits right-aligned over the health bar, and only when there is one', () => {
+  assert.equal(hudLayout(play).score, null);
+  const { score, health } = hudLayout({ ...play, score: 4200 });
+  assert.equal(score.x + measure('4200'), health.x + health.w - 1);
+  assert.ok(score.y + 9 <= health.y);
+});
+
+test('each hero has a 12x12 face drawn inside the icon, and a stranger an empty icon', () => {
+  for (const who of ['ward', 'mercer']) {
+    const face = FACES[who];
+    assert.equal(face.length, 12);
+    assert.ok(face.every((row) => row.length === 12));
+    assert.ok(face.flat().filter((c) => c != null).length > 40, who);
+    const layout = hudLayout({ name: who, hp: 5, lives: 3, meter: 2 });
+    assert.equal(layout.icon.face, face);
+    const dots = [];
+    drawHud((x, y, w, h) => w === 1 && h === 1 && dots.push({ x, y }), { ...layout, lives: { ...layout.lives, text: '' }, name: { ...layout.name, text: '' } });
+    const { x, y, w, h } = layout.icon;
+    assert.ok(dots.length && dots.every((d) => d.x > x && d.y > y && d.x < x + w - 1 && d.y < y + h - 1));
+  }
+  assert.equal(hudLayout({ ...play, name: 'clerk' }).icon.face, null);
 });
 
 test('bars fill in proportion and clamp', () => {
@@ -100,8 +126,9 @@ test('bars fill in proportion and clamp', () => {
   assert.equal(hudLayout({ ...play, hp: 8 }).health.fill, inside(hudLayout(play)));
   assert.equal(hudLayout({ ...play, hp: 0 }).health.fill, 0);
   assert.equal(hudLayout({ ...play, hp: 99 }).health.fill, inside(hudLayout(play)));
-  assert.equal(hudLayout({ ...play, hp: 4 }).health.fill, 32);
-  assert.deepEqual(hudLayout(play).meter.map((m) => m.full), [true, true, false, false]);
+  assert.equal(hudLayout({ ...play, hp: 4 }).health.fill, 35);
+  assert.equal(hudLayout(play).meter.fill, 35);
+  assert.equal(hudLayout({ ...play, meter: 9 }).meter.fill, 70);
   const boss = hudLayout(play).boss;
   assert.equal(boss.bar.fill, Math.round((94 * 7) / 12));
   assert.equal(boss.name.x + measure('OVERDUE: VELLUM'), WIDTH - 8);
@@ -134,8 +161,8 @@ test('a hit leaves the lost slice pale for 20 frames, then it drains', () => {
   assert.equal(frames, 3 / DRAIN_PER_FRAME);
   assert.equal(drainStep(drainStep(d, 3), 8).pale, 8, 'a heal past the pale slice replaces it');
   const layout = hudLayout({ ...play, hp: 4, pale: 6 });
-  assert.equal(layout.health.fill, 32);
-  assert.equal(layout.health.pale, 48);
+  assert.equal(layout.health.fill, 35);
+  assert.equal(layout.health.pale, 53);
 });
 
 test('a hit during the pale hold keeps the oldest value and restarts the hold', () => {
@@ -169,12 +196,13 @@ test('drawHud draws only inside the screen, and a faded-out group not at all', (
   assert.ok(lit.length && lit.every((r) => r.y >= 36 && r.step <= 9));
 });
 
-test('a full Notice segment is a gold box with a red stamp, an empty one has none', () => {
+test('the Notice meter is a thin blue bar that shows no blue when empty', () => {
   const colours = (meter) => {
     const out = new Set();
     drawHud((x, y, w, h, c) => out.add(c), hudLayout({ ...play, meter }), { health: 0, enchant: 0, boss: 0 });
     return out;
   };
-  assert.ok(!colours(0).has(HUD_COLOURS.stamp));
-  assert.ok(colours(1).has(HUD_COLOURS.stamp) && colours(1).has(HUD_COLOURS.meter));
+  assert.ok(!colours(0).has(HUD_COLOURS.meter) && colours(0).has(HUD_COLOURS.track));
+  assert.ok(colours(1).has(HUD_COLOURS.meter));
+  assert.equal(hudLayout(play).meter.h - 2, 2);
 });

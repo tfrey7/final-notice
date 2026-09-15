@@ -300,8 +300,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (!run.paused) this.drain = drainStep(this.drain, hud.hp);
     const layout = hudLayout({ ...hud, pale: this.drain?.pale ?? hud.hp, receipt: this.receipt, now: run.frame * MS });
     drawHud(fadeFill(buf), layout);
-    const hudArt = [...artOr(this, `hud-portrait-${p.auditor}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 13, 21), rgb15(31, 31, 31)] })
-      .frame(undefined, 0, layout.portrait.x + 2, layout.portrait.y + 2)];
+    const hudArt = [];
     for (const e of layout.enchant ?? []) {
       if (!e.icon) continue;
       hudArt.push(...artOr(this, `hud-${e.icon}`, { w: 16, h: 16, palette: [rgb15(1, 1, 1), e.icon === 'notice' ? rgb15(28, 3, 3) : rgb15(15, 15, 15), rgb15(31, 31, 31)] })

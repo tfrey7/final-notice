@@ -1,26 +1,32 @@
-// The SNES HUD on BG3, over play with no strip behind it: portrait slot, health bar, lives, the
-// injunction meter, Stage 2's two enchantments and a boss bar. It is always on screen, as in Final
-// Fight: nothing fades or hides it. hudLayout and drainStep are pure.
+// The SNES HUD on BG3, over play with no strip behind it, laid out as Streets of Rage 2's: a small face
+// icon with the lives beside it, the name (and a score, where one is kept) over a chunky health bar,
+// a thin Notice meter under that; Stage 2's two enchantments and a boss bar sit to the right. It is
+// always on screen, as in Final Fight: nothing fades or hides it. hudLayout and drainStep are pure.
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { channels, rgb15 } from './color.mjs';
 import { BG3_PALETTE, drawString, measure } from './text.mjs';
+import { FACES } from './hudfaces.mjs';
 
 export const PALE_FRAMES = 20;
 export const DRAIN_PER_FRAME = 1 / 8;
 
 export const HUD_COLOURS = {
   edge: BG3_PALETTE[1],
-  frame: BG3_PALETTE[2],
-  text: BG3_PALETTE[3],
-  ink: rgb15(26, 25, 21),
-  health: rgb15(21, 6, 5),
-  pale: rgb15(26, 19, 16),
-  meter: rgb15(23, 18, 8),
-  stamp: rgb15(19, 4, 4),
+  outline: rgb15(1, 1, 3),
+  iconBack: rgb15(10, 14, 24),
+  name: rgb15(20, 28, 31),
+  score: rgb15(31, 27, 4),
+  lives: rgb15(31, 31, 30),
+  health: rgb15(31, 27, 4),
+  healthLit: rgb15(31, 31, 20),
+  healthShadow: rgb15(24, 16, 2),
+  pale: rgb15(27, 4, 3),
+  paleShadow: rgb15(18, 2, 2),
+  track: rgb15(6, 3, 8),
+  meter: rgb15(8, 20, 31),
   boss: rgb15(15, 5, 16),
   bossLate: rgb15(11, 2, 6),
   bossLabel: rgb15(29, 22, 30),
-  brass: rgb15(24, 19, 8),
   empty: rgb15(4, 4, 7),
   paper: rgb15(27, 25, 19),
   carbon: rgb15(8, 12, 27),
@@ -78,17 +84,19 @@ export const fadeFill = (buf) => (x, y, w, h, c, step = 15) => {
   }
 };
 
-export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segments = 4, carried = null, hand = 0, boss = null, receipt = null, now = 0 }) {
+// Bars are outlined boxes: `fill` is the lit width inside the one-pixel outline.
+export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segments = 4, score = null, carried = null, hand = 0, boss = null, receipt = null, now = 0 }) {
   const px = (w, value, max) => Math.round(((w - 2) * Math.max(0, Math.min(value, max))) / max);
   const bar = (x, y, w, h, value, max) => ({ x, y, w, h, fill: px(w, value, max) });
-  const health = bar(36, 20, 66, 8, hp, maxHp);
+  const health = bar(47, 14, 72, 9, hp, maxHp);
+  const scored = score == null ? null : String(score);
   const layout = {
-    portrait: { x: 8, y: 8, w: 24, h: 24 },
-    name: { text: name.toUpperCase(), x: 36, y: 8 },
-    health: { ...health, pale: Math.max(health.fill, px(66, pale, maxHp)) },
-    lives: { text: `x${lives}`, x: 106, y: 20 },
-    meterLabel: { text: 'NOTICE', x: 128, y: 8 },
-    meter: Array.from({ length: segments }, (_, i) => ({ x: 128 + i * 14, y: 20, w: 12, h: 8, full: i < meter })),
+    icon: { x: 11, y: 7, w: 14, h: 14, face: FACES[name.toLowerCase()] ?? null },
+    lives: { text: `x${lives}`, x: 28, y: 10 },
+    name: { text: name.toUpperCase(), x: 48, y: 4 },
+    score: scored && { text: scored, x: health.x + health.w - 1 - measure(scored), y: 4 },
+    health: { ...health, pale: Math.max(health.fill, px(health.w, pale, maxHp)) },
+    meter: bar(47, 25, 72, 4, meter, segments),
     enchant: null,
     boss: null,
     receipt: receipt && receiptLayout(receipt, now, carried ? 58 : 8),
@@ -111,7 +119,8 @@ export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segmen
 // Every box the layout draws, for bounds and overlap checks.
 export function hudBoxes(layout) {
   const text = (t) => ({ x: t.x, y: t.y, w: measure(t.text) + 1, h: 9 });
-  const boxes = [layout.portrait, text(layout.name), layout.health, text(layout.lives), text(layout.meterLabel), ...layout.meter];
+  const boxes = [layout.icon, text(layout.lives), text(layout.name), layout.health, layout.meter];
+  if (layout.score) boxes.push(text(layout.score));
   if (layout.enchant) boxes.push(...layout.enchant);
   if (layout.boss) boxes.push(text(layout.boss.name), layout.boss.bar);
   if (layout.receipt) boxes.push({ ...layout.receipt, w: RECEIPT.w + RECEIPT.carbon, h: RECEIPT.h + RECEIPT.carbon });
@@ -129,45 +138,37 @@ export function drainStep(d, hp) {
   return { hp, pale: Math.max(hp, d.pale - DRAIN_PER_FRAME), hold: 0 };
 }
 
-// A bar with a highlight row, a mid and a shadow over a see-through track.
-const drawBar = (fill, b, colour) => {
-  fill(b.x, b.y, b.w, b.h, HUD_COLOURS.edge);
-  fill(b.x + 1, b.y + 1, b.w - 2, b.h - 2, HUD_COLOURS.empty, 'track');
+// A black-outlined bar over a dark track, the slice just lost in red; bars taller than two pixels
+// inside get a highlight row and a shadow row.
+function drawBar(fill, b, colour, lit = shade(colour, 4), dark = shade(colour, -4)) {
+  const inner = b.h - 2;
+  fill(b.x, b.y, b.w, b.h, HUD_COLOURS.outline);
+  fill(b.x + 1, b.y + 1, b.w - 2, inner, HUD_COLOURS.track);
   if (b.pale > b.fill) {
-    fill(b.x + 1 + b.fill, b.y + 1, b.pale - b.fill, b.h - 2, HUD_COLOURS.pale);
-    fill(b.x + 1 + b.fill, b.y + b.h - 2, b.pale - b.fill, 1, shade(HUD_COLOURS.pale, -6));
+    fill(b.x + 1 + b.fill, b.y + 1, b.pale - b.fill, inner, HUD_COLOURS.pale);
+    if (inner > 2) fill(b.x + 1 + b.fill, b.y + b.h - 2, b.pale - b.fill, 1, HUD_COLOURS.paleShadow);
   }
   if (!b.fill) return;
-  fill(b.x + 1, b.y + 1, b.fill, b.h - 2, colour);
-  fill(b.x + 1, b.y + 1, b.fill, 1, shade(colour, 4));
-  fill(b.x + 1, b.y + b.h - 2, b.fill, 1, shade(colour, -4));
-  for (let t = b.x + 8; t < b.x + 1 + b.fill; t += 8) fill(t, b.y + 2, 1, b.h - 3, shade(colour, -3));
-};
+  fill(b.x + 1, b.y + 1, b.fill, inner, colour);
+  if (inner <= 2) return;
+  fill(b.x + 1, b.y + 1, b.fill, 1, lit);
+  fill(b.x + 1, b.y + b.h - 2, b.fill, 1, dark);
+}
 
-// A Notice segment: a bevelled gold box, a red bar stamped into it once it fills.
-const drawStampBox = (fill, m) => {
-  fill(m.x, m.y, m.w, m.h, HUD_COLOURS.edge);
-  if (!m.full) {
-    fill(m.x + 1, m.y + 1, m.w - 2, m.h - 2, shade(HUD_COLOURS.meter, -12));
-    fill(m.x + 2, m.y + 2, m.w - 4, m.h - 4, HUD_COLOURS.empty, 'track');
-    return;
-  }
-  fill(m.x + 1, m.y + 1, m.w - 2, m.h - 2, HUD_COLOURS.meter);
-  fill(m.x + 1, m.y + 1, m.w - 2, 1, shade(HUD_COLOURS.meter, 3));
-  fill(m.x + 1, m.y + m.h - 2, m.w - 2, 1, shade(HUD_COLOURS.meter, -5));
-  fill(m.x + 3, m.y + 3, m.w - 6, 2, HUD_COLOURS.stamp);
-  fill(m.x + 3, m.y + 5, m.w - 6, 1, shade(HUD_COLOURS.stamp, -4));
-};
+function drawIcon(fill, icon) {
+  fill(icon.x, icon.y, icon.w, icon.h, HUD_COLOURS.outline);
+  fill(icon.x + 1, icon.y + 1, icon.w - 2, icon.h - 2, HUD_COLOURS.iconBack);
+  icon.face?.forEach((row, y) => row.forEach((c, x) => c != null && fill(icon.x + 1 + x, icon.y + 1 + y, 1, 1, c)));
+}
 
 const drawSlot = (fill, s, colour) => {
-  fill(s.x, s.y, s.w, s.h, HUD_COLOURS.edge);
+  fill(s.x, s.y, s.w, s.h, HUD_COLOURS.outline);
   fill(s.x + 1, s.y + 1, s.w - 2, s.h - 2, colour);
-  fill(s.x + 1, s.y + 1, s.w - 2, 1, shade(colour, 6));
   fill(s.x + 2, s.y + 2, s.w - 4, s.h - 4, HUD_COLOURS.empty);
 };
 
-// The bars, frames and words, each group at its own fade step (fill's sixth argument, 0-15; a
-// track takes half, see-through); the portrait and icon art go inside the slots on top (artOr).
+// The icon, bars and words, each group at its own step (fill's sixth argument, 0-15; a track takes
+// half, see-through); the enchantment icons go inside their slots on top (artOr).
 export function drawHud(fill, layout, steps = {}) {
   const group = (g) => {
     const step = steps[g] ?? 15;
@@ -177,26 +178,21 @@ export function drawHud(fill, layout, steps = {}) {
     };
   };
   const health = group('health');
-  const meter = group('meter');
-  drawSlot(health, layout.portrait, HUD_COLOURS.frame);
-  drawString(health, layout.name.text, layout.name.x, layout.name.y, HUD_COLOURS.ink);
-  drawString(health, layout.lives.text, layout.lives.x, layout.lives.y, HUD_COLOURS.ink);
-  drawBar(health, layout.health, HUD_COLOURS.health);
-  drawString(meter, layout.meterLabel.text, layout.meterLabel.x, layout.meterLabel.y, HUD_COLOURS.meter);
-  for (const m of layout.meter) drawStampBox(meter, m);
+  const words = (t, c) => drawString(health, t.text, t.x, t.y, c, HUD_COLOURS.outline);
+  drawIcon(health, layout.icon);
+  words(layout.lives, HUD_COLOURS.lives);
+  words(layout.name, HUD_COLOURS.name);
+  if (layout.score) words(layout.score, HUD_COLOURS.score);
+  drawBar(health, layout.health, HUD_COLOURS.health, HUD_COLOURS.healthLit, HUD_COLOURS.healthShadow);
+  drawBar(group('meter'), layout.meter, HUD_COLOURS.meter);
   const enchant = group('enchant');
-  for (const e of layout.enchant ?? []) drawSlot(enchant, e, e.held ? HUD_COLOURS.meter : HUD_COLOURS.empty);
+  for (const e of layout.enchant ?? []) drawSlot(enchant, e, e.held ? HUD_COLOURS.score : HUD_COLOURS.outline);
   if (layout.boss) {
     const boss = group('boss');
     const { name, bar } = layout.boss;
     const lettering = (x, y, w, h, c, part) =>
       boss(x, y, w, h, c === HUD_COLOURS.bossLabel ? blend15(HUD_COLOURS.bossLabel, bar.colour, Math.min(15, (y - name.y) * 2)) : c, part);
-    drawString(lettering, name.text, name.x, name.y, HUD_COLOURS.bossLabel);
-    for (const cx of [bar.x - 2, bar.x + bar.w]) {
-      boss(cx, bar.y - 1, 2, bar.h + 2, shade(HUD_COLOURS.brass, -8));
-      boss(cx, bar.y, 2, bar.h, HUD_COLOURS.brass);
-      boss(cx, bar.y, 1, 1, shade(HUD_COLOURS.brass, 6));
-    }
+    drawString(lettering, name.text, name.x, name.y, HUD_COLOURS.bossLabel, HUD_COLOURS.outline);
     drawBar(boss, bar, bar.colour);
   }
   if (layout.receipt) drawReceipt(group('receipt'), layout.receipt);

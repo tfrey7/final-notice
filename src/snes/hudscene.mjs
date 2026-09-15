@@ -16,6 +16,7 @@ export function demoState(ms) {
   const hits = (t >= 3500) + (t >= 9000);
   return {
     name: 'ward',
+    score: 4200,
     hp: 8 - 3 * hits,
     lives: 3,
     meter: t >= 3400 ? 2 : 1,
@@ -69,8 +70,7 @@ export class SnesHudScene extends Phaser.Scene {
     this.g.clear();
     drawHud(this.fill, layout);
 
-    const { portrait } = layout;
-    const entries = [...artOr(this, 'hud-portrait-ward', { w: 20, h: 20, palette: [0x0421, 0x2d6b, 0x7fff] }).frame('stand', 0, portrait.x + 2, portrait.y + 2)];
+    const entries = [];
     for (const e of layout.enchant) {
       entries.push(...artOr(this, `hud-${e.icon}`, { w: 16, h: 16, palette: [0x0421, e.icon === 'notice' ? 0x0c1c : 0x3def, 0x7fff] })
         .frame('stand', 0, e.x + 2, e.y + 2));
