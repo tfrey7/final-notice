@@ -242,6 +242,7 @@ export function createApu(ctx) {
     src.buffer = buffer;
     src.loop = true;
     const gain = ctx.createGain();
+    gain.gain.value = 0;
     gain.gain.setValueAtTime(0, when);
     let lastGain = -1;
     let lastRate = -1;
@@ -252,13 +253,18 @@ export function createApu(ctx) {
       const t = when + f / FRAME_HZ;
       if (g !== lastGain) gain.gain.setValueAtTime(g, t);
       const rate = hz > 0 ? (hz * cycle) / ctx.sampleRate : lastRate;
-      if (rate > 0 && rate !== lastRate) src.playbackRate.setValueAtTime(rate, t);
+      if (rate > 0 && rate !== lastRate) {
+        if (lastRate < 0) src.playbackRate.value = rate;
+        src.playbackRate.setValueAtTime(rate, t);
+      }
       lastGain = g;
       lastRate = rate;
     }
     src.connect(gain).connect(buses[channel]);
     const end = when + spec.frames / FRAME_HZ;
-    src.start(when);
+    // Chrome spikes a source started between render blocks, so it starts silent on the block edge before.
+    const block = 128 / ctx.sampleRate;
+    src.start(Math.max(0, Math.floor(when / block) * block));
     src.stop(end);
     return { src, start: when, end };
   }
