@@ -1,0 +1,70 @@
+{
+  "image": "associate.png",
+  "frameWidth": 80,
+  "frameHeight": 64,
+  "columns": 6,
+  "origin": {
+    "x": 51,
+    "y": 62
+  },
+  "animations": {
+    "walk": {
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "fps": 8,
+      "repeat": -1
+    },
+    "windup": {
+      "frames": [
+        6,
+        7,
+        8
+      ],
+      "fps": 8,
+      "repeat": 0
+    },
+    "punch": {
+      "frames": [
+        12,
+        13,
+        14,
+        15
+      ],
+      "fps": 14,
+      "repeat": 0
+    },
+    "reel": {
+      "frames": [
+        18,
+        19,
+        20
+      ],
+      "fps": 10,
+      "repeat": 0
+    },
+    "knockdown": {
+      "frames": [
+        24,
+        25,
+        26,
+        27
+      ],
+      "fps": 10,
+      "repeat": 0
+    },
+    "down": {
+      "frames": [
+        30,
+        31
+      ],
+      "fps": 3,
+      "repeat": -1
+    }
+  }
+}

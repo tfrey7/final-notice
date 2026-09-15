@@ -1,18 +1,25 @@
-// The sprite preview: Ward playing every animation at game scale on the lobby's burgundy
-// carpet, one figure per animation, in the order the caption under the canvas names them.
+// The sprite preview: every drawn character playing every animation at game scale on the
+// lobby's burgundy carpet. Ward's six stand along the back row and the Security Associate's
+// six along the front, in the order the caption under the canvas names them.
 /* global Phaser */
 import { WIDTH, HEIGHT } from './screen.mjs';
 import { PALETTE as P } from './palette.mjs';
 
 export const PREVIEW_ORDER = ['idle', 'walk', 'punch1', 'punch2', 'punch3', 'hit'];
+export const ASSOCIATE_ORDER = ['walk', 'windup', 'punch', 'reel', 'knockdown', 'down'];
 
-// Where each figure's feet stand: three across, two rows, on the carpet.
-export function previewSpots(count = PREVIEW_ORDER.length, width = WIDTH) {
-  const perRow = 3;
-  return Array.from({ length: count }, (_, i) => ({
-    x: Math.round(((i % perRow) + 0.5) * (width / perRow)),
-    y: 128 + Math.floor(i / perRow) * 84,
+// Where each figure's feet stand. Ward's row is spaced evenly; the Associate's last two
+// spots are wider apart because he lands flat on his back, his head towards the left.
+export function previewSpots(width = WIDTH) {
+  const ward = PREVIEW_ORDER.map((anim, i) => ({
+    sheet: 'ward',
+    anim,
+    x: Math.round((i + 0.5) * (width / PREVIEW_ORDER.length)),
+    y: 128,
   }));
+  const associateX = [25, 72, 118, 158, 214, 276];
+  const associate = ASSOCIATE_ORDER.map((anim, i) => ({ sheet: 'associate', anim, x: associateX[i], y: 212 }));
+  return [...ward, ...associate];
 }
 
 export class SpritesScene extends Phaser.Scene {
@@ -23,6 +30,8 @@ export class SpritesScene extends Phaser.Scene {
   preload() {
     this.load.json('ward-data', 'assets/sprites/ward.json');
     this.load.spritesheet('ward', 'assets/sprites/ward.png', { frameWidth: 40, frameHeight: 64 });
+    this.load.json('associate-data', 'assets/sprites/associate.json');
+    this.load.spritesheet('associate', 'assets/sprites/associate.png', { frameWidth: 80, frameHeight: 64 });
   }
 
   create() {
@@ -43,23 +52,22 @@ export class SpritesScene extends Phaser.Scene {
       }
     }
 
-    const data = this.cache.json.get('ward-data');
-    const spots = previewSpots();
-    PREVIEW_ORDER.forEach((name, i) => {
-      const a = data.animations[name];
+    previewSpots().forEach(({ sheet, anim, x, y }) => {
+      const data = this.cache.json.get(`${sheet}-data`);
+      const a = data.animations[anim];
+      const key = `${sheet}-${anim}`;
       this.anims.create({
-        key: name,
-        frames: a.frames.map((frame) => ({ key: 'ward', frame })),
+        key,
+        frames: a.frames.map((frame) => ({ key: sheet, frame })),
         frameRate: a.fps,
         repeat: -1,
         repeatDelay: a.repeat === 0 ? 400 : 0,
       });
-      const { x, y } = spots[i];
       g.fillStyle(0x2e0a16).fillEllipse(x, y + 1, 26, 5); // contact shadow
       this.add
-        .sprite(x, y, 'ward')
+        .sprite(x, y, sheet)
         .setOrigin(data.origin.x / data.frameWidth, (data.origin.y + 1) / data.frameHeight)
-        .play(name);
+        .play(key);
     });
   }
 }

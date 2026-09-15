@@ -103,22 +103,26 @@ const SHOE = ['.kkkk..', 'kdddskk', 'kkkkkkk'];
 
 // ---- drawing ----
 
-function blankLayer() {
-  return Array.from({ length: FRAME_H }, () => Array(FRAME_W).fill('.'));
+// The helpers below read a layer's size off the layer itself, so another character's tool
+// (tools/associate-sprite.mjs) draws with them in a wider frame.
+export function blankLayer(w = FRAME_W, h = FRAME_H) {
+  return Array.from({ length: h }, () => Array(w).fill('.'));
 }
 
-function stamp(layer, grid, x0, y0) {
+export function stamp(layer, grid, x0, y0) {
   grid.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       const X = x0 + x;
       const Y = y0 + y;
-      if (ch !== '.' && X >= 0 && Y >= 0 && X < FRAME_W && Y < FRAME_H) layer[Y][X] = ch;
+      if (ch !== '.' && X >= 0 && Y >= 0 && X < layer[0].length && Y < layer.length) layer[Y][X] = ch;
     });
   });
 }
 
 // A limb segment: a round-ended bar `width` wide, lit on one side and shaded on the other.
-function segment(layer, a, b, width, fill, shade) {
+export function segment(layer, a, b, width, fill, shade) {
+  const FRAME_W = layer[0].length;
+  const FRAME_H = layer.length;
   const r = width / 2;
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
@@ -143,10 +147,10 @@ function segment(layer, a, b, width, fill, shade) {
 }
 
 // Every clear pixel touching the part gets the outline letter.
-function outline(layer) {
+export function outline(layer) {
   const out = layer.map((row) => row.slice());
-  for (let y = 0; y < FRAME_H; y++) {
-    for (let x = 0; x < FRAME_W; x++) {
+  for (let y = 0; y < layer.length; y++) {
+    for (let x = 0; x < layer[0].length; x++) {
       if (layer[y][x] !== '.') continue;
       const n = [[0, 1], [1, 0], [0, -1], [-1, 0]].some(([a, b]) => {
         const v = layer[y + b]?.[x + a];
@@ -158,8 +162,8 @@ function outline(layer) {
   return out;
 }
 
-function over(frame, layer) {
-  for (let y = 0; y < FRAME_H; y++) for (let x = 0; x < FRAME_W; x++) if (layer[y][x] !== '.') frame[y][x] = layer[y][x];
+export function over(frame, layer) {
+  for (let y = 0; y < layer.length; y++) for (let x = 0; x < layer[0].length; x++) if (layer[y][x] !== '.') frame[y][x] = layer[y][x];
 }
 
 // Two-bone reach: where the middle joint sits for a start, an end and two bone lengths.
@@ -353,7 +357,7 @@ export function buildSheet() {
 
 // The figure's measured box in one frame: top row, bottom row, height.
 export function measure(grid) {
-  let top = FRAME_H;
+  let top = grid.length;
   let bottom = -1;
   grid.forEach((line, y) => {
     if (line.some((ch) => ch !== '.')) {
@@ -395,7 +399,7 @@ export function encodePng(width, height, rgba) {
 }
 
 // Every frame enlarged on a grey board with a foot line, for looking at.
-function lookPng(sheet, scale) {
+export function lookPng(sheet, scale) {
   const { width, height, rgba, meta } = sheet;
   const W = width * scale;
   const H = height * scale;
