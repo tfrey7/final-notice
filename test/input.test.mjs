@@ -9,7 +9,7 @@ import { player } from '../src/stage1/moves.mjs';
 import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 import { createRun, stepRun } from '../src/stage2/core.mjs';
 import { carry, inHand } from '../src/stage2/pickups.mjs';
 
@@ -96,8 +96,8 @@ test('SNES Y attacks and B jumps in the stages\' words; A, X, L and R are intent
 });
 
 test('Stage 1 on the SNES pad: right, release, right within 12 frames runs at the weighed runX', () => {
-  weighShared();
-  const tune = scaledTune(weighed(tuneFor('ward'), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  const tune = scaledTune(snesTune('ward'), STAGE1.scale);
   const world = newFloor('ward', tune);
   const frames = [['right'], ...Array(DOUBLE_TAP_FRAMES - 2).fill([]), ['right'], ['right'], ['right']];
   const xs = [];

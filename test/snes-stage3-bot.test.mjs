@@ -9,7 +9,7 @@ import { CHECKPOINTS, jumpTo, next } from '../src/flow.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
 import { BACKROOMS, SNES_STAGE3 } from '../src/snes/stage3/waves.mjs';
 import { clearLines } from '../src/snes/stage1/boss.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 
 const OPEN = ['recover', 'hurt', 'idle', 'walk', 'knockdown', 'guard'];
 
@@ -49,8 +49,8 @@ const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held),
 // Plays Stage 3 the way the scene does: checkpoints, lives, a continue back at the last checkpoint,
 // the corridor's folds, and the far door into stage clear.
 function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
-  weighShared();
-  const tune = scaledTune(weighed(tuneFor(who), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  const tune = scaledTune(snesTune(who), STAGE1.scale);
   let flow = { ...jumpTo('stage3'), auditor: who };
   let world = build(flow, tune);
   const log = { frames: 0, lives: 0, continues: 0, locks: 0, waves: 0, heals: 0, folds: [], foes: new Set(), checkpoints: [], cleared: false };

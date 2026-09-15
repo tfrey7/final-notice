@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LAB, PLANNED, buildDials, labKinds, nudge, settingsText, takeTurns, waveKinds, withKindDials } from '../src/lab/dials.mjs';
 import { TUNING, defaultTune, fighter } from '../src/stage1/moves.mjs';
-import { KINDS } from '../src/stage1/staff.mjs';
+import { KINDS } from '../src/snes/fight.mjs';
 import { WEAPONS } from '../src/stage1/weapons.mjs';
 
 test('every TUNING value, the lab dials and the planned dials each get one dial', () => {
@@ -58,7 +58,7 @@ test('every enemy kind\'s health, speed and each attack\'s wind-up and damage ge
   assert.equal(kinds.manager.moves.charge.windup, KINDS.manager.moves.charge.windup + 4);
   assert.equal(kinds.associate.hp, KINDS.associate.hp + 1);
   assert.deepEqual(KINDS, before);
-  assert.match(settingsText(dials, {}, 'ward'), /\[foes\][^[]*manager\.charge\.windup: 36/);
+  assert.match(settingsText(dials, {}, 'ward'), /\[foes\][^[]*manager\.charge\.windup: 46/);
 });
 
 test('a foe starting a wind-up waits while the attack turns are all taken', () => {

@@ -9,7 +9,7 @@ import { CHECKPOINTS, jumpTo, next } from '../src/flow.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
 import { CHAPEL, RITUAL, SNES_STAGE5, altarsInView, armChapel, chapelAltars, stepRitual } from '../src/snes/stage5/chapel.mjs';
 import { clearLines } from '../src/snes/stage1/boss.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 
 const OPEN = ['recover', 'hurt', 'idle', 'walk', 'knockdown', 'guard'];
 
@@ -59,8 +59,8 @@ const pad = ({ held = [], b = false, parry = false }) => ({ held: new Set(held),
 // Plays Stage 5 the way the scene does: checkpoints, lives, a continue back at the last checkpoint,
 // the two rituals, and the sanctum's far side into stage clear.
 function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
-  weighShared();
-  const tune = scaledTune(weighed(tuneFor(who), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  const tune = scaledTune(snesTune(who), STAGE1.scale);
   let flow = { ...jumpTo('stage5'), auditor: who };
   let world = build(flow, tune);
   const log = { frames: 0, lives: 0, continues: 0, locks: 0, waves: 0, heals: 0, rituals: 0, broken: 0, smashed: 0, mended: 0, lost: [], foes: new Set(), checkpoints: [], cleared: false };

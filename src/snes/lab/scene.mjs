@@ -1,5 +1,5 @@
 // The brawl lab under ?snes&go=lab: one locked grey-box room on Stage 1's real fighting (moves.mjs,
-// player.mjs and staff.mjs, at the SNES weight and scale), with a dial panel for tuning the feel live.
+// player.mjs and staff.mjs, at the SNES pace and scale), with a dial panel for tuning the feel live.
 // Boxes stand in for every sprite: foes flash white on a wind-up, and a swing shows its reach.
 /* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
@@ -15,11 +15,11 @@ import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
 import { SHAPE, readLook, turnOwners } from '../../stage1/readout.mjs';
 import { drawReadout } from '../readout.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
-import { CROWD, KINDS, moveOf, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
+import { CROWD, moveOf, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { MAX_HITS, RING, SEGMENTS, freeInjunction } from '../../injunction.mjs';
 import { scaledTune } from '../stage1/finisher.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
+import { KINDS, snesTune, useSnesTables } from '../fight.mjs';
 import { buildDials, labKinds, settingsText, takeTurns, waveKinds, withKindDials } from '../../lab/dials.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
 import { isShortcut, mountControls } from '../../controls.mjs';
@@ -57,8 +57,8 @@ export class SnesLabScene extends Phaser.Scene {
   create() {
     const params = new URLSearchParams(location.search);
     this.who = AUDITORS.includes(params.get('who')) ? params.get('who') : 'ward';
-    weighShared();
-    this.base = weighed(tuneFor(this.who), BRAWL_WEIGHT);
+    useSnesTables();
+    this.base = snesTune(this.who);
     this.tune = scaledTune(this.base, STAGE1.scale);
     this.dials = buildDials(this.base);
     this.counts = { ...START_COUNTS };

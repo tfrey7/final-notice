@@ -17,7 +17,7 @@ const s = 'supervisor';
 
 // `tough` grows every chapel foe's health once, as he walks on; an anointed foe mends one point
 // every `mendFrames` and his attack cooldown runs down `haste` frames faster.
-export const RITUAL = registerTuning('chapel', { tough: 1.25, mendFrames: 90, haste: 0.5 });
+export const RITUAL = registerTuning('chapel', { tough: 1.25, mendFrames: 144, haste: 0.325 });
 
 // A lock's `altars` stand on its screen, x from that screen's left edge.
 export const CHAPEL = [

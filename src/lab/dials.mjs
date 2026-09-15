@@ -2,7 +2,8 @@
 // one by pad, the attack-turn gate and the settings text Tim copies into the room.
 // Dials change the lab's live tables only; nothing here writes the game's defaults.
 import { TUNING } from '../stage1/moves.mjs';
-import { CROWD, KINDS, moveOf } from '../stage1/staff.mjs';
+import { CROWD, moveOf } from '../stage1/staff.mjs';
+import { KINDS } from '../snes/fight.mjs';
 import { WEAPONS } from '../stage1/weapons.mjs';
 import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
@@ -127,7 +128,7 @@ export function settingsText(dials, counts, who) {
     '',
     '[crowd] (circleRadius before the SNES 1.5x pixel scale)', byGroup('crowd'),
     '',
-    '[foes] (speed before the SNES weight and scale, wind-ups before the SNES weight)', byGroup('foes'),
+    '[foes] (speed before the SNES 1.5x pixel scale)', byGroup('foes'),
     '',
     '[moves] (before the SNES 1.5x pixel scale)', byGroup('moves'),
     '',

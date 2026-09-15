@@ -7,15 +7,15 @@ import { CROWD, spawnStaff } from '../src/stage1/staff.mjs';
 import { readLook, readout } from '../src/stage1/readout.mjs';
 import { buildDials } from '../src/lab/dials.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 
 const HURT = ['hurt', 'knockdown', 'bound'];
 const pad = () => ({ held: new Set(), pressed: new Set(), released: new Set(), step: 0, aim: false, dash: null });
 
-// The brawl lab's room at the SNES weight and scale, with nobody touching the pad.
+// The brawl lab's room at the SNES pace and scale, with nobody touching the pad.
 function room(kinds, extraPlayer = false) {
-  weighShared();
-  const tune = scaledTune(weighed(tuneFor('ward'), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  const tune = scaledTune(snesTune('ward'), STAGE1.scale);
   const world = newFloor('ward', tune);
   const p = Object.assign(world.fighters.find((f) => f.team === 'player'), { x: 60, hp: 999 });
   world.fighters = [p];

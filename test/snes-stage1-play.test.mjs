@@ -5,7 +5,7 @@ import { newFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE, newStage } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { KINDS, spawnStaff, spot, thinkStaff } from '../src/stage1/staff.mjs';
-import { BRAWL_WEIGHT } from '../src/snes/weight.mjs';
+import { KINDS as SNES_KINDS } from '../src/snes/fight.mjs';
 import { FINISHER_FRAMES, SCALED, endsArea, finisherFrame, finisherTarget, livingFoes, scaledTune } from '../src/snes/stage1/finisher.mjs';
 
 test('one scale factor grows every pixel number and leaves times and damage alone', () => {
@@ -18,18 +18,20 @@ test('one scale factor grows every pixel number and leaves times and damage alon
   assert.equal(STAGE1.scale, 1.5);
 });
 
-test('the SNES staff foes stand and reach 1.5x as far and swing at the brawl weight; the NES keeps its numbers', () => {
+test('the SNES staff foes stand and reach 1.5x as far and swing at the SNES pace; the NES keeps its numbers', () => {
   const nes = structuredClone(KINDS);
   const { kinds } = scaledTune(defaultTune(), STAGE1.scale);
   const a = kinds.associate;
   assert.equal(a.reach, nes.associate.reach * 1.5);
   assert.equal(a.stand, nes.associate.stand * 1.5);
-  assert.equal(a.speed, nes.associate.speed * BRAWL_WEIGHT.scale.foeSpeed * 1.5);
-  assert.equal(a.windup, nes.associate.windup + BRAWL_WEIGHT.frames.foeWindup);
-  assert.equal(a.cooldown, nes.associate.cooldown + BRAWL_WEIGHT.frames.foeCooldown);
+  assert.equal(a.speed, SNES_KINDS.associate.speed * 1.5);
+  assert.ok(SNES_KINDS.associate.speed < nes.associate.speed);
+  assert.equal(a.windup, SNES_KINDS.associate.windup);
+  assert.ok(a.windup > nes.associate.windup && a.cooldown > nes.associate.cooldown);
   assert.equal(a.hp, nes.associate.hp);
   assert.equal(kinds.manager.moves.charge.to, nes.manager.moves.charge.to * 1.5);
-  assert.equal(kinds.manager.moves.charge.windup, nes.manager.moves.charge.windup + BRAWL_WEIGHT.frames.foeWindup);
+  assert.equal(kinds.manager.moves.charge.windup, SNES_KINDS.manager.moves.charge.windup);
+  assert.ok(kinds.manager.moves.charge.windup > nes.manager.moves.charge.windup);
   assert.equal(kinds.counsel.keep, nes.counsel.keep * 1.5);
   assert.equal(kinds.counsel.near, nes.counsel.near * 1.5);
   assert.deepEqual(KINDS, nes);

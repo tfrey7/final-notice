@@ -10,7 +10,7 @@ import { jumpTo, next } from '../src/flow.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
 import { SNES_STAGE1 } from '../src/snes/stage1/waves.mjs';
 import { CLEAR, OFFICE, clearDone, clearLines } from '../src/snes/stage1/boss.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { snesTune, useSnesTables } from '../src/snes/fight.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../src/stage1/weapons.mjs';
 
 const OPEN = ['recover', 'hurt', 'idle', 'walk', 'knockdown', 'guard'];
@@ -96,8 +96,8 @@ const pad = ({ held = [], b = false, a = false, heavy = false, parry = false, st
 // Plays Stage 1 from the first screen the way the scene does: checkpoints, lives, a continue on game
 // over back at the last checkpoint, the door to Vellum's office, and his slump into stage clear.
 function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
-  weighShared();
-  const tune = scaledTune(weighed(tuneFor(who), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  const tune = scaledTune(snesTune(who), STAGE1.scale);
   let flow = jumpTo('stage1');
   flow = { ...flow, auditor: who };
   let world = build(flow, tune);

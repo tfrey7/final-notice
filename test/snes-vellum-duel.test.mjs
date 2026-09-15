@@ -6,13 +6,13 @@ import { KINDS } from '../src/stage1/staff.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { VELLUM, enterOffice, vellum } from '../src/stage1/vellum.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
-import { BRAWL_WEIGHT, VELLUM_WEIGHT, weighShared, weighed } from '../src/snes/weight.mjs';
+import { VELLUM as SNES_VELLUM, snesTune as snesBase, useSnesTables } from '../src/snes/fight.mjs';
 import { buildDials } from '../src/lab/dials.mjs';
 
 // The tune exactly as the SNES office builds it.
 function snesTune(who = 'mercer') {
-  weighShared();
-  return scaledTune(weighed(tuneFor(who), BRAWL_WEIGHT), STAGE1.scale);
+  useSnesTables();
+  return scaledTune(snesBase(who), STAGE1.scale);
 }
 
 // Mercer duels him with the parry; Ward blocks instead.
@@ -81,7 +81,7 @@ function parrier(i, world, tune, p, f, v) {
   return { held, b: open && i % 4 === 0, parry };
 }
 
-test('the SNES Vellum is grown and weighed like the player; the NES table keeps its numbers', () => {
+test('the SNES Vellum is grown like the player and plays his SNES table; the NES table keeps its numbers', () => {
   const tune = snesTune();
   const s = tune.vellum;
   assert.deepEqual(VELLUM.guard, [80, 44]);
@@ -90,15 +90,16 @@ test('the SNES Vellum is grown and weighed like the player; the NES table keeps 
   assert.equal(s.rushReach, 14 * STAGE1.scale);
   assert.equal(s.sweepReach, 38 * STAGE1.scale);
   assert.equal(s.stand, 28 * STAGE1.scale);
-  assert.deepEqual(s.speed, VELLUM.speed.map((x) => x * BRAWL_WEIGHT.scale.foeSpeed * STAGE1.scale));
-  assert.deepEqual(s.rushSpeed, VELLUM.rushSpeed.map((x) => x * VELLUM_WEIGHT.scale.rushSpeed * STAGE1.scale));
+  assert.deepEqual(s.speed, SNES_VELLUM.speed.map((x) => x * STAGE1.scale));
+  assert.deepEqual(s.rushSpeed, SNES_VELLUM.rushSpeed.map((x) => x * STAGE1.scale));
+  assert.ok(SNES_VELLUM.speed[0] < VELLUM.speed[0] && SNES_VELLUM.recover[0] > VELLUM.recover[0]);
   assert.ok(s.guard[0] <= 32 && s.guard[1] < s.guard[0], 'a guard of about half a second');
   assert.equal(s.windup[0], tune.vellumTell);
   assert.equal(s.stagger, tune.vellumStagger);
 });
 
 test('his tell and stagger are brawl-lab dials that turn the SNES table', () => {
-  const base = weighed(tuneFor('ward'), BRAWL_WEIGHT);
+  const base = snesBase('ward');
   const dials = buildDials(base);
   for (const key of ['vellumTell', 'vellumStagger']) assert.equal(dials.find((d) => d.key === key)?.group, 'moves', key);
   assert.ok(TUNING.vellumTell && TUNING.vellumStagger);

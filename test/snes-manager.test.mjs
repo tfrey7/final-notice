@@ -4,10 +4,10 @@ import { player } from '../src/stage1/moves.mjs';
 import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
 import { spawnStaff } from '../src/stage1/staff.mjs';
-import { BRAWL_WEIGHT, weighed } from '../src/snes/weight.mjs';
+import { snesTune as snesBase } from '../src/snes/fight.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
 
-const snesTune = () => scaledTune(weighed(tuneFor('ward'), BRAWL_WEIGHT), STAGE1.scale);
+const snesTune = () => scaledTune(snesBase('ward'), STAGE1.scale);
 
 function managerFloor(tune) {
   const world = newFloor('ward', tune);

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { defaultTune, fighter, hitFeel, landHit, step } from '../src/stage1/moves.mjs';
 import { comboRating, comboScale, routeLights } from '../src/stage1/combo.mjs';
 import { tuneFor } from '../src/stage1/player.mjs';
-import { BRAWL_WEIGHT, weighed } from '../src/snes/weight.mjs';
+import { snesTune } from '../src/snes/fight.mjs';
 
-const snes = () => weighed(tuneFor('ward'), BRAWL_WEIGHT);
+const snes = () => snesTune('ward');
 const idle = { held: new Set(), pressed: new Set(), dash: null };
 
 function hitOnce(tune, blow) {

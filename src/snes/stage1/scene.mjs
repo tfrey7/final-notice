@@ -36,7 +36,7 @@ import { SNES_STAGE1 } from './waves.mjs';
 import { SNES_STAGE3 } from '../stage3/waves.mjs';
 import { SNES_STAGE5, armChapel, stepRitual } from '../stage5/chapel.mjs';
 import { thingPriority, withPriority } from './priority.mjs';
-import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
+import { snesTune, useSnesTables } from '../fight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { mountControls } from '../../controls.mjs';
@@ -114,8 +114,8 @@ export class SnesStage1Scene extends Phaser.Scene {
 
     this.who = state.auditor;
     this.partner = newBarker(this.who);
-    weighShared();
-    this.base = registerTuning(`snes-brawl-${this.who}`, weighed(tuneFor(this.who), BRAWL_WEIGHT), RANGES);
+    useSnesTables();
+    this.base = registerTuning(`snes-brawl-${this.who}`, snesTune(this.who), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
     this.fin = null;
     this.barker = createBarker();

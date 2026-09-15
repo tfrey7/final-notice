@@ -13,7 +13,7 @@ const HURTING = ['hurt', 'knockdown', 'down', 'getup', 'bound', 'held'];
 
 // Colour means behaviour (NES-CLASSICS L3), so each kind keeps its own palette in foe-actors.mjs.
 // `stand` is where a squaring-up foe rests, `near` the closest Counsel will throw from. A tune may
-// carry its own `kinds` (the SNES scene's, grown and weighed); without one these are used.
+// carry its own `kinds` (the SNES scene's, from src/snes/fight.mjs, grown); without one these are used.
 // `crowd` is how a kind waits its turn: its circle's size, how often it feints and taunts, how
 // restless it is (`jitter` shortens every act), its taunt gesture, and whether it drifts to your back.
 // `moves` is the kind's attacks: each overrides the kind's own windup, punch (recovery), reach and

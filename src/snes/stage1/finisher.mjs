@@ -1,9 +1,8 @@
 // Stage 1 on the SNES, the pure half: the one scale factor that grows reach, hitboxes and speeds to
 // match 56-64 px characters, and the TMNT IV throw-into-camera finisher on an area's last foe.
 import { STAGE } from '../../stage1/areas.mjs';
-import { CROWD, CROWD_SCALED, KINDS } from '../../stage1/staff.mjs';
-import { VELLUM } from '../../stage1/vellum.mjs';
-import { STAFF_WEIGHT, VELLUM_WEIGHT, weighed } from '../weight.mjs';
+import { CROWD, CROWD_SCALED } from '../../stage1/staff.mjs';
+import { KINDS, VELLUM } from '../fight.mjs';
 
 // Every tuning number measured in pixels; times and damage keep their values.
 export const SCALED = ['walkX', 'walkY', 'runX', 'jumpUp', 'gravity', 'punchReach', 'comboStep', 'depthReach', 'grabReach', 'knockback', 'launchX', 'launchUp', 'juggleUp', 'juggleFloat', 'airReachZ', 'thirdReach', 'diveX', 'diveDown', 'takedownReach'];
@@ -15,28 +14,23 @@ export const VELLUM_SCALED = ['speed', 'stand', 'rushSpeed', 'rushReach', 'sweep
 const grown = (table, keys, scale) => ({ ...table, ...Object.fromEntries(keys.filter((k) => k in table).map((k) => [k, table[k] * scale])) });
 const each = (value, fn) => (Array.isArray(value) ? value.map(fn) : fn(value));
 
-// Vellum's parry duel: his table weighed and grown like the staff's, his guard short, and his tell
-// (the wind-up, quicker with his fangs out) and the stagger a parry leaves him in read from the dials.
+// Vellum's parry duel: his SNES table grown like the staff's, and his tell (the wind-up, quicker with
+// his fangs out) and the stagger a parry leaves him in read from the dials.
 export function vellumTable(tune, scale) {
   const out = { ...VELLUM };
-  for (const [k, m] of Object.entries(VELLUM_WEIGHT.scale)) out[k] = each(out[k], (x) => x * m);
-  for (const [k, n] of Object.entries(VELLUM_WEIGHT.frames)) out[k] = each(out[k], (x) => x + n);
   for (const k of VELLUM_SCALED) out[k] = each(out[k], (x) => x * scale);
   const tell = tune.vellumTell;
-  return { ...out, guard: VELLUM_WEIGHT.guard, windup: [tell, Math.max(1, Math.round(tell * 0.6))], stagger: tune.vellumStagger };
+  return { ...out, windup: [tell, Math.max(1, Math.round(tell * 0.6))], stagger: tune.vellumStagger };
 }
 
-// The player's tune grown, carrying the staff foes' and Vellum's tables weighed and grown to match,
+// The player's tune grown, carrying the staff foes' and Vellum's SNES tables grown to match,
 // which staff.mjs and vellum.mjs read in place of their NES tables. A flanker walks no faster than
 // the auditor, so he can be caught.
 export function scaledTune(base, scale) {
   const tune = grown(base, SCALED, scale);
   const staff = (k) => {
-    const out = grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale);
-    if (k.moves) {
-      const move = (m) => weighed(grown(m, MOVE_SCALED, scale), { frames: { windup: STAFF_WEIGHT.frames.windup } });
-      out.moves = Object.fromEntries(Object.entries(k.moves).map(([name, m]) => [name, move(m)]));
-    }
+    const out = grown(k, STAFF_SCALED, scale);
+    if (k.moves) out.moves = Object.fromEntries(Object.entries(k.moves).map(([name, m]) => [name, grown(m, MOVE_SCALED, scale)]));
     return k.flank ? { ...out, speed: Math.min(out.speed, tune.walkX) } : out;
   };
   return {

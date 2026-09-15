@@ -2,7 +2,7 @@
 // Pure rules: he guards, telegraphs one of three attacks, and is open only in the recovery after
 // one (the bait), when a thrown Associate breaks his guard, or when a parry sends him reeling.
 // Below half he bares his fangs. A tune may carry its own `vellum` table (the SNES scene's parry
-// duel, grown and weighed); without one VELLUM is used.
+// duel, from src/snes/fight.mjs, grown); without one VELLUM is used.
 import { DOWNED, fighter, landHit, player, set, updateCommon } from './moves.mjs';
 import { TAPE, spawnStaff, thinkStaff } from './staff.mjs';
 import { WIDTH } from '../snes/screen.mjs';

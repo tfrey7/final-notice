@@ -5,7 +5,7 @@ import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { KINDS, moveOf, spawnStaff } from '../src/stage1/staff.mjs';
 import { readout } from '../src/stage1/readout.mjs';
 import { scaledTune } from '../src/snes/stage1/finisher.mjs';
-import { BRAWL_WEIGHT } from '../src/snes/weight.mjs';
+import { KINDS as SNES_KINDS } from '../src/snes/fight.mjs';
 
 const idle = { held: new Set(), pressed: new Set(), dash: null };
 const mash = (i) => ({ held: new Set(), pressed: new Set(i % 2 ? [] : ['b']), dash: null });
@@ -163,10 +163,11 @@ test('the readout names the attack being wound up and times it by that attack', 
   assert.equal(readout({ ...f, state: 'walk' }, tune).move, null);
 });
 
-test('the SNES tune grows each move\'s reach and run-up and weighs its own wind-up', () => {
+test('the SNES tune grows each move\'s reach and run-up and takes its SNES wind-up', () => {
   const { kinds } = scaledTune(tuneFor('ward'), 1.5);
-  assert.equal(kinds.associate.moves.lunge.from, KINDS.associate.moves.lunge.from * 1.5);
-  assert.equal(kinds.counsel.moves.paper.speed, KINDS.counsel.moves.paper.speed * 1.5);
-  assert.equal(kinds.supervisor.moves.overhead.windup, KINDS.supervisor.moves.overhead.windup + BRAWL_WEIGHT.frames.foeWindup);
+  assert.equal(kinds.associate.moves.lunge.from, SNES_KINDS.associate.moves.lunge.from * 1.5);
+  assert.equal(kinds.counsel.moves.paper.speed, SNES_KINDS.counsel.moves.paper.speed * 1.5);
+  assert.equal(kinds.supervisor.moves.overhead.windup, SNES_KINDS.supervisor.moves.overhead.windup);
+  assert.ok(SNES_KINDS.supervisor.moves.overhead.windup > KINDS.supervisor.moves.overhead.windup);
   assert.equal(kinds.associate.moves.jab.windup, undefined, 'a move with no wind-up of its own takes the kind\'s');
 });
