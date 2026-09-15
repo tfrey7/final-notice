@@ -6,7 +6,8 @@ import { brrDecode } from './spc.mjs';
 import { demoSong } from './bank.mjs';
 import DATA from './recorded-brr.mjs';
 
-export const BUDGET_BYTES = 64 * 1024;
+// Tim, 16:17 EDT 09-15 (item 2256): the game cheats, with 1 MB of sample memory rather than the SNES's 64 KB.
+export const BUDGET_BYTES = 1024 * 1024;
 export const PREFIX = 'rec-';
 
 export function unpack(base64) {
@@ -55,6 +56,14 @@ export const INSTRUMENTS = {
   slowstr: inst('slowstr', {
     label: 'slow string pad', group: 'Keys', adsr: [6, 2, 6, 1], vol: 76, echo: true,
     demo: ['G4 - - - - - - - - - Ab4 - - - - - - - . .', 'Eb4 - - - - - - - - - F4 - - - - - - - . .', 'C4 - - - - - - - - - C4 - - - - - - - . .'],
+  }),
+  reed: inst('reed', {
+    label: 'reed organ', group: 'Keys', adsr: [14, 7, 7, 3], vol: 72, echo: true,
+    demo: ['C5 - - - Eb5 - - - G5 - - - F5 - Eb5 - D5 - . .'],
+  }),
+  pedal: inst('pedal', {
+    label: 'organ pedal', group: 'Bass', adsr: [13, 7, 7, 4], vol: 124, echo: true,
+    demo: ['C2 - - - - - - - G1 - - - - - - - C2 - . .'],
   }),
   bell: inst('bell', {
     label: 'tubular bell', group: 'Keys', adsr: [15, 5, 2, 19], vol: 100, pan: 30, echo: true,

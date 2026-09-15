@@ -219,24 +219,32 @@ player's sprites never recolour; Bellwether's office and his phone call are alwa
 
 ## 4. Music across the arc
 
-*`kb_get snes-descent-music-across-the-arc` · version 3*
+*`kb_get snes-descent-music-across-the-arc` · version 4*
 
 The 09:23 "Split by moment" ruling (as briefed to item 2027) holds: **story moments are corporate
-wave** (title, scenes, ending: Rhodes, pad, slap bass, sax) and **action is the gothic Castlevania
+wave** (title, scenes, ending: Rhodes, pad, fretless bass, sax) and **action is the gothic Castlevania
 drive** (stages, bosses: brass lead, driving bass, strings answering). Tim's later verdicts also hold:
 nothing plucky or twangy, slower rather than faster, music someone would listen to after the game.
 **Every cue is its own song** (Tim, 14:40 EDT 09-15): its own melody, harmony and groove, consistent
 with the rest through the band's instruments and mood, never a rework of the title theme. The title
 theme belongs to the title and the story scenes; anywhere else it is at most a one-bar nod.
 
+**The organ arc** (Tim, 16:06 EDT 09-15: "the deeper you get in the game, the more pipe organ there
+is"): **the higher you climb the tower, the more pipe organ.** The bank's recorded stops are `organ`
+(full church organ), `reed` (reed organ, for tunes) and `pedal` (the deep bass). Stage 1 gets a faint
+hint only: the organ quietly in the pad or under one held chord, the corporate groove on top. Each
+floor up hands it more: chords, then counter-lines and the pedal under the bass, then the tune. At the
+Great Seal the organ leads. Keep the upper register tasteful: no shrill mixture on top (Tim dislikes
+shrill brass), the tune in the middle octaves.
+
 The descent does not break that split; it moves the **balance inside each cue** and assigns cues to
 bands:
 
 | Band | Descent | Cues | What the arrangement does |
 | --- | --- | --- | --- |
-| Corporate | 0-30 | title, Scene 1, Stage 1 | Stage 1's drive keeps a corporate top line: Rhodes-and-sax colour over the gothic bass. Smooth, major-leaning, reverb-wet. |
-| Backrooms | 30-75 | Vellum boss, Scene 2, Stage 2 areas 1-3, hold music | The smoothness drains: the pad detunes a few cents per area, the sax drops out, the Rhodes is replaced by the choir holding one chord too long. A fluorescent hum (a 60 Hz-ish square at very low volume) under the Backrooms stage cue. The drive stays, thinner. Hold music (pause) is its own short on-hold tune on the pad, slowed, not the title theme. |
-| Gothic cosmic | 75-100 | Disposal Line, the Great Seal (boss), game over past 75 | The full Castlevania drive: C minor, brass with vibrato, organ-register strings, tubular bell tolls on the downbeat. No corporate instrument left except one quoted bar of the title motif, in minor, on the bell: a nod, the rest of each song its own. |
+| Corporate | 0-30 | title, Scene 1, Stage 1 | Stage 1's drive keeps a corporate top line: Rhodes-and-sax colour over the gothic bass. Smooth, major-leaning, reverb-wet. Organ: a faint hint, quiet in the pad. |
+| Backrooms | 30-75 | Vellum boss, Scene 2, Stage 2 areas 1-3, hold music | The smoothness drains: the pad detunes a few cents per area, the sax drops out, the Rhodes is replaced by the choir holding one chord too long. A fluorescent hum (a 60 Hz-ish square at very low volume) under the Backrooms stage cue. The drive stays, thinner. Organ: holds the chords and answers the lead, the pedal doubling the bass on section heads. Hold music (pause) is its own short on-hold tune on the pad, slowed, not the title theme. |
+| Gothic cosmic | 75-100 | Disposal Line, the Great Seal (boss), game over past 75 | The full Castlevania drive: C minor, brass with vibrato, tubular bell tolls on the downbeat. Organ: carries the harmony over the pedal on the Disposal Line and leads outright at the Great Seal. No corporate instrument left except one quoted bar of the title motif, in minor, on the bell: a nod, the rest of each song its own. |
 | The twist | 100 | Scene 3 | Corporate wave returns, sincere (per the storyboard: "an unresolved version of the corporate melody"), with the Seal's drone held under it at the edge of hearing. |
 | Release | 100 → 0 | ending, credits | The drone stops on the walk out; the ending cue is clean corporate wave. |
 

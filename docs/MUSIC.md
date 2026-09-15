@@ -137,8 +137,13 @@ one recorded sample an instrument, cut by `tools/snes-bank.mjs` from a SoundFont
 - **A light treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top. It
   was halved (item 2156) after the judge heard "a bright haze across the top"; the new orchestral
   and drum samples take none, keeping the era's soft top.
-- **63.6 KB for twenty-three instruments**, inside the 64 KB of sound RAM. Item 2219 spent the room
+- **63.6 KB for twenty-three instruments** fitted the real 64 KB of sound RAM. Item 2219 spent the room
   on longer piano and e-piano loops and brighter bass, toms and crash, and cut the orchestra hit short.
+- **The pipe organ, at full quality** (item 2245): the game allows itself 1 MB of sample memory (Tim,
+  16:17 EDT 2026-09-15), so the church organ, reed organ and organ pedal are stored at 28 kHz (the
+  pedal at 16 kHz) with 0.3 s of pipe speech and a 0.6 s loop, long enough to breathe rather than
+  drone: about 36 KB for the three, 101.6 KB for the bank. `node tools/snes-organ-demo.mjs <dir>`
+  renders the organ alone and over Stage 1.
 - The synthesised bank stays on the sound test as "(v1)": the instruments, the bank walk `bank (v1)`,
   and the first arrangements `title (v1)` and `stage1 (v1)`. The jingles and effects moved to the new
   bank in place.
@@ -168,6 +173,9 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 | slow string pad | `slowstr` | Slow Strings / Strings C#5L | 12503 Hz |
 | fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 11033 Hz |
 | timpani | `timpani` | Timpani / Timpani 3(L) | 10976 Hz |
+| church organ | `organ` | Church Organ / Church Organ C3 | 27996 Hz |
+| reed organ | `reed` | Reed Organ / reed organ c5(L) | 27996 Hz |
+| organ pedal | `pedal` | Church Organ / Church Organ C1 | 15993 Hz |
 | low tom | `ltom` | Power kit / Tom Floor(L) | 14000 Hz |
 | high tom | `htom` | Power kit / Tom Low(L) | 14000 Hz |
 | crash cymbal | `crash` | Standard kit / Crsh 1(L) | 14000 Hz |

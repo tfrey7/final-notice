@@ -8,7 +8,7 @@ import DATA from '../src/snes/audio/recorded-brr.mjs';
 import { pack, RECIPES } from '../tools/snes-bank.mjs';
 
 const DRUMS = ['gkick', 'gsnare', 'chat', 'ohat', 'clap', 'orch', 'ltom', 'htom', 'crash'];
-const BRIEF = ['epiano', 'pad', 'strings', 'choir', 'bell', 'slap', 'synbass', 'sax', 'brass', 'piano', 'slowstr', 'subbass', 'timpani', ...DRUMS];
+const BRIEF = ['epiano', 'pad', 'strings', 'choir', 'bell', 'slap', 'synbass', 'sax', 'brass', 'piano', 'slowstr', 'subbass', 'timpani', 'organ', 'reed', 'pedal', ...DRUMS];
 
 test('the recorded bank covers the brief, and the synthesised bank stays as v1', () => {
   for (const key of BRIEF) assert.ok(INSTRUMENTS[key], key);
@@ -24,7 +24,7 @@ test('every recipe keeps the treble lift light, so the top stays soft', () => {
   for (const [key, recipe] of Object.entries(RECIPES)) assert.ok(recipe.bright <= 0.25, `${key} lifts ${recipe.bright}`);
 });
 
-test('the stored blocks round-trip through the 9-byte BRR packing and fit 64 KB', () => {
+test('the stored blocks round-trip through the 9-byte BRR packing and fit the sample budget', () => {
   let bytes = 0;
   for (const [key, d] of Object.entries(DATA)) {
     const blocks = unpack(d.brr);
