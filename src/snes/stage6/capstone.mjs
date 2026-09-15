@@ -8,7 +8,8 @@ import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString, measure } from '../text.mjs';
 import { hex, rgb15 } from '../color.mjs';
 import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
-import { AUDITORS } from '../../flow.mjs';
+import { showFlow } from '../../flow.mjs';
+import { climbFlow, climber, inRun } from '../runflow.mjs';
 import { HEALTH } from '../../stage2/player.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { PHASES, slamBox, stampBox } from '../../stage6/bellwether.mjs';
@@ -35,7 +36,9 @@ export class SnesCapstoneScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(location.search);
-    this.who = AUDITORS.includes(params.get('who')) ? params.get('who') : 'ward';
+    const flow = this.registry.get('flow');
+    this.inRun = inRun(flow, 'capstone');
+    this.who = climber(flow, 'capstone', params);
     this.autoplay = params.has('bot');
     this.crown = params.get('at') === 'crown';
     this.restart();
@@ -51,6 +54,7 @@ export class SnesCapstoneScene extends Phaser.Scene {
   restart() {
     this.s = createCapstone(this.who);
     if (this.crown) startAtCrown(this.s);
+    if (this.inRun) this.s.lives = this.registry.get('flow').lives;
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
   }
@@ -63,9 +67,19 @@ export class SnesCapstoneScene extends Phaser.Scene {
   update() {
     const pad = pollPad(this.game.loop.frame);
     const { s } = this;
-    if (s.over && s.over.t > 60 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
+    if (this.inRun) {
+      stepCapstone(s, this.autoplay ? this.botPad() : pad);
+      if (this.follow(pad)) return;
+    } else if (s.over && s.over.t > 60 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepCapstone(s, this.autoplay ? this.botPad() : pad);
     this.draw();
+  }
+
+  follow(pad) {
+    const { flow, leave } = climbFlow(this.registry.get('flow'), this.s, pad);
+    if (leave) showFlow(this, flow);
+    else this.registry.set('flow', flow);
+    return leave;
   }
 
   draw() {

@@ -111,7 +111,7 @@ test('the chapel: 5-7 encounters of all four staff kinds, a checkpoint per area,
   const altars = chapelAltars(stage.starts);
   assert.equal(CHAPEL.flatMap((a) => a.locks).filter((l) => l.altars).length, 2);
   for (const o of altars) assert.ok(stage.locks.some((l) => o.x >= l.x && o.x < l.x + SCREEN_W && l.waves), `${o.id} stands in a locked room`);
-  assert.equal(next(jumpTo('stage3'), { type: 'stageClear' }).screen, 'stage5');
+  assert.equal(next(jumpTo('shaft'), { type: 'stageClear' }).screen, 'stage5');
   assert.equal(next(jumpTo('stage5'), { type: 'stageClear' }).screen, 'scene3');
   assert.deepEqual(clearLines(60 * 200, 2, 5), ['STAGE 5 CLEAR', 'TIME 3:20', 'LIVES 2']);
 });

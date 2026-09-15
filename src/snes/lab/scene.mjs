@@ -8,7 +8,7 @@ import { hex, rgb15 } from '../color.mjs';
 import { sfx } from '../audio/player.mjs';
 import { brawlSound } from '../audio/brawl.mjs';
 import { pollPad } from '../../input.mjs';
-import { AUDITORS } from '../../flow.mjs';
+import { AUDITORS, stageSelectUrl } from '../../flow.mjs';
 import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
 import { SHAPE, readLook, turnOwners } from '../../stage1/readout.mjs';
 import { drawReadout } from '../readout.mjs';
@@ -91,6 +91,8 @@ export class SnesLabScene extends Phaser.Scene {
       if (isShortcut(e.code, 'boxes')) this.boxes = !this.boxes;
       if (isShortcut(e.code, 'routes')) this.showRoutes = !this.showRoutes;
       if (isShortcut(e.code, 'lines')) this.showLines = !this.showLines;
+      const stage = !this.panel.visible && stageSelectUrl(e.code, this.who);
+      if (stage) location.search = stage;
     };
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot.
@@ -363,6 +365,7 @@ export class SnesLabScene extends Phaser.Scene {
     drawString(this.fill, this.panel.visible ? 'TAB: FIGHT' : 'TAB: DIALS', WIDTH - 72, 20, rgb15(20, 20, 22));
     drawString(this.fill, this.boxes ? 'H: NO BOXES' : 'H: BOXES', WIDTH - 72, 32, rgb15(20, 20, 22));
     drawString(this.fill, this.showRoutes ? 'M: NO ROUTES' : 'M: ROUTES', WIDTH - 72, 44, rgb15(20, 20, 22));
+    drawString(this.fill, '1-6: STAGE', WIDTH - 72, 56, rgb15(20, 20, 22));
     if (this.sheet) drawString(this.fill, this.sheet, 8, 44, rgb15(31, 28, 10));
     const foes = w.fighters.filter((f) => f.team === 'foe' && f.state !== 'ko').length + w.bench.length;
     drawString(this.fill, `FOES ${foes}`, 8, 30, rgb15(20, 20, 22));

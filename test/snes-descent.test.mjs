@@ -11,13 +11,13 @@ import { AREAS as DISPOSAL } from '../src/snes/bg/disposal.mjs';
 import { CARD } from '../src/snes/stage1/boss.mjs';
 import { SLIP } from '../src/snes/entrance.mjs';
 import { ANCHORS, BAND_PALETTES, palettesAt } from '../src/snes/kit/palettes.mjs';
-import { CHECKPOINTS, SCREENS } from '../src/flow.mjs';
+import { CHECKPOINTS, SCREENS, isStage } from '../src/flow.mjs';
 import {
   BEATS, BOSSES, DRIFT_SLOTS, MAX_DRIFT_BANDS, MAX_DRIFT_SLOTS, descentAt, descentOf, driftTable, slotAt, timedDrift,
 } from '../src/snes/descent.mjs';
 
 test('every screen and every stage area names its descent, rising along the arc', () => {
-  const beats = [...SCREENS.filter((s) => s !== 'gameover' && !s.startsWith('stage')), ...CHECKPOINTS.stage1, ...CHECKPOINTS.stage2];
+  const beats = [...SCREENS.filter((s) => s !== 'gameover' && !isStage(s)), ...CHECKPOINTS.stage1, ...CHECKPOINTS.stage2];
   for (const b of beats) assert.ok(b in BEATS, `${b} has a beat`);
   const arc = ['scene1', ...CHECKPOINTS.stage1, 'scene2', ...CHECKPOINTS.stage2, 'scene3'];
   for (let i = 1; i < arc.length; i++) assert.ok(BEATS[arc[i]][0] >= BEATS[arc[i - 1]][1], `${arc[i]} starts no lower than ${arc[i - 1]} ends`);

@@ -4,7 +4,7 @@ import { debugScene } from './snes/debug.mjs';
 import { installCrt } from './crt/display.mjs';
 import { NesTestScene } from './nes/testscene.mjs';
 import { ArtScene } from './nes/artscene.mjs';
-import { AUDITORS, CHECKPOINTS, SCREENS, jumpTo, next } from './flow.mjs';
+import { AUDITORS, CHECKPOINTS, SCREENS, jumpTo, next, sceneFor } from './flow.mjs';
 import { CinemaScene } from './scenes/cinema.mjs';
 import { EscapeScene } from './stage2/scene.mjs';
 import { Stage1Scene } from './stage1/scene.mjs';
@@ -26,6 +26,7 @@ import { SnesClimbLabScene } from './snes/lab/climb.mjs';
 import { SnesArchiveClimbScene } from './snes/stage2/climb.mjs';
 import { SnesShaftScene } from './snes/stage4/shaft.mjs';
 import { SnesCapstoneScene } from './snes/stage6/capstone.mjs';
+import { SnesIntroScene } from './snes/scenes/intro.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -40,6 +41,10 @@ const SCENES = {
   // Stages 3 and 5 exist only as SNES grey boxes, so the NES build plays those too.
   stage3: new SnesStage3Scene(),
   stage5: new SnesStage5Scene(),
+  archiveclimb: new SnesArchiveClimbScene(),
+  shaft: new SnesShaftScene(),
+  capstone: new SnesCapstoneScene(),
+  intro: new SnesIntroScene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: snes ? new SnesEndingScene() : new EndingScene(),
 };
@@ -57,7 +62,10 @@ const start = boss
 const area = start.stage && CHECKPOINTS[start.stage]?.[Number(params.get('area')) - 1];
 if (area) Object.assign(start, next(start, { type: 'checkpoint', id: area }));
 if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
-let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
+// ?go=<stage>&intro opens that stage on its intro card.
+if (params.has('intro')) start.intro = true;
+const first = SCENES[sceneFor(start)];
+let scene = [first, ...[...SCREENS, 'intro'].map((k) => SCENES[k]).filter((s) => s !== first)];
 // ?snes plays the opening before the title once a session; ?snes&go=opening plays it every time.
 const session = () => { try { return sessionStorage; } catch { return null; } };
 // The opening is also the title's attract loop, so it is always registered under ?snes.
@@ -68,11 +76,10 @@ if (snes && params.get('go') === 'lab') scene = [new SnesLabScene()];
 // ?snes&go=climblab is the climb lab: Stage 2's running and casting up a grey-box shaft ahead of a flood.
 else if (snes && params.get('go') === 'climblab') scene = [new SnesClimbLabScene()];
 // ?snes&go=archive is Stage 2 as a grey-box escape climb, floor to the Custodian; ?bot lets the climb bot play.
+// ?go=archiveclimb is the same stage inside the run.
 else if (snes && params.get('go') === 'archive') scene = [new SnesArchiveClimbScene()];
-// ?snes&go=shaft is Stage 4 as a grey-box escape climb up the elevator shaft; ?bot lets the shaft bot play.
-else if (snes && params.get('go') === 'shaft') scene = [new SnesShaftScene()];
-// ?snes&go=capstone is Stage 6 as a grey-box finale: the capstone climb, Bellwether and the final choice; &at=crown starts at the fight.
-else if (snes && params.get('go') === 'capstone') scene = [new SnesCapstoneScene()];
+// ?snes&go=shaft is Stage 4, the elevator shaft climb, and ?snes&go=capstone Stage 6, the capstone climb, Bellwether
+// and the final choice (&at=crown starts at the fight); both play on through the run, and ?bot lets their bots play.
 else if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];

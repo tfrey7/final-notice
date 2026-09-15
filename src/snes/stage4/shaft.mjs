@@ -7,7 +7,8 @@ import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString, measure } from '../text.mjs';
 import { hex, rgb15 } from '../color.mjs';
 import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
-import { AUDITORS } from '../../flow.mjs';
+import { showFlow } from '../../flow.mjs';
+import { climbFlow, climber, inRun } from '../runflow.mjs';
 import { HEALTH } from '../../stage2/player.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { CAR, CHECKPOINT_LEDGE, FLOORS, SHAFT, TOP_LEDGE, createShaft, floorsClimbed, stepShaft } from '../../stage4/shaft.mjs';
@@ -29,7 +30,9 @@ export class SnesShaftScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(location.search);
-    this.who = AUDITORS.includes(params.get('who')) ? params.get('who') : 'ward';
+    const flow = this.registry.get('flow');
+    this.inRun = inRun(flow, 'shaft');
+    this.who = climber(flow, 'shaft', params);
     this.autoplay = params.has('bot');
     this.restart();
     this.g = this.add.graphics();
@@ -43,6 +46,7 @@ export class SnesShaftScene extends Phaser.Scene {
 
   restart() {
     this.s = createShaft(this.who);
+    if (this.inRun) this.s.lives = this.registry.get('flow').lives;
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
     playSong(this.song = SHAFT_SONG);
@@ -62,10 +66,20 @@ export class SnesShaftScene extends Phaser.Scene {
   update() {
     const pad = pollPad(this.game.loop.frame);
     const { s } = this;
-    if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
+    if (this.inRun) {
+      stepShaft(s, this.autoplay ? this.botPad() : pad);
+      if (this.follow(pad)) return;
+    } else if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepShaft(s, this.autoplay ? this.botPad() : pad);
     this.cue();
     this.draw();
+  }
+
+  follow(pad) {
+    const { flow, leave } = climbFlow(this.registry.get('flow'), this.s, pad);
+    if (leave) showFlow(this, flow);
+    else this.registry.set('flow', flow);
+    return leave;
   }
 
   draw() {

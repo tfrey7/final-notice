@@ -8,7 +8,8 @@ import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString } from '../text.mjs';
 import { hex, rgb15 } from '../color.mjs';
 import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
-import { AUDITORS } from '../../flow.mjs';
+import { showFlow } from '../../flow.mjs';
+import { climbFlow, climber, inRun } from '../runflow.mjs';
 import { HEALTH } from '../../stage2/player.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { ARCHIVE, ARENA, ARENA_LEDGE, CHECKPOINT_LEDGE, DROP, createArchive, ledgesClimbed, startAtSummit, stepArchive } from '../../stage2/climb.mjs';
@@ -32,7 +33,9 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(location.search);
-    this.who = AUDITORS.includes(params.get('who')) ? params.get('who') : 'ward';
+    const flow = this.registry.get('flow');
+    this.inRun = inRun(flow, 'archiveclimb');
+    this.who = climber(flow, 'archiveclimb', params);
     this.autoplay = params.has('bot');
     this.atBoss = params.has('boss');
     this.dials = custodianDials();
@@ -65,6 +68,7 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
   restart() {
     this.s = createArchive(this.who, this.boss);
     if (this.atBoss) startAtSummit(this.s);
+    if (this.inRun) this.s.lives = this.registry.get('flow').lives;
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
     playSong(this.song = ARCHIVE_CLIMB_SONG);
@@ -100,10 +104,20 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     this.tabbed = false;
     Object.assign(this.boss, custodianTable(this.dials));
     if (this.panel.visible) this.drivePanel(pad);
-    else if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
+    else if (this.inRun) {
+      stepArchive(s, this.autoplay ? this.botPad() : pad);
+      if (this.follow(pad)) return;
+    } else if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepArchive(s, this.autoplay ? this.botPad() : pad);
     this.cue();
     this.draw();
+  }
+
+  follow(pad) {
+    const { flow, leave } = climbFlow(this.registry.get('flow'), this.s, pad);
+    if (leave) showFlow(this, flow);
+    else this.registry.set('flow', flow);
+    return leave;
   }
 
   draw() {
