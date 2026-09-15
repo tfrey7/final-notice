@@ -4,6 +4,9 @@
 import { DOWNED, fighter, inReach, landHit, player, set, updateCommon } from './moves.mjs';
 
 export const MAX_ON_SCREEN = 3;
+// Attack tokens, as Final Fight and Streets of Rage 2 space their crowds: the rest wait their turn.
+export const MAX_ATTACKERS = 2;
+const STANDING = ['idle', 'walk', 'guard', 'windup', 'punch'];
 
 // Colour means behaviour (NES-CLASSICS L3), so each kind keeps its own palette in foe-actors.mjs.
 // `stand` is where a squaring-up foe rests, `near` the closest Counsel will throw from. A tune may
@@ -52,8 +55,10 @@ function fillSeats(world, tune) {
 
 // Where each kind wants to stand: the Associate and Supervisor square up, the Manager goes round to
 // the auditor's back, Counsel holds his distance. The Manager picks his back side once and keeps it
-// until he swings or is hit, so turning round catches him.
-export function spot(f, p, tune) {
+// until he swings or is hit, so turning round catches him. Given the world, squaring-up foes share
+// out the places around the auditor, both sides first and then a depth lane above and below, so no
+// two rest on one spot or on a flanker's.
+export function spot(f, p, tune, world) {
   const k = kindsOf(tune)[f.kind];
   const side = Math.sign(f.x - p.x) || 1;
   if (k.flank) {
@@ -62,8 +67,32 @@ export function spot(f, p, tune) {
     return { x: p.x + back * k.flank, y: p.y + (f.y < p.y ? -k.flank : k.flank) };
   }
   if (k.keep) return { x: p.x + side * k.keep, y: p.y };
-  return { x: p.x + side * k.stand, y: p.y };
+  if (!world) return { x: p.x + side * k.stand, y: p.y };
+  return squareUp(world, f, p, tune);
 }
+
+function squareUp(world, f, p, tune) {
+  const kinds = kindsOf(tune);
+  const lane = (tune.depthReach ?? 6) * 2;
+  const floor = world.floor;
+  const onFloor = (s) => !floor || (s.x >= floor.left && s.x <= floor.right && s.y >= floor.top && s.y <= floor.bottom);
+  const live = world.fighters.filter((o) => o.team === 'foe' && kinds[o.kind] && STANDING.includes(o.state));
+  const others = live.filter((o) => !kinds[o.kind].stand).map((o) => spot(o, p, tune));
+  const claimed = [];
+  for (const o of live.filter((o) => kinds[o.kind].stand)) {
+    const { stand } = kinds[o.kind];
+    const places = [[1, 0], [-1, 0], [1, -1], [-1, 1], [1, 1], [-1, -1]]
+      .map(([sx, ly]) => ({ x: p.x + sx * stand, y: p.y + ly * lane }))
+      .filter((s) => onFloor(s) && ![...others, ...claimed].some((c) => Math.abs(c.x - s.x) < 12 && Math.abs(c.y - s.y) < lane));
+    const pool = places.length ? places : [{ x: p.x + (Math.sign(o.x - p.x) || 1) * stand, y: p.y }];
+    const best = pool.reduce((a, b) => (Math.hypot(b.x - o.x, b.y - o.y) < Math.hypot(a.x - o.x, a.y - o.y) ? b : a));
+    if (o === f) return best;
+    claimed.push(best);
+  }
+  return { x: p.x + (Math.sign(f.x - p.x) || 1) * kinds[f.kind].stand, y: p.y };
+}
+
+const attackers = (world, f) => world.fighters.filter((o) => o !== f && o.team === 'foe' && o.kind && ['windup', 'punch'].includes(o.state)).length;
 
 function moveTo(f, x, y, speed) {
   const dx = x - f.x;
@@ -75,6 +104,7 @@ function moveTo(f, x, y, speed) {
 
 function readyToStrike(world, f, p, k, tune) {
   if (f.cooldown > 0 || DOWNED.includes(p.state) || p.state === 'bound') return false;
+  if (attackers(world, f) >= MAX_ATTACKERS) return false;
   if (k.keep) {
     const gap = Math.abs(p.x - f.x);
     return gap >= k.near && gap <= k.reach && Math.abs(p.y - f.y) <= tune.depthReach && !world.tapes.length;
@@ -92,7 +122,7 @@ export function thinkStaff(world, f, tune) {
   switch (f.state) {
     case 'idle': case 'walk': case 'guard': {
       const guarding = k.guard && f.guardDown === 0;
-      const { x, y } = spot(f, p, tune);
+      const { x, y } = spot(f, p, tune, world);
       const moving = moveTo(f, x, y, k.speed);
       f.facing = Math.sign(p.x - f.x) || f.facing;
       const stance = guarding ? 'guard' : moving ? 'walk' : 'idle';
