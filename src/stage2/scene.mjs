@@ -1,105 +1,133 @@
-// Stage 2 with placeholder figures: boxes for Ward, pursuers and platforms, so the feel can be judged now.
+// Stage 2's test run on screen: the chosen auditor, platforms, seals and target boxes, drawn through artOr.
 /* global Phaser */
-import { HEIGHT, SAFE } from '../nes/screen.mjs';
+import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
-import { playSong } from '../audio/player.mjs';
+import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
+import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
-import { CHECKPOINTS, jumpTo, next } from '../flow.mjs';
+import { AUDITORS as WHO, jumpTo, next } from '../flow.mjs';
 import { drawText, showFlow } from '../scenes/placeholder.mjs';
 import { mountTunePanel } from '../tune.mjs';
-import { BODY_H, BODY_W, SCREEN_W, createWorld, inChase, stepWorld } from './escape.mjs';
+import { AUDITORS } from './casting.mjs';
+import { TILE, solidAt } from './physics.mjs';
+import { createRun, stepRun } from './core.mjs';
+import { drawStage2Hud } from './hud.mjs';
 
-const C = {
-  sky: nes(0x0f), shelf: nes(0x07), floor: nes(0x17), edge: nes(0x27), ward: nes(0x10), tie: nes(0x16),
-  foe: nes(0x02), hurt: nes(0x30), shot: nes(0x28), charge: nes(0x38), spark: nes(0x30), text: nes(0x30),
-  warn: nes(0x16), flag: nes(0x2a),
-};
+const MS = 1000 / 60;
+const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit' };
+const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
+
+// The art cards' Stage 2 names, as ward.mjs exports them; an auditor without them is a 16x32 stand-in.
+async function loadAuditor(scene, who) {
+  const mod = await import(`../art/${who}.mjs`).catch(() => null);
+  if (mod?.default) await loadArt(who);
+  return { art: artOr(scene, mod?.default ? who : `${who}2`, { w: 16, h: 32, palette: [0x0f, 0x00, 0x10] }), names: mod?.stage2 ?? null };
+}
 
 export class EscapeScene extends Phaser.Scene {
   constructor() {
     super('stage2');
   }
 
-  create() {
-    let state = this.registry.get('flow');
-    if (!state || state.screen !== 'stage2') state = jumpTo('stage2');
-    this.registry.set('flow', state);
-    this.world = createWorld();
-    // ?cp=<n> starts at checkpoint n, so a chase can be tried straight away.
-    const cp = Math.min(Number(new URLSearchParams(location.search).get('cp')) || 0, this.world.level.checkpoints.length - 1);
-    if (cp > 0) {
-      this.world.checkpoint = cp;
-      this.world.ward.x = this.world.level.checkpoints[cp];
-      this.world.camX = this.world.ward.x - 32;
-    }
-    window.finalNoticeEscape = this.world;
-    this.g = this.add.graphics();
-    if (new URLSearchParams(location.search).has('tune') && !document.querySelector('details')) mountTunePanel();
+  async create() {
+    this.ready = false;
+    const params = new URLSearchParams(location.search);
+    let flow = this.registry.get('flow');
+    if (!flow || flow.screen !== 'stage2') flow = jumpTo('stage2');
+    if (WHO.includes(params.get('who'))) flow = { ...flow, auditor: params.get('who') };
+    this.registry.set('flow', flow);
+    this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
+
+    this.run = createRun(flow.auditor);
+    // ?at=<x> starts the auditor further along the floor, for a quick look at one spot.
+    if (params.has('at')) this.run.player.x = this.run.player.safe.x = Number(params.get('at'));
+    window.finalNoticeStage2 = this.run;
     playSong('stage2');
+
+    this.bg = this.add.graphics();
+    this.layer = new SpriteLayer(this);
+    this.fx = this.add.graphics().setDepth(15);
+    this.hud = this.add.graphics().setDepth(20);
+    if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
+    this.who = await loadAuditor(this, flow.auditor);
+    this.spells = artOr(this, 'spells', { w: 8, h: 8, palette: [0x16, 0x28, 0x38] });
+    this.ready = true;
   }
 
   update() {
-    const pad = pollPad(this.game.loop.frame);
-    const w = stepWorld(this.world, pad);
-    window.finalNoticeEscape = w;
+    if (!this.ready) return;
+    const frame = this.game.loop.frame;
+    const pad = pollPad(frame);
+    if (this.freezeAt !== null && frame >= this.freezeAt) return;
+    stepRun(this.run, pad);
     let flow = this.registry.get('flow');
-    for (const e of w.events) {
-      if (e.type === 'checkpoint') flow = next(flow, { type: 'checkpoint', id: CHECKPOINTS.stage2[e.index] });
-      else flow = next(flow, e);
-    }
-    if (flow !== this.registry.get('flow')) {
-      showFlow(this, flow);
-      if (flow.screen !== 'stage2') return;
-    }
-    this.draw(w, flow);
-  }
-
-  draw(w, flow) {
-    const g = this.g.clear();
-    const cx = Math.round(w.camX);
-    const x = (v) => Math.round(v) - cx;
-    g.fillStyle(C.sky).fillRect(0, 0, SCREEN_W, HEIGHT);
-    // Shelving stripes scroll at half speed so motion reads even on flat ground.
-    g.fillStyle(C.shelf);
-    for (let sx = -((cx >> 1) % 48); sx < SCREEN_W; sx += 48) g.fillRect(sx, SAFE + 40, 32, 120);
-    for (const s of w.level.surfaces) {
-      const floor = s.y === w.level.floor;
-      g.fillStyle(C.floor).fillRect(x(s.x0), s.y, s.x1 - s.x0, floor ? HEIGHT - s.y : 6);
-      g.fillStyle(C.edge).fillRect(x(s.x0), s.y, s.x1 - s.x0, 1);
-    }
-    w.level.checkpoints.forEach((cpx, i) => {
-      g.fillStyle(i <= w.checkpoint ? C.flag : C.edge).fillRect(x(cpx), w.level.floor - 24, 2, 24).fillRect(x(cpx) + 2, w.level.floor - 24, 8, 6);
-    });
-    g.fillStyle(C.flag).fillRect(x(w.level.exit), w.level.floor - 40, 12, 40);
-    if (inChase(w.level, w.camX + SCREEN_W / 2) && Math.floor(w.frame / 8) % 2) g.fillStyle(C.warn).fillRect(0, SAFE + 24, 2, HEIGHT - SAFE * 2 - 24);
-
-    for (const p of w.pursuers) {
-      g.fillStyle(p.hurt ? C.hurt : C.foe).fillRect(x(p.x - BODY_W / 2), Math.round(p.y - BODY_H), BODY_W, BODY_H);
-    }
-    const r = w.ward;
-    if (!(w.invuln && Math.floor(w.frame / 3) % 2)) {
-      const h = r.crouch ? 20 : BODY_H;
-      const lean = r.skid ? -r.facing * 2 : 0;
-      g.fillStyle(C.ward).fillRect(x(r.x - BODY_W / 2) + lean, Math.round(r.y - h), BODY_W, h);
-      g.fillStyle(C.tie).fillRect(x(r.x + r.facing * 4) - 1 + lean, Math.round(r.y - h + 8), 3, 8);
-      if (w.cast.charge >= w.t.chargeFrames && Math.floor(w.frame / 4) % 2) g.fillStyle(C.charge).fillRect(x(r.x - BODY_W / 2) - 2, Math.round(r.y - h) - 2, BODY_W + 4, 2);
-      if (w.cast.pending) g.fillStyle(C.shot).fillRect(x(r.x + r.facing * 10) - 2, Math.round(r.y - 22), 4, 4);
-    }
-    for (const s of w.shots) {
-      const size = s.charged ? 8 : 4;
-      g.fillStyle(s.charged ? C.charge : C.shot).fillRect(x(s.x) - size / 2, Math.round(s.y) - size / 2, size, size);
-    }
-    for (const sp of w.sparks) {
-      const reach = (sp.big ? 10 : 6) * (1 - sp.age / w.t.sparkFrames) + 2;
-      g.fillStyle(C.spark);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
-        g.fillRect(x(sp.x + dx * reach) - 1, Math.round(sp.y + dy * reach) - 1, 2, 2);
+    for (const e of this.run.events) {
+      if (SOUNDS[e.type]) sfx(SOUNDS[e.type]);
+      if (e.type === 'lifeLost') {
+        flow = next(flow, e);
+        if (flow.screen !== 'stage2') { showFlow(this, flow); return; }
+        this.registry.set('flow', flow);
       }
     }
+    this.draw(flow);
+  }
 
-    g.fillStyle(C.sky).fillRect(0, SAFE, SCREEN_W, 16);
-    for (let i = 0; i < w.t.health; i++) g.fillStyle(i < w.health ? C.tie : C.shelf).fillRect(8 + i * 6, SAFE + 4, 4, 8);
-    drawText(g, `x${flow.lives}`, 64, SAFE + 4, C.text);
-    drawText(g, w.paused ? 'PAUSE' : `AREA ${w.checkpoint + 1}`, 176, SAFE + 4, C.text);
+  draw(flow) {
+    const { run } = this;
+    const cx = run.camX;
+    const g = this.bg.clear();
+    g.fillStyle(C.sky).fillRect(0, 0, WIDTH, HEIGHT);
+    g.fillStyle(C.shelf);
+    for (let sx = -((cx >> 1) % 48); sx < WIDTH; sx += 48) g.fillRect(sx, SAFE + 48, 32, 128);
+    const { area } = run;
+    for (let col = Math.floor(cx / TILE); col <= Math.floor((cx + WIDTH) / TILE); col++) {
+      for (let row = 0; row < area.rows; row++) {
+        if (col >= area.cols || !solidAt(area, col, row)) continue;
+        g.fillStyle(C.block).fillRect(col * TILE - cx, row * TILE, TILE, TILE);
+        if (!solidAt(area, col, row - 1)) g.fillStyle(C.edge).fillRect(col * TILE - cx, row * TILE, TILE, 2);
+      }
+    }
+    for (const t of run.targets) {
+      const x = t.x - t.w / 2 - cx;
+      if (t.hp <= 0) {
+        if (t.flash) g.fillStyle(C.boxEdge).fillRect(x - (6 - t.flash) * 2, t.y - 12 + (6 - t.flash), 5, 5).fillRect(x + 11 + (6 - t.flash) * 2, t.y - 12 + (6 - t.flash), 5, 5);
+        continue;
+      }
+      g.fillStyle(t.flash ? C.flash : C.boxEdge).fillRect(x, t.y - t.h, t.w, t.h);
+      g.fillStyle(t.flash ? C.flash : C.box).fillRect(x + 2, t.y - t.h + 2, t.w - 4, t.h - 4);
+      g.fillStyle(C.boxEdge).fillRect(x + 2, t.y - 9, t.w - 4, 2);
+    }
+
+    const p = run.player;
+    const sprites = [];
+    if (!(p.invuln && p.invuln % 6 < 3)) {
+      const n = this.who.names;
+      let anim = null;
+      let flip = p.facing < 0;
+      if (n) {
+        if (p.castPose) {
+          anim = n.cast[CAST_POSE[p.castDir]];
+          if (!['up', 'down'].includes(p.castDir)) flip = p.castDir.endsWith('Left') || p.castDir === 'left';
+        } else if (!p.grounded) anim = n.jump;
+        else if (p.crouch) anim = n.crouch;
+        else if (Math.abs(p.vx) > 0.2) anim = n.run;
+        else anim = n.idle;
+      }
+      sprites.push(...this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip));
+    }
+    const fx = this.fx.clear();
+    for (const c of run.casts) {
+      if (c.kind === 'burst') {
+        const reach = AUDITORS[c.auditor].radius * Math.min(1, (c.age + 3) / 6);
+        fx.fillStyle(C.burst);
+        for (let i = 0; i < 8; i++) fx.fillRect(Math.round(c.x - cx + Math.cos(i * Math.PI / 4) * reach) - 1, Math.round(c.y + Math.sin(i * Math.PI / 4) * reach) - 1, 3, 3);
+      } else {
+        sprites.push(...this.spells.frame('notice', 0, Math.round(c.x - 4 - cx), Math.round(c.y - 4)));
+      }
+    }
+    this.layer.draw(sprites);
+    drawStage2Hud(this.hud.clear(), run, flow);
+    if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
   }
 }
