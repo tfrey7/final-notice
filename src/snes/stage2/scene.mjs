@@ -25,6 +25,7 @@ import { DIRECTOR, FLOOR_Y, SEAL, createArena, enterExit, poseArena, reachedAren
 import { BOSS_AREA, areaAt, arenaLocked, createStage, frontsOf, layoutFrom, promptsFor, stepStage } from '../../stage2/areas.mjs';
 import { BELT } from '../../stage2/conveyor.mjs';
 import { STAGE2, backdropFor, bodySize, camera, hudState, onScreen } from './view.mjs';
+import { weighShared } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { PRESS_IN, SLIP, pressEntrance, skipTo, slipFrame } from '../entrance.mjs';
@@ -55,6 +56,7 @@ export class SnesStage2Scene extends Phaser.Scene {
   }
 
   async create() {
+    weighShared();
     this.ready = false;
     this.paused = false;
     this.slowdown = createSlowdown();

@@ -25,6 +25,7 @@ import { PROFILES } from '../../platform.mjs';
 import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
+import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
@@ -75,7 +76,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.time.delayedCall(STAGE_START_MS, () => { if (this.paused) this.resume = SONGS.stage1; else playSong(SONGS.stage1); });
 
     this.who = state.auditor;
-    this.base = registerTuning(`snes-brawl-${this.who}`, tuneFor(this.who), RANGES);
+    weighShared();
+    this.base = registerTuning(`snes-brawl-${this.who}`, weighed(tuneFor(this.who), BRAWL_WEIGHT), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
     this.fin = null;
     this.slowdown = createSlowdown();
