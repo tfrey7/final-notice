@@ -187,11 +187,10 @@ export class SpriteLayer {
   }
 
   draw(entries) {
-    const list = entries.slice(0, MAX_OAM);
     const { shown, stats } = frameEntries(entries);
     this.stats = stats;
     this.shown = shown;
-    list.forEach((e, i) => {
+    entries.forEach((e, i) => {
       let img = this.pool[i];
       if (!img) {
         img = this.scene.add.image(0, 0, e.key).setOrigin(0).setDepth(this.depth);
@@ -200,6 +199,6 @@ export class SpriteLayer {
       img.setTexture(e.key).setPosition(Math.round(e.x), Math.round(e.y))
         .setFlipX(Boolean(e.flipX)).setVisible(shown.has(i));
     });
-    for (let i = list.length; i < this.pool.length; i++) this.pool[i].setVisible(false);
+    for (let i = entries.length; i < this.pool.length; i++) this.pool[i].setVisible(false);
   }
 }

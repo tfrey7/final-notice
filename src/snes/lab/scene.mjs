@@ -20,6 +20,8 @@ import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { buildDials, labKinds, settingsText, takeTurns, waveKinds } from '../../lab/dials.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
 import { armWorld, scaledWeapons } from '../../stage1/weapons.mjs';
+import { MAX_PER_LINE, boxEntries, frameEntries } from '../limits.mjs';
+import { thingPriority } from '../stage1/priority.mjs';
 
 // One piece of furniture per weapon, along the back wall; a respawn stands them all back up.
 const SMASH = [
@@ -74,9 +76,12 @@ export class SnesLabScene extends Phaser.Scene {
     this.tabbed = false;
     // H overlays hit and hurt boxes, the attack-turn owners and each fighter's state tag; ?boxes starts it on.
     this.boxes = params.has('boxes');
+    // L (or ?lines) shows each scanline's sprite count at Stage 1's limits: green drawn, red dropped.
+    this.showLines = params.has('lines');
     const onKey = (e) => {
       if (e.code === 'Tab') { e.preventDefault(); this.tabbed = true; }
       if (e.code === 'KeyH') this.boxes = !this.boxes;
+      if (e.code === 'KeyL') this.showLines = !this.showLines;
     };
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot.
@@ -229,6 +234,28 @@ export class SnesLabScene extends Phaser.Scene {
     }
     if (w.flash > 0) g.fillStyle(0xffffff, w.flash / (this.tune.parryFlash || 1) * 0.5).fillRect(-8, -8, WIDTH + 16, HEIGHT + 16);
     this.drawHud();
+    if (this.showLines) this.drawLines(things);
+  }
+
+  // The room's boxes as stand-in OAM entries through the SNES limits, in Stage 1's priority order.
+  drawLines(things) {
+    const entries = things.flatMap((t) => {
+      const { f, o, s, wp } = t;
+      if (s) { const { w, h } = FURNITURE[s.kind]; return boxEntries(s.x - w / 2, s.y - h, w, h, s.kind); }
+      if (wp) { const { w, h } = WEAPON_BOX[wp.kind]; return boxEntries(wp.x - w / 2, wp.y - wp.z - h, w, h, wp.kind); }
+      if (o) return boxEntries(o.x - 9, o.y - 20 - o.z, 18, 18, 'prop');
+      if (!f) return boxEntries(t.t.x - 10, t.t.y - 36, 20, 4, 'tape');
+      const bh = f.kind === 'supervisor' ? 62 : 56;
+      return boxEntries(f.x - 12, f.y - bh - f.z, 24, bh, f.kind ?? 'player', thingPriority(t));
+    });
+    const { stats } = frameEntries(entries);
+    stats.lines.forEach((n, y) => {
+      if (!n) return;
+      const drawn = stats.shownLines[y];
+      this.g.fillStyle(0x40c060).fillRect(WIDTH - n * 3, y, drawn * 3, 1);
+      if (n > drawn) this.g.fillStyle(0xe04040).fillRect(WIDTH - (n - drawn) * 3, y, (n - drawn) * 3, 1);
+    });
+    drawString(this.fill, `LINE ${Math.max(0, ...stats.lines)}/${MAX_PER_LINE} PAL ${stats.palettes} DROP ${stats.dropped}`, 8, 42, stats.dropped ? rgb15(31, 12, 10) : rgb15(20, 20, 22));
   }
 
   drawProp(o) {

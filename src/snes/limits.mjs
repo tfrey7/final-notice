@@ -52,10 +52,25 @@ export function scanlines(entries, height = HEIGHT) {
   return lines;
 }
 
-// One frame through every sprite limit: the first 128 entries, the first 8 distinct sprite
-// palettes, then the per-line drop. `shown` holds the entries that draw whole.
+// The OAM order: a higher `prio` takes the lower OAM indices, ties keep list order. A game writes
+// its fighters there first, so when a line is full only effects and pickups drop.
+export function oamOrder(entries) {
+  return entries.map((_, i) => i).sort((a, b) => (entries[b].prio ?? 0) - (entries[a].prio ?? 0) || a - b);
+}
+
+// Stand-in entries tiling a w x h box: one 16x16 for a small box, else 32x32s.
+export function boxEntries(x, y, w, h, palette, prio = 0) {
+  const size = w <= 16 && h <= 16 ? 16 : 32;
+  const out = [];
+  for (let dy = 0; dy < h; dy += size) for (let dx = 0; dx < w; dx += size) out.push({ x: Math.round(x + dx), y: Math.round(y + dy), size, palette, prio });
+  return out;
+}
+
+// One frame through every sprite limit, in OAM order: the first 128 entries, the first 8 distinct
+// sprite palettes, then the per-line drop. `shown` holds the indices (into `entries`) that draw whole.
 export function frameEntries(entries, height = HEIGHT) {
-  const list = entries.slice(0, MAX_OAM);
+  const order = oamOrder(entries).slice(0, MAX_OAM);
+  const list = order.map((i) => entries[i]);
   const slots = [];
   const offPalette = new Set();
   list.forEach((e, i) => {
@@ -70,7 +85,7 @@ export function frameEntries(entries, height = HEIGHT) {
     if (e.off) return;
     const top = Math.floor(e.y);
     for (let y = Math.max(0, top); y < Math.min(height, top + e.size); y++) if (!lines[y].shown.includes(i)) return;
-    shown.add(i);
+    shown.add(order[i]);
   });
   return {
     shown,
@@ -81,6 +96,7 @@ export function frameEntries(entries, height = HEIGHT) {
       offPalette: legal.filter((e) => e.off).length,
       dropped: legal.filter((e) => !e.off).length - shown.size,
       lines: lines.map((l) => l.wanted),
+      shownLines: lines.map((l) => l.shown.length),
     },
   };
 }

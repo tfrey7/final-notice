@@ -28,6 +28,7 @@ import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
 import { SNES_STAGE1 } from './waves.mjs';
+import { thingPriority, withPriority } from './priority.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
@@ -316,7 +317,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       ...(w.weapons ?? []).filter((wp) => !(wp.state === 'floor' && wp.t > w.weaponTune.weaponLife - 90 && wp.t % 8 < 4)).map((wp) => ({ y: wp.y, wp })),
     ].sort((a, b) => a.y - b.y);
     const at = (x) => x - cam - shake.x;
-    const sprites = things.flatMap(({ f, o, tape, box, s, wp }) => {
+    const spritesOf = ({ f, o, tape, box, s, wp }) => {
       if (s) {
         const { w: sw, h, palette } = FURNITURE[s.kind];
         const sh = s.state === 'broken' ? 10 : h;
@@ -336,8 +337,8 @@ export class SnesStage1Scene extends Phaser.Scene {
       if (tape) return artOr(this, 'prop:tape', { w: 24, h: 8, palette: [rgb15(2, 2, 4), rgb15(26, 4, 4), WHITE] }).frame('stand', 0, Math.round(at(tape.x) - 12), tape.y - 40);
       const ms = f.t * MS;
       return f.team === 'player' ? this.playerSprites(f, at(f.x), ms) : this.foeSprites(f, at(f.x), ms);
-    });
-    this.layer.draw(sprites);
+    };
+    this.layer.draw(things.flatMap((t) => withPriority(spritesOf(t), thingPriority(t))));
     this.drawMarks(cam + shake.x);
     this.drawFinisher();
     this.drawHud(time);
