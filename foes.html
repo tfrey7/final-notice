@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final Notice - Enemy Bench</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #000; }
+    body { display: grid; place-items: center; min-height: 100vh; }
+    canvas { image-rendering: pixelated; width: min(100vw, calc(100vh * 256 / 240)); }
+    body:has(canvas[width="1024"]) canvas { width: 100vw; }
+  </style>
+</head>
+<body>
+  <!-- Arrows move, Z punches (third in a row is heavy), X kicks. ?tune sliders, ?bot plays itself, ?strip frame strip. -->
+  <canvas id="bench" width="256" height="240"></canvas>
+  <script type="module" src="./src/stage1/foespage.mjs"></script>
+</body>
+</html>
