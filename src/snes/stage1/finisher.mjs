@@ -32,8 +32,9 @@ export const endsArea = (index, locks = STAGE.locks) => Boolean(locks[index]) &&
 // waiting on the bench, and the one foe standing a frame ago has just been knocked out.
 export function finisherTarget(world, before) {
   const run = world.run;
-  if (!run?.locked || !endsArea(run.lock)) return null;
-  if (run.wave !== STAGE.locks[run.lock].waves.length - 1 || world.bench?.length) return null;
+  const { locks } = world.stage ?? STAGE;
+  if (!run?.locked || !endsArea(run.lock, locks)) return null;
+  if (run.wave !== locks[run.lock].waves.length - 1 || world.bench?.length) return null;
   if (before.length !== 1 || livingFoes(world).length) return null;
   return world.fighters.includes(before[0]) ? before[0] : null;
 }

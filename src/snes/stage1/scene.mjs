@@ -27,6 +27,7 @@ import { PROFILES } from '../../platform.mjs';
 import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
+import { SNES_STAGE1 } from './waves.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
@@ -91,7 +92,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       // Before the card, the camera pans in and he stands from the desk; ?entrance=<frame> holds it still.
       this.entrance = this.card && !params.has('card') ? { t: Number(params.get('entrance') ?? 0), still: params.has('entrance') } : null;
     } else {
-      this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint));
+      this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint), SNES_STAGE1);
     }
     this.world.cooldown = freeInjunction();
 
@@ -282,8 +283,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.tex.refresh();
     this.cameras.main.setScroll(0, shake.y);
 
+    // Foes still walking on from off screen push no sprites, which would count against the line limit.
     const things = [
-      ...w.fighters.filter((f) => f !== this.fin?.foe).map((f) => ({ y: f.y, f })),
+      ...w.fighters.filter((f) => f !== this.fin?.foe && Math.abs(f.x - cam - WIDTH / 2) < WIDTH / 2 + 32).map((f) => ({ y: f.y, f })),
       ...w.props.filter((o) => o.state !== 'gone').map((o) => ({ y: o.y + (o.state === 'held' ? 1 : 0), o })),
       ...(w.tapes ?? []).map((tape) => ({ y: tape.y + 1, tape })),
       ...(w.firstAid ?? []).filter((b) => !b.taken).map((box) => ({ y: box.y - 1, box })),

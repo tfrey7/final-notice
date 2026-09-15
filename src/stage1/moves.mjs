@@ -76,8 +76,10 @@ function wave(tune, n) {
 }
 
 export const set = (f, state) => { f.state = state; f.t = 0; };
+// A foe walking on from off screen is held to the floor only once he is on it.
 const clampFloor = (f, floor = FLOOR) => {
-  f.x = Math.min(floor.right, Math.max(floor.left, f.x));
+  if (f.entering) f.entering = f.x < floor.left || f.x > floor.right;
+  else f.x = Math.min(floor.right, Math.max(floor.left, f.x));
   f.y = Math.min(floor.bottom, Math.max(floor.top, f.y));
 };
 export const player = (world) => world.fighters.find((f) => f.team === 'player');

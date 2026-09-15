@@ -33,21 +33,34 @@ export function spawnStaff(world, kinds, tune) {
   return world;
 }
 
-// Benched foes walk on only while fewer than three are on screen; a dazed foe holds his seat
-// until he has blinked away.
+// With `world.entry` 'edges' a foe walks on from beyond the view's left or right side, alternating,
+// each one ENTRY_GAP px further out than the last on that side.
+export const VIEW_W = 256;
+export const ENTRY_GAP = 24;
+
+export function entryX(world, n, fresh) {
+  const out = ENTRY_GAP * (1 + (fresh >> 1));
+  const cam = world.cameraX ?? 0;
+  return n % 2 ? cam + VIEW_W + out : cam - out;
+}
+
+// Benched foes walk on only while a seat is free (world.seats, else MAX_ON_SCREEN); a dazed foe
+// holds his seat until he has blinked away.
 function fillSeats(world, tune) {
   const p = player(world);
+  const edges = world.entry === 'edges';
   let seated = world.fighters.filter((f) => f.kind).length;
-  while (world.bench.length && seated < MAX_ON_SCREEN) {
+  for (let fresh = 0; world.bench.length && seated < (world.seats ?? MAX_ON_SCREEN); fresh++) {
     const kind = world.bench.shift();
     const k = KINDS[kind];
     const n = world.spawned = (world.spawned ?? 0) + 1;
     const { top, bottom } = world.floor;
     const y = top + 8 + ((n * 17) % (bottom - top - 8));
+    const x = edges ? entryX(world, n, fresh) : Math.min(world.floor.right, p.x + 96 + seated * 28);
     world.fighters.push({
-      ...fighter(`${kind}${n}`, 'foe', Math.min(world.floor.right, p.x + 96 + seated * 28), y, tune),
+      ...fighter(`${kind}${n}`, 'foe', x, y, tune),
       kind, hp: k.hp, maxHp: k.hp, hitsToFall: k.hitsToFall, taken: 0, cooldown: 30 + seated * 30,
-      guardDown: 0, guardBreakFrames: k.guard ?? 0,
+      guardDown: 0, guardBreakFrames: k.guard ?? 0, entering: edges,
     });
     seated++;
   }
@@ -123,11 +136,12 @@ export function thinkStaff(world, f, tune) {
     case 'idle': case 'walk': case 'guard': {
       const guarding = k.guard && f.guardDown === 0;
       const { x, y } = spot(f, p, tune, world);
-      const moving = moveTo(f, x, y, k.speed);
+      const { left, right } = world.floor;
+      const moving = moveTo(f, f.entering ? Math.min(right, Math.max(left, x)) : x, y, k.speed);
       f.facing = Math.sign(p.x - f.x) || f.facing;
       const stance = guarding ? 'guard' : moving ? 'walk' : 'idle';
       if (stance !== f.state) set(f, stance);
-      if (readyToStrike(world, f, p, k, tune)) {
+      if (!f.entering && readyToStrike(world, f, p, k, tune)) {
         set(f, 'windup');
         f.flankSide = null;
       }
