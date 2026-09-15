@@ -8,7 +8,8 @@ import { MAX_MOSAIC, LEVELS, screen, brightnessPass, mosaicPass, toRgba } from '
 
 export const IN_FRAMES = 16;
 export const OUT_FRAMES = 24;
-export const ZOOM_FRAMES = 90;
+export const ZOOM_FRAMES = 20;
+export const PRESS_FROM = 2.6;
 const EMPTY = 0xffff;
 const TOP = LEVELS - 1;
 
@@ -32,11 +33,11 @@ export function outStep(frame) {
   };
 }
 
-// The logo's Mode 7 zoom: from a speck turning twice to full size and square, easing out.
+// The logo's Mode 7 press: scale only, 260% down to 100%, easing out as it lands.
 export function logoZoom(frame) {
   const p = Math.min(1, Math.max(0, frame) / ZOOM_FRAMES);
   const ease = 1 - (1 - p) ** 3;
-  return { scale: 0.05 + 0.95 * ease, angle: (1 - ease) * Math.PI * 4, done: p >= 1 };
+  return { scale: PRESS_FROM - (PRESS_FROM - 1) * ease, done: p >= 1 };
 }
 
 // Every menu confirms on Start, the NES A and the SNES A (which the pad names `injunction`).

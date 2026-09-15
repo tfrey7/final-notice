@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hex } from '../src/snes/color.mjs';
 import { MAX_TILESET, bakeScene, composeFrame, sceneProblems } from '../src/snes/layers.mjs';
-import { FILES, PAL, STAMP_FRAMES, approvedStamp, logo, logoTiles, mode7Problems, screens, skyline } from '../src/snes/bg/ui.mjs';
+import { FILES, GLINT_EVERY, PAL, STAMP_FRAMES, approvedStamp, glintBand, logo, logoPalette, logoTiles, mode7Problems, screens, skyline } from '../src/snes/bg/ui.mjs';
 import { SNES_GLYPHS } from '../src/snes/text.mjs';
 
 test('every front-end screen passes the Mode 1 checks', () => {
@@ -37,6 +37,13 @@ test('the logo is a Mode 7-ready tile image in exactly 15 colours', () => {
   assert.ok(logoTiles() <= 256);
   assert.equal(new Set(logo.pixels.join('').replace(/0/g, '')).size, 15);
   assert.match(mode7Problems({ ...logo, w: 175 }).join(), /not whole tiles/);
+  assert.equal(new Set(logo.palette.slice(6)).size, 1, 'the highlight bands share one colour between glints');
+  assert.equal(glintBand(0), -1);
+  const bands = Array.from({ length: GLINT_EVERY * 2 }, (_, t) => glintBand(t)).filter((k) => k >= 0);
+  assert.deepEqual([...new Set(bands)], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(bands.length, 2 * 30, 'two crossings in 12 s');
+  assert.notDeepEqual(logoPalette(4), logo.palette);
+  assert.deepEqual(logoPalette(-1), logo.palette);
 });
 
 test('select is two manila files on a green blotter under the skyline window', () => {

@@ -19,9 +19,9 @@ const palettes = [
   pad([rgb15(2, 2, 7), rgb15(4, 3, 10), rgb15(8, 4, 12), rgb15(5, 4, 11), rgb15(8, 7, 15), rgb15(17, 13, 7), rgb15(10, 12, 17), rgb15(28, 27, 21), rgb15(21, 20, 17)]),
   // near: 1 shade, 2 face, 3 lit edge, 4 warm office, 5 warm low, 6 fluorescent, 7 fluorescent low, 8 dark glass, 9 beacon, 10 ledge
   pad([rgb15(1, 1, 4), rgb15(3, 3, 8), rgb15(7, 7, 13), rgb15(31, 26, 13), rgb15(23, 16, 8), rgb15(22, 28, 25), rgb15(12, 18, 18), rgb15(2, 3, 7), rgb15(29, 4, 4), rgb15(8, 7, 14)]),
-  // logo: 1 outline, 2-5 burgundy, 6-10 brass, 11 cream, 12 drop shadow, 13 deep burgundy, 14 rivet, 15 rule glint
-  [rgb15(5, 1, 3), rgb15(9, 1, 5), rgb15(14, 2, 7), rgb15(18, 4, 9), rgb15(24, 8, 12), rgb15(12, 7, 2), rgb15(18, 12, 3),
-    rgb15(24, 18, 6), rgb15(29, 24, 11), rgb15(31, 29, 19), rgb15(31, 31, 27), rgb15(3, 0, 2), rgb15(7, 1, 4), rgb15(8, 5, 2), rgb15(27, 23, 14)],
+  // logo: 1 outline, 2 drop shadow, 3-5 brass ramp top to low, 6 shaded edge, 7-15 the highlight row in
+  // nine bands left to right, one colour until the glint cycles through them
+  pad([rgb15(2, 1, 1), rgb15(1, 1, 3), rgb15(23, 18, 9), rgb15(17, 12, 6), rgb15(11, 8, 4), rgb15(6, 4, 3), rgb15(27, 23, 14)]),
   // frame (the select desk): 1 outline, 2-4 walnut, 5-7 blotter green, 8-10 manila, 11 paper, 12-13 steel, 14-15 photo backdrop
   [rgb15(10, 4, 1), rgb15(7, 4, 2), rgb15(12, 6, 2), rgb15(18, 10, 4), rgb15(1, 6, 3), rgb15(3, 12, 6), rgb15(9, 19, 10), rgb15(15, 9, 2),
     rgb15(25, 18, 7), rgb15(31, 26, 13), rgb15(31, 31, 24), rgb15(11, 12, 15), rgb15(25, 26, 28), rgb15(4, 6, 12), rgb15(10, 13, 21)],
@@ -85,28 +85,55 @@ function textMask(text, scale, gap) {
 const on = (m, x, y) => m[y]?.[x] === 1;
 const touches = (m, x, y) => [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => on(m, x + dx, y + dy)));
 
-// Raised letters: a drop shadow down-right, an outline, a lit top-left edge, a shaded bottom-right
-// edge and a three-step vertical ramp dithered at its seams.
+// Heavy condensed capitals for the logo: stems two cells wide, bars one cell tall, drawn at 3x4.
+const HEAVY = {
+  A: ['.####.', '##..##', '##..##', '##..##', '######', '##..##', '##..##', '##..##', '##..##'],
+  C: ['.#####', '##....', '##....', '##....', '##....', '##....', '##....', '##....', '.#####'],
+  D: ['#####.', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '#####.'],
+  E: ['######', '##....', '##....', '##....', '#####.', '##....', '##....', '##....', '######'],
+  F: ['######', '##....', '##....', '##....', '#####.', '##....', '##....', '##....', '##....'],
+  H: ['##..##', '##..##', '##..##', '##..##', '######', '##..##', '##..##', '##..##', '##..##'],
+  I: ['######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '######'],
+  L: ['##....', '##....', '##....', '##....', '##....', '##....', '##....', '##....', '######'],
+  N: ['##..##', '###.##', '###.##', '######', '##.###', '##.###', '##..##', '##..##', '##..##'],
+  O: ['.####.', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '.####.'],
+  T: ['######', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..', '..##..'],
+  ' ': Array(9).fill('......'),
+};
+
+function heavyMask(text, sx = 3, sy = 4, gap = 4) {
+  const m = canvas(text.length * 6 * sx + (text.length - 1) * gap, 9 * sy);
+  [...text].forEach((ch, n) => HEAVY[ch].forEach((row, gy) => [...row].forEach((c, gx) => {
+    if (c === '#') rect(m, n * (6 * sx + gap) + gx * sx, gy * sy, sx, sy, 1);
+  })));
+  return m;
+}
+
+// Raised brass letters: a drop shadow down-right, an outline, a three-step vertical ramp dithered at
+// its seams, a shaded bottom-right edge and one highlight row along every top edge. The highlight
+// takes one of nine entries by where it sits across the picture, so the glint is a palette cycle.
 function emboss(g, m, ox, oy, c) {
   const h = m.length;
   const w = m[0].length;
+  const band = (x) => c.band + Math.min(GLINT_BANDS - 1, Math.floor((x * GLINT_BANDS) / g[0].length));
   for (let y = -1; y < h + 3; y++) for (let x = -1; x < w + 3; x++) if (!on(m, x, y) && on(m, x - 2, y - 2)) put(g, ox + x, oy + y, c.shadow);
   for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) if (!on(m, x, y) && touches(m, x, y)) put(g, ox + x, oy + y, c.outline);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (!on(m, x, y)) continue;
-      const r = y / h;
-      const [top, mid, low] = c.ramp;
-      let v = r < 0.3 ? top : r < 0.38 ? ((x + y) % 2 ? top : mid) : r < 0.62 ? mid : r < 0.7 ? ((x + y) % 2 ? mid : low) : low;
+      // Top to low ramp ordered-dithered over the letter's height, restarting on each line of text.
+      const step = Math.min(2, Math.floor((y / h) * 2.4 + BAYER[y & 3][x & 3] / 16 - 0.2));
+      let v = c.ramp[Math.max(0, step)];
       if (!on(m, x, y + 1) || !on(m, x + 1, y)) v = c.lo;
-      if (!on(m, x, y - 1) || !on(m, x - 1, y)) v = c.hi;
-      if (!on(m, x, y - 1) && !on(m, x - 1, y)) v = c.glint;
+      if (!on(m, x, y - 1)) v = band(ox + x);
       put(g, ox + x, oy + y, v);
     }
   }
 }
 
-const BRASS = { outline: 1, shadow: 12, hi: 10, lo: 6, glint: 11, ramp: [9, 8, 7] };
+const GLINT_BANDS = 9;
+const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+const BRASS = { outline: 1, shadow: 2, ramp: [3, 4, 5], lo: 6, band: 7 };
 
 // --- tiles and layers -------------------------------------------------------------------------
 
@@ -250,27 +277,37 @@ export const skyline = {
 
 // --- the logo ---------------------------------------------------------------------------------
 
-// A burgundy plate with clipped corners and an inset brass rule, FINAL NOTICE raised in brass.
+// FINAL NOTICE in heavy condensed brass capitals, two lines, nothing behind them.
 function logoPicture() {
-  const w = 176;
-  const h = 80;
-  const g = canvas(w, h);
-  bevel(g, 0, 0, w, h, { outline: 1, light: 5, dark: 2, fill: 3 });
-  checker(g, 2, 2, w - 4, 6, 4, 3);
-  checker(g, 2, h - 8, w - 4, 6, 2, 13);
-  [[0, 0], [1, 0], [0, 1], [w - 1, 0], [w - 2, 0], [w - 1, 1], [0, h - 1], [1, h - 1], [0, h - 2], [w - 1, h - 1], [w - 2, h - 1], [w - 1, h - 2]].forEach(([x, y]) => put(g, x, y, 0));
-  [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]].forEach(([x, y]) => put(g, x, y, 1));
-  for (const y of [5, h - 7]) { rect(g, 6, y, w - 12, 1, 15); rect(g, 6, y + 1, w - 12, 1, 7); }
-  for (const x of [5, w - 7]) { rect(g, x, 6, 1, h - 12, 15); rect(g, x + 1, 6, 1, h - 12, 7); }
-  [[4, 4], [w - 8, 4], [4, h - 8], [w - 8, h - 8]].forEach(([x, y]) => draw(g, x, y, ['E99E', '9AA7', '9A76', 'E76E']));
-  const top = textMask('FINAL', 3, 4);
-  const bottom = textMask('NOTICE', 3, 4);
-  emboss(g, top, Math.floor((w - top[0].length) / 2), 13, BRASS);
-  emboss(g, bottom, Math.floor((w - bottom[0].length) / 2), 45, BRASS);
+  const g = canvas(136, 88);
+  const top = heavyMask('FINAL');
+  const bottom = heavyMask('NOTICE');
+  emboss(g, top, Math.floor((136 - top[0].length) / 2), 4, BRASS);
+  emboss(g, bottom, Math.floor((136 - bottom[0].length) / 2), 46, BRASS);
   return g;
 }
 
-export const logo = { palette: palettes[PAL.logo], w: 176, h: 80, pixels: logoPicture().map(hexRow) };
+export const logo = { palette: palettes[PAL.logo], w: 136, h: 88, pixels: logoPicture().map(hexRow) };
+
+// The glint: every 6 s, 3 frames a band, the highlight row's bands flare white left to right with a
+// warm lead-in either side. `glintBand(t)` is the band at `t` frames after the logo lands, -1 between.
+export const GLINT_EVERY = 360;
+const GLINT_STEP = 3;
+const GLINT_AT = 240;
+export const glintBand = (t) => {
+  const k = Math.floor((((t - GLINT_AT) % GLINT_EVERY) + GLINT_EVERY) % GLINT_EVERY / GLINT_STEP);
+  return t >= GLINT_AT && k <= GLINT_BANDS ? k : -1;
+};
+export function logoPalette(k) {
+  const pal = [...palettes[PAL.logo]];
+  const at = BRASS.band - 1;
+  if (k >= 0) {
+    for (const [d, c] of [[-1, rgb15(31, 31, 25)], [0, rgb15(31, 31, 31)], [1, rgb15(31, 31, 25)]]) {
+      if (k + d >= 0 && k + d < GLINT_BANDS) pal[at + k + d] = c;
+    }
+  }
+  return pal;
+}
 
 // Mode 7 takes one 128x128 map of up to 256 distinct 8x8 tiles; this logo also keeps to one
 // 15-colour palette, so the same tiles drop onto BG1 once the zoom settles into Mode 1.

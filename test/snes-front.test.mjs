@@ -17,10 +17,12 @@ test('a screen mosaics in to 1 px at full brightness and out to 16 px in black',
   }
 });
 
-test('the logo zoom settles square at full size', () => {
-  assert.ok(logoZoom(0).scale < 0.1);
-  assert.deepEqual(logoZoom(ZOOM_FRAMES), { scale: 1, angle: 0, done: true });
-  assert.ok(logoZoom(ZOOM_FRAMES / 2).scale > logoZoom(ZOOM_FRAMES / 4).scale);
+test('the logo presses from 260% to full size in 20 frames by scale alone, easing out', () => {
+  assert.equal(ZOOM_FRAMES, 20);
+  assert.deepEqual(logoZoom(0), { scale: 2.6, done: false });
+  assert.deepEqual(logoZoom(ZOOM_FRAMES), { scale: 1, done: true });
+  for (let f = 1; f <= ZOOM_FRAMES; f++) assert.ok(logoZoom(f).scale < logoZoom(f - 1).scale);
+  assert.ok(logoZoom(ZOOM_FRAMES / 2).scale < 1.5, 'most of the travel is in the first half');
 });
 
 test('the logo becomes a Mode 7 texture with its clear pixels transparent', () => {

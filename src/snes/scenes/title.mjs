@@ -5,8 +5,8 @@
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
 import { bakeLayer, bakeScene, composeFrame } from '../layers.mjs';
-import { LEVELS, screen, fromRgba, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
-import { afterHours, logo, setFloors } from '../bg/ui.mjs';
+import { LEVELS, screen, fromRgba, mathPass, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
+import { afterHours, glintBand, logo, logoPalette, setFloors } from '../bg/ui.mjs';
 import { INTRO_FRAMES, TITLE_BPM, lightsOut } from '../lights.mjs';
 import { measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
@@ -21,6 +21,9 @@ const PAN = 20 / 60;
 const FADE_FRAMES = 24;
 const fadeUp = (f) => ({ mosaic: 1, level: Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES)) });
 const LOGO_CENTRE = [WIDTH >> 1, 76];
+// The press starts 20 frames before the downbeat of bar 5 so it lands on it.
+const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
+const FLASH = screen(rgb15(9, 8, 5));
 const PROMPT = 'PUSH START';
 const PROMPT_Y = 150;
 
@@ -59,7 +62,7 @@ export class SnesTitleScene extends Phaser.Scene {
     this.sky = afterHours();
     this.baked = bakeScene(this.sky);
     this.dark = 0;
-    this.logo = mode7Texture(logo);
+    this.logo = null;
     this.main = screen();
     this.out = screen();
     this.rgba = new Uint8ClampedArray(this.main.length * 4);
@@ -103,6 +106,7 @@ export class SnesTitleScene extends Phaser.Scene {
       this.baked[i] = bakeLayer(this.sky, this.baked[i].layer);
     }
     if (lights.clunk && this.pinned == null) sfx('relay');
+    if (f === INTRO_FRAMES && this.pinned == null) sfx('brassHit');
     const frame = paintTitle(this, f);
     if (this.leaving != null) {
       // Select opens the file drawer over this last frame.
@@ -118,25 +122,32 @@ export class SnesTitleScene extends Phaser.Scene {
 function paintTitle(s, f) {
   composeFrame(s.sky, s.baked, Math.floor(f * PAN), 0, s.rgba);
   fromRgba(s.rgba, s.main);
-  const zoom = logoZoom(f - INTRO_FRAMES);
-  let frame = f < INTRO_FRAMES ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, zoom.angle), LOGO_CENTRE, s.main, s.out);
+  const zoom = logoZoom(f - PRESS_AT);
+  const band = glintBand(f - INTRO_FRAMES);
+  if (s.glint !== band) {
+    s.glint = band;
+    s.logo = mode7Texture({ ...logo, palette: logoPalette(band) });
+  }
+  let frame = f < PRESS_AT ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, 0), LOGO_CENTRE, s.main, s.out);
+  // The landing frame: the whole screen brightens once by fixed-colour add.
+  if (f === INTRO_FRAMES) frame = mathPass(frame, FLASH, { op: 'add' });
   if (s.t.demo) {
     frame = brightnessPass(frame, 5, s.main);
     const word = 'DEMO';
     drawString(bufferFill(frame), word, (WIDTH - measure(word)) >> 1, PROMPT_Y, rgb15(31, 26, 10));
   } else if (s.memo) {
     drawMemo(frame, s.memo, f);
-  } else if (zoom.done && blinkOn(f - INTRO_FRAMES - 90)) {
+  } else if (zoom.done && f >= INTRO_FRAMES + 60 && blinkOn(f - INTRO_FRAMES - 60)) {
     drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
   }
   return frame;
 }
 
 // The settled title with the memo up, for select's `&wipe=<frame>` screenshot of the drawer.
-export function titleStill(memo, f = INTRO_FRAMES + ZOOM_FRAMES + 60) {
+export function titleStill(memo, f = INTRO_FRAMES + 120) {
   const sky = afterHours();
   setFloors(sky.palettes, lightsOut(f, TITLE_BPM).dark);
   const main = screen();
-  const s = { sky, baked: bakeScene(sky), logo: mode7Texture(logo), main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: { demo: false }, memo };
+  const s = { sky, baked: bakeScene(sky), logo: null, main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: { demo: false }, memo };
   return paintTitle(s, f).slice();
 }
