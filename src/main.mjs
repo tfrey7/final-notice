@@ -16,6 +16,7 @@ import { SnesTitleScene } from './snes/scenes/title.mjs';
 import { SnesSelectScene } from './snes/scenes/select.mjs';
 import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
+import { SnesStage1Scene } from './snes/stage1/scene.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -25,7 +26,7 @@ const snes = profile.name === 'snes';
 const SCENES = {
   title: snes ? new SnesTitleScene() : new TitleScene(),
   select: snes ? new SnesSelectScene() : new SelectScene(),
-  stage1: new Stage1Scene(),
+  stage1: snes ? new SnesStage1Scene() : new Stage1Scene(),
   stage2: new EscapeScene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: new EndingScene(),

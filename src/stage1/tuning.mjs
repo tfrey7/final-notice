@@ -62,6 +62,13 @@ export const BOSS = registerTuning('accountManager', {
   heavyStagger: 12,
 });
 
+// The SNES draws Stage 1 about 1.5x taller: `scale` grows every pixel number of the moves to match,
+// and `finisherHitStop` holds the fight still while the last foe of an area flies at the camera.
+export const STAGE1 = registerTuning('stage1', {
+  scale: 1.5,
+  finisherHitStop: 12,
+});
+
 export const CAMERA = registerTuning('stage1Camera', {
   lead: 112,
   edge: 8,
