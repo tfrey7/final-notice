@@ -16,24 +16,26 @@ const CORPORATE = /rec-(epiano|pad|slap|sax|choir|sqlead)$/;
 const bars = (def, v) => def[v].rows.split('|').map((b) => b.trim());
 const notes = (bar) => bar.split(/\s+/).filter((t) => /^[A-G]/.test(t));
 const midi = (t) => noteToMidi(t.split(':')[0]);
+const instOf = (t) => t.split(':')[1].split('/')[0];
 
 for (const [name, def, quoteBar] of [['Great Seal', seal, SEAL_QUOTE], ['Disposal Line', disposal, DISPOSAL_QUOTE]]) {
   test(`the ${name} cue is the gothic band: brass with vibrato, organ strings, a bell, no corporate instrument`, () => {
-    const used = new Set(VOICE_NAMES.flatMap((v) => notes(def[v].rows).map((t) => t.split(':')[1])));
+    const used = new Set(VOICE_NAMES.flatMap((v) => notes(def[v].rows).map(instOf)));
     for (const key of used) assert.doesNotMatch(def.instruments[key].sample, CORPORATE, key);
     const samples = [...used].map((key) => def.instruments[key].sample);
     for (const s of ['rec-brass', 'rec-strings', 'rec-bell', 'rec-synbass']) assert.ok(samples.includes(s), s);
     const lead = VOICE_NAMES.find((v) => notes(def[v].rows).some((t) => /brass|lead/.test(t)));
-    const brass = def.instruments[notes(def[lead].rows)[0].split(':')[1]];
+    const brass = def.instruments[instOf(notes(def[lead].rows)[0])];
     assert.ok(brass.pitch.some((p) => p !== 0), 'the brass has vibrato');
     const organ = notes(def.v3.rows).map(midi);
     assert.ok(organ.every((m) => m >= 48 && m < 80), 'the organ strings sit between C3 and G#5');
   });
 
-  test(`the ${name} tolls the bell on the downbeat and quotes the title hook in C minor once`, () => {
+  test(`the ${name} tolls the bell on every other downbeat and quotes the title hook in C minor once`, () => {
     const bell = bars(def, 'v4');
-    const tolls = bell.filter((b, i) => i !== quoteBar && /^[A-G]\S*:toll/.test(b));
-    assert.ok(tolls.length >= bell.length - 3, `${tolls.length} of ${bell.length} bars toll`);
+    bell.forEach((b, i) => {
+      if (i !== quoteBar) assert.equal(/^[A-G]\S*:toll/.test(b), i % 2 === 0, `bar ${i}`);
+    });
     assert.equal(bell.filter((b) => b.includes(':bell')).length, 1);
     assert.equal(bell[quoteBar], QUOTE);
     const hook = notes(HOOK).map(midi);
