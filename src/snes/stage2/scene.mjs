@@ -11,6 +11,7 @@ import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
 import { drainStep, drawHud, fadeFill, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
+import { SEAL_SONG, stage2Song } from '../audio/cues.mjs';
 import { FrontScreen, bufferFill } from '../scenes/front.mjs';
 import { pollPad } from '../../input.mjs';
 import { cheapen, fastOn } from '../../fast.mjs';
@@ -97,7 +98,7 @@ export class SnesStage2Scene extends Phaser.Scene {
         if (params.has('at')) this.run.player.x = Number(params.get('at'));
       }
     } else {
-      playSong(this.song = 'stage2');
+      playSong(this.song = stage2Song(this.run.player.x));
       // ?slip=<frame> holds the Custodian's slip still, for a screenshot.
       if (params.has('slip')) this.slip = { t: Number(params.get('slip')), still: true };
     }
@@ -117,7 +118,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     this.voiced = false;
     this.slip = null;
     this.entrance = { t: 0, still: false };
-    playSong(this.song = 'boss');
+    playSong(this.song = SEAL_SONG);
   }
 
   // An entrance holds the fight: the press lowering before the Great Seal's card, or the Custodian's
@@ -209,7 +210,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     const locked = !!run.stage && arenaLocked(run);
     if (locked && !this.wasLocked) this.slip = { t: 0, still: false };
     this.wasLocked = locked;
-    const song = run.boss ? this.song : arenaLocked(run) ? 'boss' : 'stage2';
+    const song = run.boss ? this.song : arenaLocked(run) ? 'boss' : stage2Song(run.player.x);
     if (!this.paused && song !== this.song) playSong(this.song = song);
     this.draw(flow);
   }

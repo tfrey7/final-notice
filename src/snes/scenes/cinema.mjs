@@ -10,7 +10,8 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { screens } from '../bg/ui.mjs';
 import { currentSong, playSong, sfx, soloSong, stopSong } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
-import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
+import { SONGS as FLOW_SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
+import { SCENE3_SONG } from '../audio/cues.mjs';
 import { SPEAKERS } from '../../story/script.mjs';
 import { SCENE_IDS, FRAMES_PER_LETTER, startPlayer, tick, press, letters } from '../../story/cinema.mjs';
 import { FrontScreen, IN_FRAMES, bufferFill, inStep } from './front.mjs';
@@ -18,6 +19,9 @@ import {
   ADVANCE, ALARM_FLASH, SPIN_CENTRE, changeStep, fadeOutStep, paintPicture, pictureId, snesWrap, spinStep, spinTexture,
 } from '../cinema.mjs';
 import { PAD_VOICES, mosaicOutStep, stageFrame, stagePages } from '../staging.mjs';
+
+const SONGS = { ...FLOW_SONGS, scene3: SCENE3_SONG };
+const DRONE_VOICE = 7;
 
 // The fluorescent buzz is a 56-frame effect, played again while its page lasts.
 const BUZZ_FRAMES = 56;
@@ -154,8 +158,9 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.held = 0;
     if (page.music === 'cut') stopSong();
     else if (page.music === 'pad') {
-      if (currentSong()) soloSong(PAD_VOICES);
-      else playSong(SONGS[this.scene.key]).then(() => soloSong(PAD_VOICES));
+      const voices = this.scene.key === 'scene3' ? [...PAD_VOICES, DRONE_VOICE] : PAD_VOICES;
+      if (currentSong()) soloSong(voices);
+      else playSong(SONGS[this.scene.key]).then(() => soloSong(voices));
     }
     else if (page.music) {
       if (currentSong() === page.music) soloSong(null);
