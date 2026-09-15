@@ -189,6 +189,9 @@ export class SnesOpeningScene extends Phaser.Scene {
     this.pinned = params.has('t') ? Number(params.get('t')) : null;
     this.frame = this.pinned ?? 0;
     this.leaving = null;
+    // Started by the idle title as its attract loop: any button, or the end, returns to the settled title.
+    this.attract = this.registry.get('attract') === true;
+    this.registry.remove('attract');
     try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* private window: the opening plays again */ }
     this.skyline = skylineLayer();
     this.tower = towerLayer();
@@ -212,10 +215,12 @@ export class SnesOpeningScene extends Phaser.Scene {
 
   update() {
     if (this.pinned == null && this.leaving == null) {
-      const step = openingStep(this.frame, pollPad(this.game.loop.frame));
+      const pad = pollPad(this.game.loop.frame);
+      if (this.attract && pad.pressed.size > 0) return this.toTitle();
+      const step = openingStep(this.frame, pad);
       if (step.event === 'title') {
         // Run out, the screen is already black: straight to the title's own mosaic in.
-        if (openingAt(this.frame).level === 0) return showFlow(this, jumpTo('title'));
+        if (openingAt(this.frame).level === 0) return this.toTitle();
         this.leaving = 0;
       } else {
         this.frame = step.frame;
@@ -228,13 +233,18 @@ export class SnesOpeningScene extends Phaser.Scene {
       const step = outStep(this.leaving++);
       if (step.done) {
         this.leaving = null;
-        showFlow(this, jumpTo('title'));
+        this.toTitle();
         return;
       }
       this.view.show(frame, { mosaic: Math.max(at.mosaic, step.mosaic), level: Math.min(at.level, step.level) });
       return;
     }
     this.view.show(frame, at);
+  }
+
+  toTitle() {
+    if (this.attract) this.registry.set('attractBack', true);
+    showFlow(this, jumpTo('title'));
   }
 
   paint(at) {

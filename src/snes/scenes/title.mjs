@@ -1,26 +1,27 @@
-// The SNES title: FINAL NOTICE zooms in by Mode 7 over the parallax night skyline, then PUSH START
-// blinks; after 20 idle seconds the attract note, as on the NES. Start slides up the memo slip
-// (NEW AUDIT, CONTINUE, SETTINGS); NEW AUDIT hands over to select, which wipes in by file drawer.
+// The SNES title: FINAL NOTICE presses in by Mode 7 over the parallax night skyline, then PUSH START
+// pulses; Start during the reveal skips to the settled title. After 20 idle seconds the title fades to
+// the opening as its attract loop. Start slides up the memo slip (NEW AUDIT, CONTINUE, SETTINGS);
+// NEW AUDIT hands over to select, which wipes in by file drawer.
 /* global Phaser */
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
 import { bakeLayer, bakeScene, composeFrame } from '../layers.mjs';
-import { LEVELS, screen, fromRgba, mathPass, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
+import { LEVELS, screen, fromRgba, mathPass, mode7Pass, mode7Matrix, brightness } from '../fx.mjs';
 import { FLOORS, KEPT_WINDOWS, afterHours, glintBand, logo, logoPalette, logoReading, setFloors } from '../bg/ui.mjs';
 import { INTRO_FRAMES, TITLE_BPM, lightsOut } from '../lights.mjs';
 import { clerkDesk, pastDue, skyFor } from '../clock.mjs';
-import { measure, drawString, setWindowColours } from '../text.mjs';
+import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
+import { PROMPT_AT, fadeLevel, newTitle, promptLevel, titleTick } from '../titlestate.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
-import { blinkOn, titleStep } from '../../scenes/menu.mjs';
 import { FrontScreen, ZOOM_FRAMES, bufferFill, logoZoom, mode7Texture } from './front.mjs';
 
 const PAN = 20 / 60;
 const FADE_FRAMES = 24;
-const fadeUp = (f) => ({ mosaic: 1, level: Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES)) });
+const fadeUp = (f) => Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES));
 const LOGO_CENTRE = [WIDTH >> 1, 76];
 // The press starts 20 frames before the downbeat of bar 5 so it lands on it.
 const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
@@ -53,10 +54,15 @@ export class SnesTitleScene extends Phaser.Scene {
     // The opening starts the title melody as its doors part; the logo zoom comes in on it without a restart.
     if (currentSong() !== SONGS.title) playSong(SONGS.title);
     const params = new URLSearchParams(location.search);
-    // &t=<frames> pins the clock for a screenshot; &memo=memo|settings opens the slip on that page.
+    // &t=<frames> pins the clock for a screenshot; &memo=memo|settings opens the slip on that page;
+    // &attract=<frames> pins the fade into the attract loop.
     this.pinned = params.has('t') ? Number(params.get('t')) : null;
-    this.t = { idle: 0, demo: false };
-    this.frames = 0;
+    // Back from the attract loop: the settled title fades up with the prompt already pulsing.
+    this.back = this.registry.get('attractBack') === true;
+    this.registry.remove('attractBack');
+    this.t = newTitle(this.back ? PROMPT_AT : 0);
+    if (params.has('attract')) this.t.fade = Number(params.get('attract'));
+    this.shown = 0;
     this.leaving = null;
     this.settings = readSettings(storage());
     applySettings(this.settings);
@@ -82,7 +88,7 @@ export class SnesTitleScene extends Phaser.Scene {
     const { event, settings } = this.memo;
     if (MEMO_SOUNDS[event]) sfx(MEMO_SOUNDS[event]);
     if (event === 'new' || event === 'continue') this.leaving = 0;
-    if (event === 'back') { this.memo = null; this.t = { idle: 0, demo: false }; }
+    if (event === 'back') { this.memo = null; this.t = { ...this.t, idle: 0 }; }
     if (event === 'change') {
       this.settings = settings;
       writeSettings(storage(), settings);
@@ -91,19 +97,25 @@ export class SnesTitleScene extends Phaser.Scene {
   }
 
   update() {
-    const f = this.pinned ?? this.frames++;
     if (this.pinned == null && this.leaving == null) {
       const pad = pollPad(this.game.loop.frame);
       if (this.memo) {
         this.stepMemo(pad);
       } else {
-        const was = this.t.demo;
-        this.t = titleStep(this.t, pad);
-        if (this.t.event === 'start') this.memo = openMemo(this.settings, hasSave(storage()));
-        if (this.t.event === 'attract') playSong('demo');
-        if (this.t.event === 'back' && was) playSong(SONGS.title);
+        this.t = titleTick(this.t, pad);
+        if (this.t.event === 'confirm') sfx('stampOk');
+        if (this.t.event === 'enter') {
+          this.memo = openMemo(this.settings, hasSave(storage()));
+          this.t = { ...this.t, confirm: null };
+        }
+        if (this.t.event === 'attract') {
+          this.registry.set('attract', true);
+          this.scene.start('opening');
+          return;
+        }
       }
     }
+    const f = this.pinned ?? this.t.frame;
 
     if (!this.pastDue && this.pinned == null && f % 60 === 0 && pastDue(this.opened)) {
       this.pastDue = true;
@@ -128,11 +140,18 @@ export class SnesTitleScene extends Phaser.Scene {
       showFlow(this, next(this.registry.get('flow'), { type: 'start' }));
       return;
     }
-    this.view.show(frame, fadeUp(f));
+    const up = fadeUp(this.back ? this.shown++ : f);
+    this.view.show(frame, { mosaic: 1, level: Math.min(up, fadeLevel(this.t.fade)) });
   }
 }
 
-// The title at frame `f`: the skyline panning, the logo zoom, and the demo note, memo or prompt over it.
+// PUSH START in the text layer's own colours at brightness `level`.
+function drawPrompt(frame, level) {
+  const [, shadow, , ink] = BG3_PALETTE;
+  drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y, brightness(ink, level), brightness(shadow, level));
+}
+
+// The title at frame `f`: the skyline panning, the logo zoom, and the memo or prompt over it.
 function paintTitle(s, f) {
   composeFrame(s.sky, s.baked, Math.floor(f * PAN), 0, s.rgba);
   fromRgba(s.rgba, s.main);
@@ -146,14 +165,12 @@ function paintTitle(s, f) {
   let frame = f < PRESS_AT ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, 0), LOGO_CENTRE, s.main, s.out);
   // The landing frame: the whole screen brightens once by fixed-colour add.
   if (f === INTRO_FRAMES) frame = mathPass(frame, FLASH, { op: 'add' });
-  if (s.t.demo) {
-    frame = brightnessPass(frame, 5, s.main);
-    const word = 'DEMO';
-    drawString(bufferFill(frame), word, (WIDTH - measure(word)) >> 1, PROMPT_Y, rgb15(31, 26, 10));
-  } else if (s.memo) {
+  if (s.memo) {
     drawMemo(frame, s.memo, f);
-  } else if (zoom.done && f >= INTRO_FRAMES + 60 && blinkOn(f - INTRO_FRAMES - 60)) {
-    drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
+  } else if (zoom.done) {
+    // Confirmed: the prompt holds at full brightness until the memo slides up.
+    const level = s.t.confirm != null ? LEVELS - 1 : promptLevel(f);
+    if (level != null) drawPrompt(frame, level);
   }
   return frame;
 }
@@ -170,6 +187,6 @@ export function titleStill(memo, f = INTRO_FRAMES + 120) {
   const sky = afterHours();
   setFloors(sky.palettes, lightsOut(f, TITLE_BPM).dark);
   const main = screen();
-  const s = { sky, baked: bakeScene(sky), logo: null, main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: { demo: false }, memo };
+  const s = { sky, baked: bakeScene(sky), logo: null, main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: newTitle(f), memo };
   return paintTitle(s, f).slice();
 }

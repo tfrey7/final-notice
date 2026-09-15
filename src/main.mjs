@@ -52,7 +52,8 @@ if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
 // ?snes plays the opening before the title once a session; ?snes&go=opening plays it every time.
 const session = () => { try { return sessionStorage; } catch { return null; } };
-if (snes && opensWithOpening(params, session())) scene = [new SnesOpeningScene(), ...scene];
+// The opening is also the title's attract loop, so it is always registered under ?snes.
+if (snes) scene = opensWithOpening(params, session()) ? [new SnesOpeningScene(), ...scene] : [...scene, new SnesOpeningScene()];
 const debug = snes && debugScene(params);
 if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
