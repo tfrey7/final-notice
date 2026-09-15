@@ -22,11 +22,14 @@
 
 import { noteToMidi, midiToHz } from '../../audio/apu.mjs';
 import { DSP_HZ, VOICES, createDsp, makeSample } from './spc.mjs';
+import { SAMPLES as BANK, INSTRUMENTS, demoSong } from './bank.mjs';
+
+export { INSTRUMENTS };
 
 export const VOICE_NAMES = Array.from({ length: VOICES }, (_, i) => `v${i + 1}`);
 const FRAME_HZ = 60;
 
-// Placeholder samples until the instrument bank exists: a saw loop, a soft square loop and a kick.
+// The bank, plus the synth card's test samples: a saw loop, a soft square loop and a kick.
 export const SAMPLES = (() => {
   const cycle = (n, fn) => Array.from({ length: n }, (_, i) => fn(i / n));
   const saw = cycle(64, (p) => {
@@ -42,6 +45,7 @@ export const SAMPLES = (() => {
     return 26000 * Math.sin(phase) * Math.exp(-t * 9) * Math.min(1, (6400 - i) / 400);
   });
   return {
+    ...BANK,
     saw: { ...makeSample(saw, 0), rootHz: DSP_HZ / 64 },
     square: { ...makeSample(square, 0), rootHz: DSP_HZ / 32 },
     kick: { ...makeSample(kick), rootHz: midiToHz(60) },
@@ -297,6 +301,12 @@ export async function playSong(name) {
   if (!compiled) return;
   seq.play(compiled);
   songName = name;
+}
+
+export function playInstrument(key) {
+  if (!seq || !INSTRUMENTS[key]) return;
+  seq.play(compileSong(demoSong([key])));
+  songName = null;
 }
 
 export function stopSong() {
