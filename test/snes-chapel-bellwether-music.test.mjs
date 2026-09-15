@@ -46,12 +46,22 @@ test('Bellwether\'s phases each sound their own: a slow ominous 1, a frantic fas
   assert.ok(loop >= 60 && loop <= 120, `${loop} s`);
   assert.ok(phase2.tempo < phase3.tempo && phase3.tempo < bellwether.tempo);
   assert.equal(bellwether.instruments.bell.sample, 'rec-bell');
-  assert.equal(bellwether.instruments.sub.sample, 'rec-subbass');
   assert.equal(phase2.instruments.hit.sample, 'rec-orch');
   assert.equal(phase3.instruments.lead.sample, 'rec-brass');
   assert.equal(phase3.instruments.choir.sample, 'rec-choir');
   assert.deepEqual(FORM3.at(-1).c.tones, [0, 4, 7]);
   assert.ok(seconds(phase2, compileSong(phase2)) <= 40 && seconds(phase3, compileSong(phase3)) <= 40);
+});
+
+test('the chapel and every Bellwether phase put the organ up front over the pedal stop', () => {
+  for (const def of [chapel, bellwether, phase2, phase3]) {
+    const vols = (pick) => Object.values(def.instruments).filter(pick).map((i) => i.vol);
+    const organ = Math.max(...vols((i) => i.sample === 'rec-organ'));
+    assert.ok(organ >= Math.max(0, ...vols((i) => i.sample === 'rec-choir')), 'the organ over the choir');
+    assert.ok(organ >= Math.max(...vols(() => true)) / 2, 'a loud church organ');
+    assert.ok(Object.values(def.instruments).some((i) => i.sample === 'rec-pedal'), 'the pedal stop');
+    assert.ok(Object.values(def.instruments).every((i) => i.sample !== 'rec-reed'), 'no reed stop');
+  }
 });
 
 test('a key-changed lead moves exactly its shift, once', () => {

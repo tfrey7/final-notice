@@ -1,10 +1,11 @@
 // Bellwether bound to the Great Seal, the final boss (item 2225). Three phases, three songs, each its own
 // sound (Tim, 16:00 EDT 09-15: "phase 1 should be super ominous. 2nd is frantic. 3 is epic climax").
-// Phase 1, this file: C minor at 100 bpm, no ostinato. A low string line creeps over an organ pedal and a
-// low choir, a bell tolls every other bar, and timpani and kick beat like a heart; Db and a tritone Gb
-// against C keep it from ever settling. bellwether-2.mjs is the frantic phase, bellwether-3.mjs the climax.
+// Phase 1, this file: C minor at 100 bpm, no ostinato. A low string line creeps over held organ chords, the
+// pedal stop and a low choir, a bell tolls every other bar, and timpani and kick beat like a heart; Db and
+// a tritone Gb against C keep it from ever settling. bellwether-2.mjs is the frantic phase, bellwether-3.mjs
+// the climax. The organ is up front in all three, the pedal stop holding the bass (item 2247).
 //
-// Phase 1: v1 string lead | v2 organ pedal | v3 low choir | v4 timpani heartbeat | v5 sub-bass | v6 kick |
+// Phase 1: v1 string lead | v2 organ | v3 low choir | v4 timpani heartbeat | v5 organ pedal | v6 kick |
 // v7 low tom | v8 bell
 
 import { bars, rest, section, voice } from './chase-kit.mjs';
@@ -85,11 +86,11 @@ const phrase = (b) => (b.part === 'intro' ? 4 : 8);
 const isFill = (b) => b.bar === phrase(b) - 1;
 
 const OMEN = {
-  organ: 'R - - - - - - - F - - - - - - -',
+  organ: 'R - - - - - - - F - - - T - - -',
   choir: 'T - - - - - - - - - - - - - - -',
   heart: 'R . . R . . . . . . . . . . . .',
   roll: 'R R R R R R R R R R R R R R R R',
-  sub: 'R - - - - - - - R - - - - - - -',
+  pedal: 'R - - - - - - - - - - - - - - -',
   kick: 'C4 . . C4 . . . . . . . . . . . .',
   knock: '. . . . . . . . . . . . L . . .',
   rumble: 'L . L . L . L . L L L L L L L L',
@@ -99,17 +100,17 @@ const FRANTIC = {
   organ: 'R T F O R T F O R T F O R T F O',
   hits: 'H . . H . . H . . H . . H . H .',
   timpani: 'R . . . R . . . R . . . R . R R',
-  bass: 'R R O R R R O R R R O R R R O R',
+  bass: 'R - R - O - R - R - R - O - R -',
   kick: 'C4 . C4 . C4 . C4 . C4 . C4 . C4 . C4 .',
   snare: '. . . . C4 . . C4 . . C4 . C4 . C4 C4',
   roll: 'C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4 C4',
   toms: 'H . L . H . L . H . L . H H L L',
 };
 const EPIC = {
-  strings: 'R O F O R O F O R O F O R O F O',
+  organ: 'R O F O R O F O R O F O R O F O',
   choir: 'O - - - - - - - U - - - - - - -',
   timpani: 'R . . R . . R . R . R . R R R R',
-  bass: 'R . R . O . R . R . R . O . R .',
+  pedal: 'R - - - - - - - O - - - R - - -',
   kick: 'C4 . . . C4 . . . C4 . . . C4 . . .',
   snare: '. . . . C4 . . . . . . . C4 . C4 C4',
   fill: 'C4 . C4 . C4 . C4 . C4 C4 C4 C4 C4 C4 C4 C4',
@@ -123,7 +124,7 @@ const ARRANGE = {
     v2: voice(OMEN.organ, b.c, 'organ', 12),
     v3: voice(OMEN.choir, b.c, 'choir', 12),
     v4: voice(isFill(b) ? OMEN.roll : OMEN.heart, b.c, 'timpani'),
-    v5: voice(OMEN.sub, b.c, 'sub'),
+    v5: voice(OMEN.pedal, b.c, 'pedal'),
     v6: drum(OMEN.kick, 'kick'),
     v7: tom(isFill(b) ? OMEN.rumble : OMEN.knock),
     v8: b.bar % 2 === 0 ? voice(OMEN.toll, b.c, 'bell', 12) : R,
@@ -133,17 +134,17 @@ const ARRANGE = {
     v2: voice(FRANTIC.organ, b.c, 'organ', 12),
     v3: voice(FRANTIC.hits, b.c, 'hit'),
     v4: voice(FRANTIC.timpani, b.c, 'timpani'),
-    v5: voice(FRANTIC.bass, b.c, 'bass'),
+    v5: voice(FRANTIC.bass, b.c, 'pedal'),
     v6: drum(FRANTIC.kick, 'kick'),
     v7: drum(isFill(b) ? FRANTIC.roll : FRANTIC.snare, 'snare'),
     v8: tom(FRANTIC.toms),
   }),
   3: (b) => ({
     v1: lead(b.lead, 'lead', b.shift),
-    v2: voice(EPIC.strings, b.c, 'ostinato', 12),
+    v2: voice(EPIC.organ, b.c, 'organ', 12),
     v3: voice(EPIC.choir, b.c, 'choir', 12),
     v4: voice(EPIC.timpani, b.c, 'timpani'),
-    v5: voice(EPIC.bass, b.c, 'bass'),
+    v5: voice(EPIC.pedal, b.c, 'pedal'),
     v6: drum(EPIC.kick, 'kick'),
     v7: drum(isFill(b) ? EPIC.fill : EPIC.snare, 'snare'),
     v8: tom(b.bar % 2 === 0 ? EPIC.crash : EPIC.toms),
@@ -161,10 +162,10 @@ const SETTINGS = {
     echo: { mvol: 60, room: 'hall', evol: 44 },
     instruments: {
       lead: { ...INSTRUMENTS.strings, adsr: [12, 3, 6, 6], vol: 104, vibrato: { delay: 12, period: 11, depth: 0.3 } },
-      organ: { ...INSTRUMENTS.organ, adsr: [10, 2, 6, 2], vol: 64 },
-      choir: { ...INSTRUMENTS.choir, vol: 80 },
+      organ: { ...INSTRUMENTS.organ, adsr: [10, 2, 6, 2], vol: 100 },
+      choir: { ...INSTRUMENTS.choir, vol: 70 },
       timpani: { ...INSTRUMENTS.timpani, vol: 116 },
-      sub: { ...INSTRUMENTS.subbass, vol: 120 },
+      pedal: { ...INSTRUMENTS.pedal, adsr: [11, 3, 7, 2], vol: 124 },
       kick: { ...INSTRUMENTS.gkick, vol: 108 },
       ltom: { ...INSTRUMENTS.ltom, vol: 100 },
       bell: { ...INSTRUMENTS.bell, vol: 84 },
@@ -175,10 +176,10 @@ const SETTINGS = {
     echo: { mvol: 60, room: 'studio', evol: 32 },
     instruments: {
       lead: { ...INSTRUMENTS.strings, adsr: [14, 3, 6, 10], vol: 108, glide: 3 },
-      organ: { ...INSTRUMENTS.organ, adsr: [15, 5, 4, 16], vol: 56 },
-      hit: { ...INSTRUMENTS.orch, vol: 76 },
+      organ: { ...INSTRUMENTS.organ, adsr: [15, 5, 5, 14], vol: 96 },
+      hit: { ...INSTRUMENTS.orch, vol: 70 },
       timpani: { ...INSTRUMENTS.timpani, vol: 110 },
-      bass: { ...INSTRUMENTS.synbass, vol: 96 },
+      pedal: { ...INSTRUMENTS.pedal, adsr: [15, 4, 6, 12], vol: 120 },
       kick: { ...INSTRUMENTS.gkick, vol: 112 },
       snare: { ...INSTRUMENTS.gsnare, vol: 92 },
       htom: { ...INSTRUMENTS.htom, vol: 92 },
@@ -190,10 +191,10 @@ const SETTINGS = {
     echo: { mvol: 62, room: 'hall', evol: 38 },
     instruments: {
       lead: { ...INSTRUMENTS.brass, adsr: [13, 3, 6, 6], vol: 112, vibrato: { delay: 10, period: 9, depth: 0.35 }, glide: 4 },
-      ostinato: { ...INSTRUMENTS.strings, adsr: [14, 5, 4, 12], vol: 58 },
-      choir: { ...INSTRUMENTS.choir, vol: 86 },
+      organ: { ...INSTRUMENTS.organ, adsr: [14, 4, 6, 8], vol: 94 },
+      choir: { ...INSTRUMENTS.choir, vol: 76 },
       timpani: { ...INSTRUMENTS.timpani, vol: 118 },
-      bass: { ...INSTRUMENTS.synbass, vol: 96 },
+      pedal: { ...INSTRUMENTS.pedal, adsr: [13, 3, 7, 3], vol: 124 },
       kick: { ...INSTRUMENTS.gkick, vol: 112 },
       snare: { ...INSTRUMENTS.gsnare, vol: 94 },
       htom: { ...INSTRUMENTS.htom, vol: 96 },

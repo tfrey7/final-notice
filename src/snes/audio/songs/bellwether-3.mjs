@@ -1,5 +1,5 @@
-// Bellwether's last phase, the epic climax: brass carrying long heroic lines over a full choir, string
-// ostinato and pounding timpani at 129 bpm, climbing Ab, Bb to C minor and breaking out into C major at
+// Bellwether's last phase, the epic climax: brass carrying long heroic lines over the full organ churning
+// in eighths, the pedal stop, a full choir and pounding timpani at 129 bpm, climbing Ab, Bb to C minor and breaking out into C major at
 // the end of each phrase. Sixteen bars, looped.
 
 import { keyed, phaseSong } from './bellwether.mjs';

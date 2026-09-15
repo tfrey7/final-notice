@@ -1,5 +1,5 @@
-// Bellwether's second phase: A and the climbing B a semitone up, every bar driven in sixteenths, with
-// orchestra hits where the organ stabbed. Sixteen bars, looped.
+// Bellwether's second phase: A and the climbing B a semitone up, every bar driven by organ sixteenths over
+// a pumping pedal, with orchestra hits stabbing across them. Sixteen bars, looped.
 
 import { A_CHORDS, A_LEAD_2, B_CHORDS, B_LEAD_2, keyed, phaseSong } from './bellwether.mjs';
 

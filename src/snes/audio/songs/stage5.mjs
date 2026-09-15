@@ -1,6 +1,6 @@
 // Stage 5, the executive chapel brawl (item 2225). D minor at 129 bpm, pipe organ first (Tim, 16:05 EDT
 // 09-15: "Needs more pipe organ music"): the melody on the church organ, organ figuration churning under
-// it, an organ pedal for the bass, a held choir, a bell tolling at each phrase head, and timpani, toms,
+// it, the pedal stop for the bass, a held choir behind them, a bell tolling at each phrase head, and timpani, toms,
 // kick and snare keeping the fight moving. Phrygian Eb against D in A2, a lift to the relative major in B
 // where the choir opens up, and a break where the organ, choir and bell stand alone.
 //
@@ -150,12 +150,12 @@ export function chapelDrops(form) {
 }
 
 export const INSTRUMENTS_USED = {
-  lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 55, vibrato: { delay: 8, period: 11, depth: 0.25 } },
-  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 24 },
-  choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 42 },
+  lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 58, vibrato: { delay: 8, period: 11, depth: 0.25 } },
+  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 39 },
+  choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 35 },
   bell: { ...INSTRUMENTS.bell, vol: 29 },
   timpani: { ...INSTRUMENTS.timpani, vol: 50 },
-  pedal: { ...INSTRUMENTS.organ, adsr: [12, 2, 7, 2], vol: 52 },
+  pedal: { ...INSTRUMENTS.pedal, adsr: [13, 4, 7, 3], vol: 60 },
   kick: { ...INSTRUMENTS.gkick, vol: 48 },
   snare: { ...INSTRUMENTS.gsnare, vol: 33 },
   htom: { ...INSTRUMENTS.htom, vol: 40 },
