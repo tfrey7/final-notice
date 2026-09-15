@@ -23,6 +23,8 @@
  *     pulse2:   { inst: 'harm', rows: '...' },
  *     triangle: { inst: 'bass', rows: '...' },
  *     noise:    { inst: 'kick', rows: 'D 0:hat 5:snare . ...' },
+ *     vrc6p1, vrc6p2: VRC6 pulses, duty 0-7 = 1/16 to 8/16
+ *     saw:            the VRC6 sawtooth
  *   };
  *
  * rows is one token per row, separated by spaces; '|' is ignored and is there to mark bars.
@@ -32,17 +34,19 @@
  *   .              silence
  *   <token>:<inst> the note with another instrument from the table
  * An instrument's env is the 4-bit volume for each frame of the note, the last value held; pitch
- * (optional) is a per-frame offset added to the note (semitones, or noise period steps), last held.
+ * (optional) is a per-frame offset added to the note (semitones, or noise period steps), last held;
+ * glide (optional) slides in from the channel's previous note over that many frames.
  * A missing channel is silent. Shorter channels are padded with silence to the longest.
  */
 
-import { CHANNELS, FRAME_HZ, createApu, noteToMidi } from './apu.mjs';
+import { ALL_CHANNELS as CHANNELS, FRAME_HZ, createApu, noteToMidi } from './apu.mjs';
 import { SFX } from './sfx.mjs';
 
 export function parseRows(channel, text, defaultInst) {
   const tokens = String(text ?? '').split(/\s+/).filter((t) => t && t !== '|');
   const rows = [];
   let current = null;
+  let last = null;
   tokens.forEach((token, row) => {
     if (token === '-') {
       if (current) current.len += 1;
@@ -60,6 +64,8 @@ export function parseRows(channel, text, defaultInst) {
       throw new Error(`${channel} row ${row}: cannot read "${token}"`);
     }
     current = { start: row, pitch, inst, len: 1 };
+    if (last) current.from = last.pitch;
+    last = current;
     rows.push(current);
   });
   return rows;
@@ -84,6 +90,13 @@ export function compileSong(def) {
 }
 
 const at = (list, i) => (list && list.length ? list[Math.min(i, list.length - 1)] : undefined);
+
+// The pitch a note sounds `f` frames in: its pitch envelope, plus a slide from the last note.
+export function pitchAt(note, inst, f) {
+  let pitch = note.pitch + (at(inst.pitch, f) ?? 0);
+  if (inst.glide && note.from !== undefined && f < inst.glide) pitch += (note.from - note.pitch) * (1 - f / inst.glide);
+  return pitch;
+}
 
 // What a channel plays at song frame `pos`: the note, how far into it and how many frames are left.
 export function noteAt(song, channel, pos) {
@@ -220,7 +233,7 @@ function scheduleChannel(ch, t) {
     frames: playing.left,
     duty: inst.duty,
     short: inst.short,
-    at: (f) => ({ vol: at(inst.env, f + into) ?? 15, pitch: note.pitch + (at(inst.pitch, f + into) ?? 0) }),
+    at: (f) => ({ vol: at(inst.env, f + into) ?? 15, pitch: pitchAt(note, inst, f + into) }),
   });
   songVoices[ch] = { id, v };
 }

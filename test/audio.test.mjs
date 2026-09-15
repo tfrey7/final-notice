@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {
   CHANNELS, DUTY_TABLES, noteToMidi, pulsePeriod, pulseHz, trianglePeriod, pulseAudible,
   lfsrStep, noiseSequence, triangleSteps, mixGain, channelRate, midiToHz,
+  ALL_CHANNELS, VRC6_DUTY_TABLES, sawSteps, sawPeriod,
 } from '../src/audio/apu.mjs';
-import { parseRows, compileSong, noteAt, sfx, playSong } from '../src/audio/player.mjs';
+import { parseRows, compileSong, noteAt, pitchAt, sfx, playSong } from '../src/audio/player.mjs';
 import { SFX } from '../src/audio/sfx.mjs';
 import demo from '../src/audio/songs/demo.mjs';
 
@@ -28,6 +29,29 @@ test('A440 lands on the 2A03 periods a tracker would write', () => {
 test('duty tables are 8 steps at 12.5, 25, 50 and 75 percent', () => {
   assert.deepEqual(DUTY_TABLES.map((t) => t.length), [8, 8, 8, 8]);
   assert.deepEqual(DUTY_TABLES.map((t) => t.reduce((a, b) => a + b) / 8), [0.125, 0.25, 0.5, 0.75]);
+});
+
+test('the VRC6 pulses have 8 duties in 16 steps and the saw is a 14-step 5-bit staircase', () => {
+  assert.deepEqual(VRC6_DUTY_TABLES.map((t) => t.reduce((a, b) => a + b)), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.ok(VRC6_DUTY_TABLES.every((t) => t.length === 16));
+  const saw = sawSteps();
+  assert.equal(saw.length, 14);
+  assert.equal(Math.max(...saw), 31);
+  assert.equal(sawPeriod(440), 290);
+  assert.ok(Math.abs(channelRate('saw', 69) - 440) < 2);
+  assert.ok(Math.abs(channelRate('vrc6p1', 69) - 440) < 2);
+  assert.ok(channelRate('vrc6p2', 21) > 0, 'a 12-bit period reaches notes the 2A03 cannot');
+  assert.deepEqual(ALL_CHANNELS.slice(4), ['vrc6p1', 'vrc6p2', 'saw']);
+});
+
+test('a glide slides in from the previous note', () => {
+  const [a, , b] = parseRows('triangle', 'C3 . G3', 'bass');
+  assert.equal(b.from, a.pitch);
+  const inst = { glide: 4 };
+  assert.equal(pitchAt(b, inst, 0), a.pitch);
+  assert.equal(pitchAt(b, inst, 2), (a.pitch + b.pitch) / 2);
+  assert.equal(pitchAt(b, inst, 4), b.pitch);
+  assert.equal(pitchAt(a, inst, 0), a.pitch);
 });
 
 test('the noise LFSR repeats every 32767 steps long and 93 short', () => {

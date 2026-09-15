@@ -40,7 +40,7 @@
     <ul id="songs"></ul>
     <h2>Effects</h2>
     <ul id="effects"></ul>
-    <h2>2A03</h2>
+    <h2>2A03 + VRC6</h2>
     <div class="meters" id="meters"></div>
     <div class="help">Up/Down select - Z or Enter play - X stop</div>
   </div>
@@ -48,20 +48,21 @@
     import { playSong, stopSong, sfx, hasSong, unlocked, currentSong, channelStatus } from './src/audio/player.mjs';
     import { SFX } from './src/audio/sfx.mjs';
 
-    const CUES = ['demo', 'title', 'scene', 'stage1', 'stage2', 'boss', 'ending',
+    const CUES = ['demo', 'title', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage2', 'boss', 'ending',
       'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'];
+    const LABELS = { 'title-v1': 'title (v1)', 'scene-v1': 'scene (v1)' };
     const songsEl = document.getElementById('songs');
     const effectsEl = document.getElementById('effects');
     const prompt = document.getElementById('prompt');
     const items = [];
     let sel = 0;
 
-    function add(list, label, play) {
+    function add(list, name, play) {
       const li = document.createElement('li');
-      li.textContent = label;
+      li.textContent = LABELS[name] ?? name;
       li.addEventListener('click', () => { sel = items.findIndex((i) => i.li === li); render(); play(); });
       list.append(li);
-      items.push({ li, play, name: label });
+      items.push({ li, play, name });
     }
 
     const found = await Promise.all(CUES.map(async (name) => [name, await hasSong(name)]));
