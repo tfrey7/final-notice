@@ -8,7 +8,7 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { screen, fromRgba, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
 import { screens, logo } from '../bg/ui.mjs';
 import { measure, drawString, setWindowColours } from '../text.mjs';
-import { playSong, setMono, sfx } from '../audio/player.mjs';
+import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
 import { pollPad } from '../../input.mjs';
@@ -39,7 +39,8 @@ export class SnesTitleScene extends Phaser.Scene {
     let state = this.registry.get('flow');
     if (!state || state.screen !== 'title') state = jumpTo('title');
     this.registry.set('flow', state);
-    playSong(SONGS.title);
+    // The opening starts the title melody as its doors part; the logo zoom comes in on it without a restart.
+    if (currentSong() !== SONGS.title) playSong(SONGS.title);
     const params = new URLSearchParams(location.search);
     // &t=<frames> pins the clock for a screenshot; &memo=memo|settings opens the slip on that page.
     this.pinned = params.has('t') ? Number(params.get('t')) : null;

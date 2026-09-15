@@ -18,6 +18,7 @@ import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 import { SnesEndingScene } from './snes/scenes/ending.mjs';
 import { SnesOpeningScene } from './snes/scenes/opening.mjs';
+import { opensWithOpening } from './snes/opening.mjs';
 import { SnesStage1Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 
@@ -49,8 +50,9 @@ const area = start.stage && CHECKPOINTS[start.stage]?.[Number(params.get('area')
 if (area) Object.assign(start, next(start, { type: 'checkpoint', id: area }));
 if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
-// ?snes&go=opening plays the opening before the title (not yet in the game's own flow).
-if (snes && params.get('go') === 'opening') scene = [new SnesOpeningScene(), ...scene];
+// ?snes plays the opening before the title once a session; ?snes&go=opening plays it every time.
+const session = () => { try { return sessionStorage; } catch { return null; } };
+if (snes && opensWithOpening(params, session())) scene = [new SnesOpeningScene(), ...scene];
 const debug = snes && debugScene(params);
 if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
