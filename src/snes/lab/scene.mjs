@@ -12,7 +12,7 @@ import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
 import { readLook, turnOwners } from '../../stage1/readout.mjs';
 import { drawReadout } from '../readout.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
-import { KINDS, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
+import { CROWD, KINDS, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { MAX_HITS, RING, SEGMENTS, freeInjunction } from '../../injunction.mjs';
 import { scaledTune } from '../stage1/finisher.mjs';
@@ -61,6 +61,7 @@ export class SnesLabScene extends Phaser.Scene {
     this.counts = { ...START_COUNTS };
     // Staff reads KINDS for each foe's own speed and wind-up; the lab turns them and puts them back on exit.
     this.kinds = structuredClone(KINDS);
+    this.crowd = { ...CROWD };
     this.world = this.newRoom();
     this.respawn();
     this.clear = 0;
@@ -100,6 +101,7 @@ export class SnesLabScene extends Phaser.Scene {
       this.panel.remove();
       this.controls.remove();
       for (const [k, v] of Object.entries(this.kinds)) Object.assign(KINDS[k], v);
+      Object.assign(CROWD, this.crowd);
     });
   }
 
@@ -168,6 +170,7 @@ export class SnesLabScene extends Phaser.Scene {
 
   applyDials() {
     for (const d of this.dials) if (d.group === 'moves') this.base[d.key] = d.value;
+    for (const d of this.dials) if (d.group === 'crowd') CROWD[d.key] = d.value;
     Object.assign(this.tune, scaledTune(this.base, STAGE1.scale));
     const turned = labKinds(this.kinds, { foeWalkScale: this.dial('foeWalkScale'), foeWindupAdd: this.dial('foeWindupAdd') });
     for (const [k, v] of Object.entries(turned)) Object.assign(KINDS[k], v);

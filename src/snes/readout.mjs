@@ -43,6 +43,18 @@ export function drawReadout(g, fill, f, body, { tune, dx = 0, frame = 0, cooldow
     g.fillStyle(STAR).fillRect(x - 10, top - 14, Math.ceil((20 * r.openLeft) / (f.stagger || 1)), 2);
   }
 
+  if (r.look === 'feint') {
+    // Two chevrons toward the auditor: a lunge that is not a blow.
+    for (let i = 0; i < 2; i++) {
+      const cx = ahead + f.facing * (4 + i * 6);
+      g.lineStyle(2, r.colour).lineBetween(cx, top + 20, cx + f.facing * 4, top + 26).lineBetween(cx + f.facing * 4, top + 26, cx, top + 32);
+    }
+  }
+  if (r.gesture) {
+    // The taunt's word bobs over the letter.
+    const gw = measure(r.gesture);
+    drawString(fill, r.gesture, Math.round(x - gw / 2), top - 22 - (frame % 16 < 8 ? 1 : 0), rgb15(28, 12, 28));
+  }
   const lw = measure(r.letter);
   drawString(fill, r.letter, Math.round(x - lw / 2), top - 11, WHITE);
   if (r.weapon) g.fillStyle(WEAPON_COLOUR[r.weapon] ?? 0x808080).fillRect(Math.round(x + lw / 2) + 3, top - 10, 6, 6).lineStyle(1, 0xffffff).strokeRect(Math.round(x + lw / 2) + 3, top - 10, 6, 6);

@@ -1,7 +1,7 @@
 // Stage 1 on the SNES, the pure half: the one scale factor that grows reach, hitboxes and speeds to
 // match 56-64 px characters, and the TMNT IV throw-into-camera finisher on an area's last foe.
 import { STAGE } from '../../stage1/areas.mjs';
-import { KINDS } from '../../stage1/staff.mjs';
+import { CROWD, CROWD_SCALED, KINDS } from '../../stage1/staff.mjs';
 import { VELLUM } from '../../stage1/vellum.mjs';
 import { STAFF_WEIGHT, VELLUM_WEIGHT, weighed } from '../weight.mjs';
 
@@ -34,7 +34,10 @@ export function scaledTune(base, scale) {
     const out = grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale);
     return k.flank ? { ...out, speed: Math.min(out.speed, tune.walkX) } : out;
   };
-  return { ...tune, kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, staff(k)])), vellum: vellumTable(tune, scale) };
+  return {
+    ...tune, kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, staff(k)])),
+    crowd: grown(CROWD, CROWD_SCALED, scale), vellum: vellumTable(tune, scale),
+  };
 }
 
 export const livingFoes = (world) => world.fighters.filter((f) => f.kind && f.state !== 'ko');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultTune } from '../src/stage1/moves.mjs';
+import { defaultTune, set } from '../src/stage1/moves.mjs';
 import { newFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE, newStage } from '../src/stage1/areas.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
@@ -13,7 +13,7 @@ test('one scale factor grows every pixel number and leaves times and damage alon
   const big = scaledTune(base, 1.5);
   for (const k of SCALED) assert.equal(big[k], base[k] * 1.5, k);
   for (const k of ['hitStop', 'punchStartup', 'punchDamage', 'playerHp']) assert.equal(big[k], base[k], k);
-  const { kinds, vellum, ...same } = scaledTune(base, 1);
+  const { kinds, vellum, crowd, ...same } = scaledTune(base, 1);
   assert.deepEqual(same, base);
   assert.equal(STAGE1.scale, 1.5);
 });
@@ -40,7 +40,7 @@ test('the SNES staff foes stand and reach 1.5x as far and swing at the brawl wei
   assert.equal(spot(f, p, defaultTune()).x - p.x, nes.associate.stand);
 });
 
-test('an SNES Associate stands and then swings on his weighed wind-up', () => {
+test('an SNES Associate given the attack turn stands in and swings on his weighed wind-up', () => {
   const tune = scaledTune(tuneFor('ward', defaultTune()), STAGE1.scale);
   const world = newFloor('ward', tune);
   world.fighters = [world.fighters.find((f) => f.team === 'player')];
@@ -49,10 +49,10 @@ test('an SNES Associate stands and then swings on his weighed wind-up', () => {
   spawnStaff(world, ['associate'], tune);
   const a = world.fighters.find((f) => f.kind === 'associate');
   Object.assign(a, { x: p.x + 90, y: p.y, cooldown: 1000 });
-  for (let t = 0; t < 600; t++) thinkStaff(world, a, tune);
-  assert.equal(a.state, 'idle');
-  assert.equal(a.x - p.x, tune.kinds.associate.stand);
-  a.cooldown = 0;
+  for (let t = 0; t < 600 && a.state !== 'windup'; t++) thinkStaff(world, a, tune);
+  assert.equal(a.state, 'windup');
+  assert.ok(a.x - p.x <= tune.kinds.associate.reach, `${a.x - p.x} px out`);
+  set(a, 'idle');
   let wound = null;
   for (let t = 0; t < 200 && a.state !== 'punch'; t++) {
     thinkStaff(world, a, tune);

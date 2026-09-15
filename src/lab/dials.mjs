@@ -2,7 +2,7 @@
 // one by pad, the attack-turn gate and the settings text Tim copies into the room.
 // Dials change the lab's live tables only; nothing here writes the game's defaults.
 import { TUNING } from '../stage1/moves.mjs';
-import { KINDS } from '../stage1/staff.mjs';
+import { CROWD, KINDS } from '../stage1/staff.mjs';
 import { WEAPONS } from '../stage1/weapons.mjs';
 import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
@@ -19,6 +19,15 @@ export const LAB = {
   injunctionCooldown: [COOLDOWN_FRAMES, 60, 1800, 30],
 };
 
+// The crowd's dials (staff.mjs CROWD): how hard waiting foes press, how wide they circle, how often
+// they taunt and how many frames pass before the next one closes in.
+export const CROWD_DIALS = {
+  aggression: [CROWD.aggression, 0.25, 3, 0.25],
+  circleRadius: [CROWD.circleRadius, 16, 96, 4],
+  tauntChance: [CROWD.tauntChance, 0, 1, 0.02],
+  closeIn: [CROWD.closeIn, 0, 300, 10],
+};
+
 export const MAX_OF_KIND = 6;
 
 // Every dial in panel order, grouped. `value` is the lab's starting point for that dial.
@@ -29,6 +38,7 @@ export function buildDials(base) {
   });
   return [
     ...group('lab', LAB),
+    ...group('crowd', CROWD_DIALS),
     ...group('moves', TUNING, base),
     ...group('weapons', WEAPONS),
     ...group('planned', PLANNED),
@@ -84,6 +94,8 @@ export function settingsText(dials, counts, who) {
     `changed: ${changed.length ? changed.map((d) => `${d.key} ${d.start} -> ${d.value}`).join(', ') : 'none'}`,
     '',
     '[lab]', byGroup('lab'),
+    '',
+    '[crowd] (circleRadius before the SNES 1.5x pixel scale)', byGroup('crowd'),
     '',
     '[moves] (before the SNES 1.5x pixel scale)', byGroup('moves'),
     '',
