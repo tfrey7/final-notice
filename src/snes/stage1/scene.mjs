@@ -16,11 +16,11 @@ import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
 import RECEPTION from '../bg/reception.mjs';
 import { pollPad } from '../../input.mjs';
-import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
+import { CHECKPOINTS, SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { TUNING, shakeOffset } from '../../stage1/moves.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
 import { freeInjunction } from '../../injunction.mjs';
-import { STAGE, areaFor, newStage, stepAreas } from '../../stage1/areas.mjs';
+import { areaFor, newStage, stepAreas } from '../../stage1/areas.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
 import { mountTunePanel, registerTuning } from '../../tune.mjs';
 import { fastOn, cheapen } from '../../fast.mjs';
@@ -29,6 +29,7 @@ import { createSlowdown, pairs, slowdownTick } from '../../nes/slowdown.mjs';
 import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
 import { SNES_STAGE1 } from './waves.mjs';
+import { SNES_STAGE3 } from '../stage3/waves.mjs';
 import { thingPriority, withPriority } from './priority.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
@@ -47,6 +48,9 @@ const MS = 1000 / 60;
 const STAGE_START_MS = 2400;
 const BACKGROUNDS = [RECEPTION, CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
 const OFFICE_BG = CLAIMS2.areas[2];
+const STAGE1_DEF = { number: 1, table: SNES_STAGE1, checkpoints: CHECKPOINTS.stage1, backgrounds: BACKGROUNDS, weapons: true };
+// Stage 3's grey box borrows Stage 1's rooms until the Backrooms art lands; its break room is one screen.
+const STAGE3_DEF = { number: 3, table: SNES_STAGE3, checkpoints: CHECKPOINTS.stage3, backgrounds: [RECEPTION, CLAIMS2.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]] };
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
@@ -75,13 +79,15 @@ const WEAPON_BOX = {
 const WARD_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', hurt: 'hit', held: 'hit', knockdown: 'hit', bound: 'hit', down: 'recoil', ko: 'recoil', jump: 'wind', carry: 'idle', throw: 'punch2', grab: 'punch1', step: 'walk', heavy: 'uppercut', special: 'uppercut' };
 
 export class SnesStage1Scene extends Phaser.Scene {
-  constructor() {
-    super('stage1');
+  constructor(key = 'stage1', def = STAGE1_DEF) {
+    super(key);
+    this.stageKey = key;
+    this.def = def;
   }
 
   async create() {
     let state = this.registry.get('flow');
-    if (!state || state.screen !== 'stage1') state = jumpTo('stage1');
+    if (!state || state.screen !== this.stageKey) state = jumpTo(this.stageKey);
     this.registry.set('flow', state);
     this.ready = false;
     this.paused = false;
@@ -97,7 +103,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.clear = params.has('clear') ? { t: 0, still: true } : null;
     playSong('stageStart');
     this.time.delayedCall(STAGE_START_MS, () => {
-      const song = this.pinch ? VELLUM_PINCH : this.office ? VELLUM_SONG : SONGS.stage1;
+      const song = this.pinch ? VELLUM_PINCH : this.office ? VELLUM_SONG : SONGS[this.stageKey];
       if (this.paused) this.resume = song; else playSong(song);
     });
 
@@ -115,14 +121,14 @@ export class SnesStage1Scene extends Phaser.Scene {
       // Before the card, the camera pans in and he stands from the desk; ?entrance=<frame> holds it still.
       this.entrance = this.card && !params.has('card') ? { t: Number(params.get('entrance') ?? 0), still: params.has('entrance') } : null;
     } else {
-      this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint), SNES_STAGE1);
-      armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
+      this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint, this.def.checkpoints, this.def.table.areas.length), this.def.table);
+      if (this.def.weapons) armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
     }
     this.world.cooldown = freeInjunction();
 
     await Promise.all([loadArt('ward').catch(() => null), ...(this.office ? [loadArt('vellum').catch(() => null)] : [])]);
     this.ward = artOr(this, 'ward');
-    this.baked = this.office ? [bakeScene(OFFICE_BG)] : BACKGROUNDS.map(bakeScene);
+    this.baked = this.office ? [bakeScene(OFFICE_BG)] : this.def.backgrounds.map(bakeScene);
     this.buf15 = screen();
     this.tex = this.textures.exists('snes-stage1-bg') ? this.textures.get('snes-stage1-bg') : this.textures.createCanvas('snes-stage1-bg', WIDTH, HEIGHT);
     this.pixels = this.tex.context.createImageData(WIDTH, HEIGHT);
@@ -212,6 +218,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
       if (e === 'bossDown') { w.shake = this.tune.shakeFrames; playSong('stageClear'); }
       if (e === 'bossBeaten') { this.clear = { t: 0, still: false }; break; }
+      if (e === 'stageExit') { playSong('stageClear'); this.clear = { t: 0, still: false }; break; }
       if (e === 'toOffice') {
         this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: OFFICE }));
         this.scene.restart();
@@ -219,7 +226,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       }
       if (e === 'lifeLost') {
         const after = next(this.registry.get('flow'), { type: 'lifeLost' });
-        if (after.screen !== 'stage1') { showFlow(this, after); return; }
+        if (after.screen !== this.stageKey) { showFlow(this, after); return; }
         this.registry.set('flow', after);
       }
     }
@@ -320,8 +327,9 @@ export class SnesStage1Scene extends Phaser.Scene {
         toRgba(buf, this.pixels.data);
       }
     } else {
-      const area = Math.max(0, STAGE.starts.findLastIndex((s) => cam + WIDTH / 2 >= s));
-      composeFrame(BACKGROUNDS[area], this.baked[area], cam - STAGE.starts[area] + shake.x, 0, this.pixels.data);
+      const { starts } = w.stage;
+      const area = Math.max(0, starts.findLastIndex((s) => cam + WIDTH / 2 >= s));
+      composeFrame(this.def.backgrounds[area], this.baked[area], cam - starts[area] + shake.x, 0, this.pixels.data);
     }
     const paused = this.paused && this.menu;
     if (paused) {
@@ -445,7 +453,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
     if (this.card && !this.entrance) this.drawCard(cardFrame(this.card.t));
-    if (this.clear) this.drawClear(clearLines(this.registry.get('stage1Frames') ?? 0, flow.lives));
+    if (this.clear) this.drawClear(clearLines(this.registry.get('stage1Frames') ?? 0, flow.lives, this.def.number));
   }
 
   // The stage-clear card: a plain dark panel over the slumped room, the heading in gold.
@@ -492,5 +500,12 @@ export class SnesStage1Scene extends Phaser.Scene {
       fill(((WIDTH - tw) >> 1) - 6, 170, tw + 12, 14, rgb15(1, 1, 2));
       drawString(fill, CARD.subtitle, (WIDTH - tw) >> 1, 173);
     }
+  }
+}
+
+// Stage 3, the Backrooms: the same brawl on its own floor, no office at the end, the far door clears it.
+export class SnesStage3Scene extends SnesStage1Scene {
+  constructor() {
+    super('stage3', STAGE3_DEF);
   }
 }

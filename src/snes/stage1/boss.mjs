@@ -42,9 +42,9 @@ export function cardFrame(t, times = CARD_TIMES) {
 // run's time and the lives left, before Scene 2.
 export const CLEAR = { hold: 300, skip: 60 };
 
-export function clearLines(frames, lives) {
+export function clearLines(frames, lives, stage = 1) {
   const secs = Math.floor(frames / 60);
-  return ['STAGE 1 CLEAR', `TIME ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, `LIVES ${lives}`];
+  return [`STAGE ${stage} CLEAR`, `TIME ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, `LIVES ${lives}`];
 }
 
 export const clearDone = (t, pad) => t >= CLEAR.hold || (t >= CLEAR.skip && (pad.pressed.has('start') || pad.pressed.has('b')));
