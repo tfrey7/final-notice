@@ -224,6 +224,10 @@ and a song chooses its room (`docs/research/snes-composition.md`, sections 3-5).
 - **A decaying instrument needs a long attack before a long loop.** A piano cut as 0.2 s of attack
   and a 50 ms loop repeats the attack's beating partials as a buzzing drone on every held note;
   0.45 s of attack and a 250 ms loop (item 2219) settles into the sustain instead.
+- **Judge a bank change in a song that uses it, never in a lab clip.** The sound judge scores one
+  instrument over held strings as thin and drumless whatever the sample sounds like: the softened
+  piano scored 59.3 alone, then 79.2 in the title theme and 100 in the scene (item 2261). Render
+  with `node tools/snes-render.mjs <song> <out.wav> 32`.
 
 - **Build a long song from a form table, not long strings.** One entry a bar (part, chord, lead,
   key shift) and a function per channel keeps 70 bars of eight channels short to write and easy to
