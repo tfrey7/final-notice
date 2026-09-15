@@ -7,6 +7,7 @@ import { cinemaPages } from '../src/story/cinema.mjs';
 import { paintPicture, snesWrap } from '../src/snes/cinema.mjs';
 import { BILL_FRAMES, LEDGER_SCROLL, actorAt, billStep, ledgerOffset, stageFrame, stagePages } from '../src/snes/staging.mjs';
 import { SFX } from '../src/snes/audio/sfx.mjs';
+import { STILLS } from '../src/snes/stills.mjs';
 
 const scene1 = (who) => stagePages('assignment', cinemaPages('assignment', who, snesWrap), who);
 const scene3 = (who) => stagePages('documents', cinemaPages('documents', who, snesWrap), who);
@@ -66,27 +67,33 @@ test('the speaker dims the picture by colour subtract and leaves the text box al
   assert.equal(dim[i(180, 20)], plain[i(180, 20)]);
 });
 
-test('Scene 1 opens on a wordless 4 s acting page, then the script word for word', () => {
+test('Scene 1 opens on a wordless 4 s shot of Bellwether at his window, then the script word for word', () => {
   const raw = cinemaPages('assignment', 'ward', snesWrap);
   const staged = scene1('ward');
   assert.equal(staged.length, raw.length + 1);
   assert.ok(staged[0].acting);
   assert.equal(staged[0].frames, 240);
   assert.deepEqual(staged[0].lines, []);
-  assert.deepEqual(staged[0].actors.map((a) => a.who), ['bellwether', 'ward']);
+  assert.equal(staged[0].still, 'window');
+  assert.equal(staged[0].actors, null);
   assert.deepEqual(staged.slice(1).map((p) => p.lines), raw.map((p) => p.lines));
   assert.ok(staged.slice(1).every((p) => p.cut));
-  assert.deepEqual(scene1('mercer')[0].actors.map((a) => a.who), ['bellwether', 'mercer']);
 });
 
-test('the music drops to the pad under the auditor line and comes back with the bill', () => {
+test('every Scene 1 page is a still of the named cast, the same for either partner', () => {
+  for (const auditor of ['ward', 'mercer']) {
+    const staged = scene1(auditor);
+    assert.ok(staged.every((p) => STILLS[p.still] && !p.actors));
+    assert.deepEqual([...new Set(staged.map((p) => p.still))], ['window', 'bill', 'partners', 'orders']);
+  }
+});
+
+test('the music drops to the pad under the bill and comes back with the orders', () => {
   const staged = scene1('ward');
   const at = (text) => staged.find((p) => p.lines.join(' ').startsWith(text));
   assert.equal(at('He died on Tuesday.').music, 'pad');
-  assert.equal(at("I read it.").music, 'scene');
-  assert.equal(at("I read it.").fx, 'bill');
-  assert.equal(at("I read it.").portrait, null);
-  assert.equal(at('If they lean').fx, 'lamp');
+  assert.equal(at('He died on Tuesday.').portrait, null);
+  assert.equal(at('Serve him.').music, 'scene');
   const last = staged[staged.length - 1];
   assert.equal(last.portrait, null);
   assert.ok(last.fadeAfter > 0);
@@ -98,9 +105,6 @@ test('actors ease between keyframes and take the pose of the last key passed', (
   assert.deepEqual(actorAt(keys, 5), { x: 150, feet: 140, pose: 'front' });
   assert.equal(actorAt(keys, 20).pose, 'back');
   assert.deepEqual(actorAt(keys, 99), { x: 200, feet: 140, pose: 'back' });
-  const turn = scene1('ward').at(-1).actors[0].keys;
-  assert.equal(actorAt(turn, 0).pose, 'front');
-  assert.equal(actorAt(turn, 90).pose, 'back');
 });
 
 test('the bill slides toward the camera in 8 frames, growing', () => {
@@ -111,15 +115,15 @@ test('the bill slides toward the camera in 8 frames, growing', () => {
 });
 
 test('staged frames paint SNES colours; the lamp only brightens its own side', () => {
-  const page = { ...scene1('ward').find((p) => p.fx === 'lamp'), still: null };
+  const page = { ...scene1('ward')[1], still: null, portrait: null, backdrop: 'bellwether-office', fx: 'lamp' };
   const plain = paintPicture(screen(), page);
   const lit = stageFrame(paintPicture(screen(), page), page, 0);
   assert.ok(lit.every(isRgb15));
   const i = (y, x) => y * WIDTH + x;
   assert.notEqual(lit[i(96, 200)], plain[i(96, 200)]);
   assert.equal(lit[i(30, 40)], plain[i(30, 40)]);
-  const acting = scene1('ward')[0];
+  const acting = scene3('ward')[0];
   const empty = paintPicture(screen(), acting);
   const acted = stageFrame(paintPicture(screen(), acting), acting, 0);
-  assert.notEqual(acted[i(70, 58)], empty[i(70, 58)]);
+  assert.ok(acted.some((c, k) => c !== empty[k]));
 });

@@ -15,11 +15,11 @@ export const SCENES = {
   assignment: {
     title: 'THE ASSIGNMENT',
     beats: [
-      { picture: 'bellwether-office', speaker: 'bellwether', line: 'They billed one customer for forty-seven lifetimes.' },
-      { picture: 'auditor', speaker: 'auditor', ward: 'He died on Tuesday.', mercer: 'Forty-seven?' },
-      { picture: 'bellwether', speaker: 'bellwether', line: "I read it. That's why you're here. Get the original ledger." },
-      { picture: 'bellwether', speaker: 'bellwether', line: 'If they lean on you, they answer to me.' },
-      { picture: 'bellwether', speaker: 'bellwether', line: 'And call before you make the evening news.' },
+      { picture: 'bellwether-office', speaker: 'bellwether', line: 'The company in the tower billed one of its clerks for forty-seven lifetimes.' },
+      { picture: 'bellwether', speaker: 'bellwether', line: 'He died on Tuesday. They still have him at his desk.' },
+      { picture: 'auditor', speaker: 'auditor', ward: 'Then his notice is overdue.', mercer: 'So we go and get him.' },
+      { picture: 'bellwether', speaker: 'bellwether', line: 'Serve him. Then find their Master File, the original books.' },
+      { picture: 'bellwether', speaker: 'bellwether', line: 'Bring it to me. Nobody else.' },
     ],
   },
   incident: {

@@ -17,8 +17,9 @@ test('every scene page fits the box and has a backdrop', () => {
 
 test('only the chosen auditor speaks', () => {
   const mercer = cinemaPages('assignment', 'mercer');
-  assert.deepEqual(mercer[1].lines, ['Forty-seven?']);
-  assert.equal(mercer[1].portrait, 'mercer');
+  const line = mercer.find((p) => p.speaker === 'mercer');
+  assert.deepEqual(line.lines, ['So we go and get him.']);
+  assert.equal(line.portrait, 'mercer');
   assert.ok(!mercer.some((p) => p.speaker === 'ward'));
   assert.ok(!cinemaPages('documents', 'ward').some((p) => p.speaker === 'mercer'));
 });

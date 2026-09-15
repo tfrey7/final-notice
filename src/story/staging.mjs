@@ -11,26 +11,13 @@ export const STAGING = {
   assignment: {
     cuts: true,
     fadeAfter: 120,
-    acting: {
-      backdrop: 'bellwether-office',
-      frames: 240,
-      actors: [
-        { who: 'bellwether', keys: [[0, 58, 104, 'back']] },
-        { who: 'auditor', keys: [[0, 280, 142, 'front'], [40, 280, 142, 'front'], [170, 226, 142, 'front']] },
-      ],
-    },
+    acting: { backdrop: 'bellwether-office', still: 'window', frames: 240 },
     beats: [
       { still: 'window' },
-      { music: 'pad', still: 'closeup', stillFor: 'ward' },
-      { music: 'scene', fx: 'bill', portrait: null, still: 'bill' },
-      { fx: 'lamp', still: 'desk' },
-      {
-        portrait: null,
-        actors: [
-          { who: 'bellwether', keys: [[0, 128, 104, 'front'], [30, 128, 104, 'front'], [60, 104, 104, 'back'], [110, 58, 104, 'back']] },
-          { who: 'auditor', keys: [[0, 226, 142, 'front'], [70, 226, 142, 'front'], [130, 290, 142, 'back']] },
-        ],
-      },
+      { music: 'pad', portrait: null, still: 'bill' },
+      { still: 'partners' },
+      { music: 'scene', portrait: null, still: 'orders' },
+      { portrait: null, still: 'orders' },
     ],
   },
   incident: {

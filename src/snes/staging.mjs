@@ -42,8 +42,9 @@ export function stagePages(sceneId, pages, auditor) {
   if (last && plan.mosaicOut) last.mosaicOut = true;
   if (last && plan.endCut) last.endCut = true;
   if (!plan.acting) return out;
-  const { backdrop, frames, actors, music = null, hud = null, sound = null, fx = null } = plan.acting;
-  return [{ acting: true, fromPlay: !!plan.fromPlay, hud, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors), music, sound, fx }, ...out];
+  const { backdrop, still, frames, actors, music = null, hud = null, sound = null, fx = null } = plan.acting;
+  const opening = { acting: true, fromPlay: !!plan.fromPlay, hud, backdrop, portrait: null, speaker: null, lines: [], frames, actors: cast(actors) ?? null, music, sound, fx };
+  return [still ? { ...opening, still } : opening, ...out];
 }
 
 const HOME = { assignment: 'bellwether-office', incident: 'vellum-desk', documents: 'break-room' };
