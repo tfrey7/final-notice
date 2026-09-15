@@ -28,6 +28,7 @@ import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finishe
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
+import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
@@ -83,6 +84,8 @@ export class SnesStage1Scene extends Phaser.Scene {
       poseOffice(this.world, params.get('pose'));
       // A staged pose (?pose=rush, ?pose=fangs) skips the title card; ?card holds the card still.
       this.card = params.get('pose') ? null : { t: params.has('card') ? Number(params.get('card')) : 0, still: params.has('card') };
+      // Before the card, the camera pans in and he stands from the desk; ?entrance=<frame> holds it still.
+      this.entrance = this.card && !params.has('card') ? { t: Number(params.get('entrance') ?? 0), still: params.has('entrance') } : null;
     } else {
       this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint));
     }
@@ -112,13 +115,20 @@ export class SnesStage1Scene extends Phaser.Scene {
     const loopFrame = this.game.loop.frame;
     if (this.freezeAt !== null && loopFrame >= this.freezeAt) return;
     const pad = pollPad(loopFrame);
-    if (pad.pressed.has('start') || this.openOnReady) this.togglePause(), this.openOnReady = false;
+    if ((pad.pressed.has('start') && !this.entrance) || this.openOnReady) this.togglePause(), this.openOnReady = false;
     else if (this.paused) this.stepMenu(pad);
     if (this.paused) { this.draw(time); return; }
     Object.assign(this.tune, scaledTune(this.base, STAGE1.scale));
     if (this.fast) cheapen(this.world.fighters);
 
     const w = this.world;
+    if (this.entrance) {
+      this.entrance.t = skipTo(this.entrance.t, pad, VELLUM_IN.end);
+      if (vellumEntrance(this.entrance.t).done) this.entrance = null;
+      else if (!this.entrance.still) this.entrance.t++;
+      this.draw(time);
+      return;
+    }
     if (this.card) {
       const step = cardFrame(this.card.t);
       if (step.stampNow) sfx('stamp');
@@ -197,12 +207,14 @@ export class SnesStage1Scene extends Phaser.Scene {
   vellumSprites(v, sx, ms, red) {
     if (v.invuln > 0 && v.invuln % 4 < 2 && v.state !== 'fangs') return [];
     const lying = ['down', 'slumped', 'knockdown'].includes(v.state);
-    const h = lying ? 28 : 66;
+    // Standing from the desk during his entrance: seated, half up, upright.
+    const rise = this.entrance ? Math.round(vellumEntrance(this.entrance.t).stand * 2) : 2;
+    const h = lying ? 28 : 44 + rise * 11;
     const w = lying ? 60 : 36;
     const flash = v.state === 'windup' && v.t % 8 < 2;
     const tint = red ?? (v.fangs ? rgb15(4, 0, 0) : 0);
     const palette = flash ? [WHITE, WHITE, WHITE] : VELLUM_PALETTE.map((c) => colorMath(c, tint, 'add'));
-    const name = `foe:vellum:${lying ? 'down' : 'up'}:${flash ? 'flash' : tint}`;
+    const name = `foe:vellum:${lying ? 'down' : `up${h}`}:${flash ? 'flash' : tint}`;
     return artOr(this, name, { w, h, palette }).frame('stand', ms, Math.round(sx - w / 2), Math.round(v.y - h - v.z), v.facing < 0);
   }
 
@@ -233,9 +245,11 @@ export class SnesStage1Scene extends Phaser.Scene {
   draw(time) {
     const w = this.world;
     const shake = shakeOffset(w, this.tune);
-    const cam = Math.round(w.cameraX);
+    // The entrance's pan: the camera starts 96 px left of the office and travels right into it.
+    const pan = this.entrance ? vellumEntrance(this.entrance.t).pan : 0;
+    const cam = Math.round(w.cameraX) - pan;
     if (this.office) {
-      composeFrame(OFFICE_BG, this.baked[0], shake.x, 0, this.pixels.data);
+      composeFrame(OFFICE_BG, this.baked[0], shake.x - pan, 0, this.pixels.data);
       // His fangs: the red sub-screen added to the whole room, clamped per 5-bit channel.
       const red = fangFlash(vellum(w), this.game.loop.frame);
       if (red) {
@@ -303,7 +317,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     const flow = this.registry.get('flow');
     const p = w.fighters.find((f) => f.team === 'player');
     const v = this.office && vellum(w);
-    const boss = v && !this.card ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
+    const boss = v && !this.card && !this.entrance ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
     const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
     const layout = hudLayout(state);
     const alpha = this.paused ? 0.5 : w.run?.prompt || boss ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
@@ -323,7 +337,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.g.fillStyle(hex(rgb15(31, 26, 8))).fillTriangle(WIDTH - 22, 63, WIDTH - 22, 73, WIDTH - 14, 68);
     }
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
-    if (this.card) this.drawCard(cardFrame(this.card.t));
+    if (this.card && !this.entrance) this.drawCard(cardFrame(this.card.t));
   }
 
   // The boss title card as a filed memo, in the manner of Sunset Riders' wanted posters: it drops in,

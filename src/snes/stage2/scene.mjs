@@ -27,6 +27,7 @@ import { BELT } from '../../stage2/conveyor.mjs';
 import { STAGE2, backdropFor, bodySize, camera, hudState, onScreen } from './view.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
+import { PRESS_IN, SLIP, pressEntrance, skipTo, slipFrame } from '../entrance.mjs';
 import { PRESS_H, RAIL, burstSize, headY, mosaicRect, pressTexture, shadowHalf, stampScale, titleCard } from './seal.mjs';
 
 const MS = 1000 / 60;
@@ -85,7 +86,9 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (flow.checkpoint === BOSS_AREA.id) {
       this.enterArena();
       // ?pose=stamp|seal stages the fight for a screenshot; ?exit starts on the exit run.
-      if (params.has('pose')) poseArena(this.run, params.get('pose')), this.cardOff = true;
+      if (params.has('pose')) poseArena(this.run, params.get('pose')), this.cardOff = true, this.entrance = null;
+      // ?entrance=<frame> holds the press's entrance still, for a screenshot.
+      if (this.entrance && params.has('entrance')) this.entrance = { t: Number(params.get('entrance')), still: true };
       if (params.has('exit')) {
         enterExit(this.run);
         this.run.events.length = 0;
@@ -93,7 +96,10 @@ export class SnesStage2Scene extends Phaser.Scene {
       }
     } else {
       playSong(this.song = 'stage2');
+      // ?slip=<frame> holds the Custodian's slip still, for a screenshot.
+      if (params.has('slip')) this.slip = { t: Number(params.get('slip')), still: true };
     }
+    this.wasLocked = !!this.run.stage && arenaLocked(this.run);
     if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
     await loadArt(`${flow.auditor}-stage2`).catch(() => null);
     await loadArt('greatseal-stage2').catch(() => null);
@@ -107,7 +113,22 @@ export class SnesStage2Scene extends Phaser.Scene {
     this.bursts = [];
     this.broken = new WeakSet();
     this.voiced = false;
+    this.slip = null;
+    this.entrance = { t: 0, still: false };
     playSong(this.song = 'boss');
+  }
+
+  // An entrance holds the fight: the press lowering before the Great Seal's card, or the Custodian's
+  // slip as his screen locks. Start jumps to its last frame, where the pad comes back.
+  stepIntro(pad) {
+    const press = !!this.entrance;
+    const e = press ? this.entrance : this.slip;
+    e.t = skipTo(e.t, pad, press ? PRESS_IN.end : SLIP.leave);
+    const f = press ? pressEntrance(e.t) : slipFrame(e.t);
+    if (f.landNow) sfx('stamp');
+    if (f.slamNow) sfx('knockdown');
+    if (f.done) this.entrance = this.slip = null;
+    else if (!e.still) e.t++;
   }
 
   backdrop(index) {
@@ -123,6 +144,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     if (this.holdAt !== null && this.run.frame >= this.holdAt) { this.draw(this.registry.get('flow')); return; }
     const pad = pollPad(this.game.loop.frame);
     let { run } = this;
+    if (this.entrance || this.slip) { this.stepIntro(pad); this.draw(this.registry.get('flow')); return; }
     if (this.fast) cheapen([...run.foes, ...(run.bosses ?? []), run.boss, run.boss?.seal, ...(run.boss?.bindings ?? [])].filter(Boolean));
     const count = (list) => list?.length ?? 0;
     const others = count(run.pickups) + count(run.glyphs) + count(run.locks);
@@ -181,6 +203,9 @@ export class SnesStage2Scene extends Phaser.Scene {
       for (const burst of this.bursts) burst.age++;
       this.bursts = this.bursts.filter((burst) => burstSize(burst.age) > 0);
     }
+    const locked = !!run.stage && arenaLocked(run);
+    if (locked && !this.wasLocked) this.slip = { t: 0, still: false };
+    this.wasLocked = locked;
     const song = run.boss ? this.song : arenaLocked(run) ? 'boss' : 'stage2';
     if (!this.paused && song !== this.song) playSong(this.song = song);
     this.draw(flow);
@@ -272,7 +297,8 @@ export class SnesStage2Scene extends Phaser.Scene {
         if (run.frame % 60 < 45) drawString(fill, text, (WIDTH - measure(text)) >> 1, 60 + i * 14);
       });
     }
-    if (run.boss && !run.exit && !this.cardOff) drawCard(fill, titleCard(run.frame));
+    if (run.boss && !run.exit && !this.cardOff && !this.entrance) drawCard(fill, titleCard(run.frame));
+    if (this.slip) drawSlip(fill, slipFrame(this.slip.t));
 
     this.layer.draw(sprites);
     const paused = run.paused && this.menu;
@@ -327,6 +353,7 @@ export class SnesStage2Scene extends Phaser.Scene {
       rect(shot.x - 1, shot.y - 5, 2, 2, C.gold);
     }
 
+    if (this.entrance) { this.drawPressEntrance(buf, fill, rect, px, py); return; }
     const stamp = b.stamp;
     const x = stamp ? stamp.x : 128;
     const half = shadowHalf(stamp);
@@ -347,6 +374,22 @@ export class SnesStage2Scene extends Phaser.Scene {
       const size = burstSize(burst.age);
       mosaicRect(buf, px(burst.x) - 24, py(burst.y) - 24, 48, 48, size);
     }
+  }
+
+  // B3: the room darkened by colour subtract, lifting as the press lowers out of it by Mode 7 (scale
+  // 0.6 to 1.4) with its shadow taken out of the floor, growing under it.
+  drawPressEntrance(buf, fill, rect, px, py) {
+    const f = pressEntrance(this.entrance.t);
+    const dark = Math.round(14 * (1 - f.shadow));
+    if (dark > 0) mathPass(buf, screen(rgb15(dark, dark, dark)), { op: 'sub' }, buf);
+    const x = px(128);
+    const floor = py(FLOOR_Y);
+    const [rx, ry] = [(8 + 26 * f.shadow) * STAGE2.scale, 3 + 4 * f.shadow];
+    mathPass(buf, this.shade, { op: 'sub', where: (u, v) => ((u - x) / rx) ** 2 + ((v - floor + 2) / ry) ** 2 < 1 }, buf);
+    const h = PRESS_H * f.scale;
+    const bottom = Math.round(py(RAIL) + h + (floor - 4 - py(RAIL) - h) * f.shadow ** 2);
+    fill(x - 3, py(RAIL + 4), 6, Math.max(0, Math.round(bottom - h) - py(RAIL + 4)), C.brass);
+    mode7Pass(this.press, mode7Matrix(f.scale, 0), [x, Math.round(bottom - h / 2)], buf, buf);
   }
 
   drawParts(run, rect, t) {
@@ -394,6 +437,16 @@ function drawCard(fill, card) {
   drawString(fill, 'FILE 5', 36, y + 2, C.gold);
   for (const [text, dy] of [['THE GREAT SEAL', 14], ['RETENTION DIRECTOR', 28]]) drawString(fill, text, (WIDTH - measure(text)) >> 1, y + dy);
   if (card.subtitle) drawString(fill, '"SEALED."', (WIDTH - measure('"SEALED."')) >> 1, HEIGHT - 28);
+}
+
+// B2: the Records Custodian's slip, shorter than a boss card in the same look, dropped in top-left.
+function drawSlip(fill, slip) {
+  const w = Math.max(measure(SLIP.name), measure(SLIP.area)) + 16;
+  const y = Math.round(36 - slip.rise * 70);
+  fill(8, y, w, 30, C.gold);
+  fill(10, y + 2, w - 4, 26, C.memo);
+  drawString(fill, SLIP.name, 16, y + 4);
+  drawString(fill, SLIP.area, 16, y + 16, C.waxLit);
 }
 
 function ring(fill, x, y, reach, points, size, colour) {
