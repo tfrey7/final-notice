@@ -1,5 +1,7 @@
-// One NES pad, driven by the keyboard and any gamepad (docs/NES-PLAN.md section 3).
+// The pad for the active machine, driven by the keyboard and any gamepad: the NES pad
+// (docs/NES-PLAN.md section 3) or, under `?snes`, the SNES pad (docs/SNES-PLAN.md section 4).
 // The core is pure: feed it the buttons held this frame and it answers pressed, held and released.
+import { platformFor } from './platform.mjs';
 
 export const BUTTONS = ['up', 'down', 'left', 'right', 'a', 'b', 'select', 'start'];
 
@@ -17,20 +19,61 @@ export const KEYS = {
 
 // The browser's standard gamepad layout: bottom face A, left face B, Back, Start, d-pad 12-15.
 export const PAD_BUTTONS = { 0: 'a', 2: 'b', 8: 'select', 9: 'start', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
+
+// Every pad speaks the stages' words: `a` jumps, `b` attacks or casts. The SNES pad's B and Y become
+// those two, and its A, X, L and R arrive as the intents `chord`, `swap`, `step` and `aim`.
+export const PADS = {
+  nes: { name: 'nes', buttons: BUTTONS, keys: KEYS, padButtons: PAD_BUTTONS, game: {} },
+  snes: {
+    name: 'snes',
+    buttons: ['up', 'down', 'left', 'right', 'b', 'a', 'y', 'x', 'l', 'r', 'select', 'start'],
+    keys: {
+      ArrowUp: 'up', KeyW: 'up',
+      ArrowDown: 'down', KeyS: 'down',
+      ArrowLeft: 'left', KeyA: 'left',
+      ArrowRight: 'right', KeyD: 'right',
+      KeyZ: 'y', KeyJ: 'y',
+      KeyX: 'b', KeyK: 'b',
+      KeyC: 'a', KeyL: 'a',
+      KeyV: 'x', KeyI: 'x',
+      KeyQ: 'l', KeyE: 'r',
+      ShiftLeft: 'select', ShiftRight: 'select',
+      Enter: 'start', NumpadEnter: 'start',
+    },
+    // Standard layout: bottom B, right A, left Y, top X, shoulders and triggers L/R.
+    padButtons: { 0: 'b', 1: 'a', 2: 'y', 3: 'x', 4: 'l', 5: 'r', 6: 'l', 7: 'r', 8: 'select', 9: 'start', 12: 'up', 13: 'down', 14: 'left', 15: 'right' },
+    game: { b: 'a', y: 'b', a: 'injunction', x: 'swap' },
+  },
+};
+
+export const padFor = (profile) => PADS[profile?.name] ?? PADS.nes;
+
 export const STICK_DEAD = 0.5;
 
 export const DOUBLE_TAP_FRAMES = 12;
 export const HISTORY = 16;
 
-export function createPad() {
-  return { frame: -1, held: new Set(), pressed: new Set(), released: new Set(), chord: false, dash: null, taps: {}, history: [] };
+export function createPad(layout = PADS.nes) {
+  return { layout, frame: -1, held: new Set(), pressed: new Set(), released: new Set(), chord: false, dash: null, step: 0, aim: null, swap: false, taps: {}, history: [] };
 }
 
-// Advances the pad one frame. `down` is every button held now.
+// Advances the pad one frame. `down` is every button held now, named as on the pad's own machine.
 export function updatePad(pad, down, frame = pad.frame + 1) {
-  const now = new Set([...down].filter((b) => BUTTONS.includes(b)));
+  const layout = pad.layout ?? PADS.nes;
+  const names = layout.buttons.map((b) => layout.game[b] ?? b);
+  const now = new Set([...down].filter((b) => layout.buttons.includes(b)).map((b) => layout.game[b] ?? b));
   const pressed = new Set([...now].filter((b) => !pad.held.has(b)));
   const released = new Set([...pad.held].filter((b) => !now.has(b)));
+  const history = [...pad.history, ...names.filter((b) => pressed.has(b))].slice(-HISTORY);
+  if (layout.name === 'snes') {
+    return {
+      layout, frame, held: now, pressed, released, taps: {}, history, dash: null,
+      chord: pressed.has('injunction'),
+      step: pressed.has('l') ? -1 : pressed.has('r') ? 1 : 0,
+      aim: now.has('r'),
+      swap: pressed.has('swap'),
+    };
+  }
   const taps = { ...pad.taps };
   let dash = null;
   for (const dir of ['left', 'right']) {
@@ -42,9 +85,8 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
       taps[dir] = frame;
     }
   }
-  const history = [...pad.history, ...BUTTONS.filter((b) => pressed.has(b))].slice(-HISTORY);
   const chord = now.has('a') && now.has('b') && (pressed.has('a') || pressed.has('b'));
-  return { frame, held: now, pressed, released, chord, dash, taps, history };
+  return { layout, frame, held: now, pressed, released, chord, dash, step: 0, aim: null, swap: pressed.has('select'), taps, history };
 }
 
 // True when the last presses spell `code`, e.g. a secret ['up', 'up', 'down', 'down'].
@@ -52,15 +94,15 @@ export function entered(pad, code) {
   return code.length > 0 && pad.history.slice(-code.length).join() === code.join();
 }
 
-export function keysToButtons(codes) {
-  return new Set([...codes].map((c) => KEYS[c]).filter(Boolean));
+export function keysToButtons(codes, layout = PADS.nes) {
+  return new Set([...codes].map((c) => layout.keys[c]).filter(Boolean));
 }
 
-export function gamepadToButtons(gamepad) {
+export function gamepadToButtons(gamepad, layout = PADS.nes) {
   const out = new Set();
   if (!gamepad) return out;
   gamepad.buttons.forEach((btn, i) => {
-    if (PAD_BUTTONS[i] && (btn.pressed || btn.value > 0.5)) out.add(PAD_BUTTONS[i]);
+    if (layout.padButtons[i] && (btn.pressed || btn.value > 0.5)) out.add(layout.padButtons[i]);
   });
   const [x = 0, y = 0] = gamepad.axes;
   if (x < -STICK_DEAD) out.add('left');
@@ -88,9 +130,10 @@ let live = null;
 export function pollPad(frame) {
   if (!live) live = startLivePad();
   if (live.pad.frame !== frame) {
-    const down = live.script ? scriptedButtons(live.script, frame - live.startFrame) : keysToButtons(live.keys);
+    const { layout } = live.pad;
+    const down = live.script ? scriptedButtons(live.script, frame - live.startFrame) : keysToButtons(live.keys, layout);
     if (!live.script && typeof navigator !== 'undefined' && navigator.getGamepads) {
-      for (const gp of navigator.getGamepads()) for (const b of gamepadToButtons(gp)) down.add(b);
+      for (const gp of navigator.getGamepads()) for (const b of gamepadToButtons(gp, layout)) down.add(b);
     }
     live.pad = updatePad(live.pad, down, frame);
   }
@@ -98,13 +141,13 @@ export function pollPad(frame) {
 }
 
 function startLivePad() {
-  const state = { pad: createPad(), keys: new Set(), script: null, startFrame: 0 };
+  const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
+  const layout = padFor(platformFor(params));
+  const state = { pad: createPad(layout), keys: new Set(), script: null, startFrame: 0 };
   if (typeof window === 'undefined') return state;
-  if (new URLSearchParams(window.location.search).has('demo')) {
-    state.script = window.finalNoticeDemo ?? DEMO_SCRIPT;
-  }
+  if (params.has('demo')) state.script = window.finalNoticeDemo ?? DEMO_SCRIPT;
   window.addEventListener('keydown', (e) => {
-    if (!KEYS[e.code]) return;
+    if (!layout.keys[e.code]) return;
     state.keys.add(e.code);
     e.preventDefault();
   });

@@ -67,8 +67,10 @@ function beforeStep(world, pad, tune, events) {
   const p = player(world);
   const pressed = new Set(pad.pressed);
   if (p.state !== 'carry') drop(world, p);
-  if (FREE.includes(p.state) && pad.dash) {
-    Object.assign(p, { state: 'step', t: 0, stepDir: pad.dash === 'right' ? 1 : -1, running: false });
+  // The NES double tap steps toward the tapped side; the SNES L and R step back and forward.
+  const stepDir = pad.step ? pad.step * p.facing : pad.dash ? (pad.dash === 'right' ? 1 : -1) : 0;
+  if (FREE.includes(p.state) && stepDir) {
+    Object.assign(p, { state: 'step', t: 0, stepDir, running: false });
     p.invuln = Math.max(p.invuln, STEP.frames);
     events.push('step');
   } else if (FREE.includes(p.state) && pressed.has('b') && !canGrabFoe(world, p, tune)) {

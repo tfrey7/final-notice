@@ -20,8 +20,8 @@ export function stepPlayer(p, pad, area, casts, t = TUNING) {
   const events = [];
   const side = (pad.held.has('right') ? 1 : 0) - (pad.held.has('left') ? 1 : 0);
   const b = pad.held.has('b');
-  // Holding B plants the feet so the d-pad aims; the press itself, while walking, casts on the move.
-  p.planted = p.grounded && b && !pad.pressed.has('b');
+  // Holding B (the SNES: R) plants the feet so the d-pad aims; a B press while walking casts on the move.
+  p.planted = p.grounded && (pad.aim ?? (b && !pad.pressed.has('b')));
   p.crouch = p.grounded && pad.held.has('down') && !side;
   if (side) p.facing = side;
   const move = p.planted || p.crouch ? 0 : side;

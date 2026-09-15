@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createPad, updatePad, entered, keysToButtons, gamepadToButtons, scriptedButtons, DEMO_SCRIPT, DOUBLE_TAP_FRAMES,
+  createPad, updatePad, entered, keysToButtons, gamepadToButtons, scriptedButtons, DEMO_SCRIPT, DOUBLE_TAP_FRAMES, PADS, padFor,
 } from '../src/input.mjs';
+import { platformFor } from '../src/platform.mjs';
+import { MAX_HITS } from '../src/injunction.mjs';
+import { player } from '../src/stage1/moves.mjs';
+import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
+import { createRun, stepRun } from '../src/stage2/core.mjs';
+import { carry, inHand } from '../src/stage2/pickups.mjs';
 
 const run = (frames) => frames.reduce((pad, down, f) => updatePad(pad, new Set(down), f), createPad());
 
@@ -45,6 +51,88 @@ test('gamepad buttons and the left stick map onto the pad', () => {
   const buttons = Array.from({ length: 16 }, (_, i) => ({ pressed: [0, 2, 9, 12].includes(i), value: 0 }));
   assert.deepEqual([...gamepadToButtons({ buttons, axes: [0.9, 0.1] })].sort(), ['a', 'b', 'right', 'start', 'up']);
   assert.equal(gamepadToButtons(null).size, 0);
+});
+
+test('the plain page gets the NES pad and ?snes the SNES pad', () => {
+  assert.equal(padFor(platformFor(new URLSearchParams(''))), PADS.nes);
+  assert.equal(padFor(platformFor(new URLSearchParams('?snes&go=stage1'))), PADS.snes);
+  assert.equal(createPad().layout, PADS.nes);
+});
+
+const snes = (frames) => frames.reduce((pad, down, f) => updatePad(pad, new Set(down), f), createPad(PADS.snes));
+
+test('keyboard and gamepad map onto the SNES pad as SNES-PLAN section 4 says', () => {
+  assert.deepEqual([...keysToButtons(['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyQ', 'KeyE', 'Enter', 'ArrowUp'], PADS.snes)].sort(),
+    ['a', 'b', 'l', 'r', 'start', 'up', 'x', 'y']);
+  const buttons = Array.from({ length: 16 }, (_, i) => ({ pressed: [0, 1, 2, 3, 4, 5, 9].includes(i), value: 0 }));
+  assert.deepEqual([...gamepadToButtons({ buttons, axes: [-0.9, 0] }, PADS.snes)].sort(),
+    ['a', 'b', 'l', 'left', 'r', 'start', 'x', 'y']);
+});
+
+test('SNES Y attacks and B jumps in the stages\' words; A, X, L and R are intents', () => {
+  const y = snes([['y']]);
+  assert.deepEqual([y.pressed.has('b'), y.pressed.has('a')], [true, false]);
+  const b = snes([['b']]);
+  assert.deepEqual([b.pressed.has('a'), b.pressed.has('b'), b.chord], [true, false, false]);
+  assert.equal(snes([['a']]).chord, true, 'A alone is the injunction');
+  assert.equal(snes([['a'], ['a']]).chord, false, 'once per press');
+  assert.equal(snes([['a', 'b']]).chord, true);
+  assert.equal(snes([['y', 'b']]).chord, false, 'no A+B chord on the SNES');
+  assert.equal(snes([['x']]).swap, true);
+  assert.equal(snes([['select']]).swap, false, 'Select is unused in play');
+  assert.deepEqual([snes([['l']]).step, snes([['r']]).step, snes([['r'], ['r']]).step], [-1, 1, 0]);
+  assert.deepEqual([snes([['r'], ['r']]).aim, snes([['y']]).aim], [true, false]);
+  assert.equal(snes([['right'], [], ['right']]).dash, null, 'no double-tap step');
+});
+
+test('the NES pad keeps its double tap, A+B and Select and never answers SNES intents', () => {
+  assert.equal(run([['select']]).swap, true);
+  assert.deepEqual([run([['right'], [], ['right']]).step, run([['a']]).aim], [0, null]);
+  assert.equal(updatePad(createPad(), new Set(['y', 'l', 'r', 'x'])).held.size, 0);
+});
+
+test('Stage 1 on the SNES pad: L and R step back and forward, A alone throws the injunction', () => {
+  const pressOn = (down, setup = () => {}) => {
+    const tune = tuneFor('ward');
+    const world = newFloor('ward', tune);
+    setup(world);
+    stepFloor(world, snes([down]), tune);
+    return world;
+  };
+  const back = player(pressOn(['l']));
+  assert.deepEqual([back.state, back.stepDir], ['step', -back.facing]);
+  const turned = player(pressOn(['r'], (w) => { player(w).facing = -1; }));
+  assert.deepEqual([turned.state, turned.stepDir], ['step', -1], 'forward is the way the auditor faces');
+  const tapped = newFloor('ward');
+  ['right', null, 'right'].reduce((pad, b, f) => {
+    const next = updatePad(pad, new Set(b ? [b] : []), f);
+    stepFloor(tapped, next, tuneFor('ward'));
+    return next;
+  }, createPad(PADS.snes));
+  assert.notEqual(player(tapped).state, 'step', 'no double-tap step');
+  assert.ok(pressOn(['a'], (w) => { w.meterHits = MAX_HITS; }).events.includes('injunction'));
+});
+
+test('Stage 2 on the SNES pad: X swaps, R held plants the feet, A alone throws the injunction', () => {
+  const w = createRun('ward');
+  carry(w, 'redTape');
+  stepRun(w, snes([['x']]));
+  assert.equal(inHand(w), 'redTape');
+
+  const walk = (down) => {
+    const r = createRun('ward');
+    let pad = createPad(PADS.snes);
+    for (let i = 0; i < 30; i++) stepRun(r, pad = updatePad(pad, new Set(i < 5 ? [] : down)));
+    return r.player.x;
+  };
+  const start = createRun('ward').player.x;
+  assert.ok(walk(['right']) > start + 10, 'walks');
+  assert.ok(Math.abs(walk(['r', 'right']) - start) < 1, 'R held stands still to aim');
+
+  const inj = createRun('ward');
+  inj.meterHits = MAX_HITS;
+  stepRun(inj, snes([['a']]));
+  assert.ok(inj.events.some((e) => e.type === 'injunction'));
 });
 
 test('a demo script holds its buttons for their frames', () => {

@@ -77,7 +77,7 @@ export function stepRun(w, pad) {
     w.hitStop -= 1;
     return w;
   }
-  if (pad.pressed.has('select') && swapHand(w)) w.events.push({ type: 'swap', name: inHand(w) });
+  if ((pad.swap ?? pad.pressed.has('select')) && swapHand(w)) w.events.push({ type: 'swap', name: inHand(w) });
   w.player.spell = inHand(w);
   w.events.push(...stepPlayer(w.player, pad, w.area, w.casts));
   w.events.push(...stepPickups(w));

@@ -22,6 +22,19 @@ The game is played on one NES pad; the keyboard and any gamepad both drive it.
 | Select | Shift | Back / Select |
 | Start | Enter | Start |
 
+Under `?snes` the game is played on an SNES pad instead, and the NES double tap and A+B become
+real buttons.
+
+| SNES pad | Keyboard | Gamepad | Stage 1 | Stage 2 |
+| --- | --- | --- | --- | --- |
+| D-pad | arrows or WASD | d-pad or left stick | walk | walk, crouch, aim |
+| Y | Z or J | X / left face | punch, grab | cast |
+| B | X or K | A / bottom face | jump | jump |
+| A | C or L | B / right face | Emergency Injunction | Emergency Injunction |
+| X | V or I | Y / top face | — | swap enchantment |
+| L / R | Q / E | shoulders or triggers | step back / forward | R held: stand and aim |
+| Start | Enter | Start | pause, skip scene | pause, skip scene |
+
 On a placeholder stage, Start clears it, B loses a life and A reaches the next checkpoint.
 `?go=<screen>` starts on any screen (`title`, `select`, `scene1`, `stage1`, `scene2`, `stage2`,
 `scene3`, `ending`, `gameover`); `?demo` presses the buttons by itself.
