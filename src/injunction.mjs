@@ -20,7 +20,8 @@ export const wantsInjunction = (pad, hits) => !!pad.chord && isFull(hits);
 export const COOLDOWN_FRAMES = 600;
 export const freeInjunction = (frames = COOLDOWN_FRAMES) => ({ frames, left: 0 });
 export const coolingReady = (cd) => cd.left <= 0;
-export const wantsFreeInjunction = (pad, cd) => !!pad.chord && coolingReady(cd);
+// The SNES pad's Y+X `clear`; a pad without one (the NES) uses its A+B chord.
+export const wantsFreeInjunction = (pad, cd) => !!(pad.clear ?? pad.chord) && coolingReady(cd);
 export const fireCooldown = (cd) => { cd.left = cd.frames; return cd; };
 export const tickCooldown = (cd) => { cd.left = Math.max(0, Math.min(cd.left, cd.frames) - 1); return cd; };
 // The HUD's four boxes refill as the cooldown runs out; all four lit means ready.
@@ -35,8 +36,8 @@ export const pushDir = (foe, x) => Math.sign(foe.x - x) || 1;
 
 // The pad the rest of the frame sees once the injunction has used A and B.
 export function withoutAB(pad) {
-  const drop = (set) => new Set([...set].filter((b) => b !== 'a' && b !== 'b'));
-  return { ...pad, held: drop(pad.held), pressed: drop(pad.pressed), chord: false };
+  const drop = (set) => new Set([...set].filter((b) => b !== 'a' && b !== 'b' && b !== 'swap'));
+  return { ...pad, held: drop(pad.held), pressed: drop(pad.pressed), chord: false, clear: false, heavy: false, swap: false };
 }
 
 export const startRing = (x, y) => ({ x, y, t: 0 });

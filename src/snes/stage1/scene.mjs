@@ -70,7 +70,7 @@ const WEAPON_BOX = {
   extinguisher: { w: 9, h: 20, palette: [WHITE, rgb15(26, 6, 4), rgb15(30, 18, 16)] },
   stamp: { w: 12, h: 10, palette: [WHITE, rgb15(24, 3, 5), rgb15(31, 31, 31)] },
 };
-const WARD_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', hurt: 'hit', held: 'hit', knockdown: 'hit', bound: 'hit', down: 'recoil', ko: 'recoil', jump: 'wind', carry: 'idle', throw: 'punch2', grab: 'punch1', step: 'walk' };
+const WARD_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', hurt: 'hit', held: 'hit', knockdown: 'hit', bound: 'hit', down: 'recoil', ko: 'recoil', jump: 'wind', carry: 'idle', throw: 'punch2', grab: 'punch1', step: 'walk', heavy: 'uppercut', special: 'uppercut' };
 
 export class SnesStage1Scene extends Phaser.Scene {
   constructor() {

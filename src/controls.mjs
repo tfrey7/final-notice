@@ -19,7 +19,7 @@ export function keysFor(button, layout = PADS.snes) {
 
 const PAD = { y: 'X / left', b: 'A / bottom', a: 'B / right', x: 'Y / top', l: 'LB / LT', r: 'RB / RT', start: 'Start' };
 const DOES = {
-  stage1: { y: 'punch, grab', b: 'jump', a: 'Injunction', x: 'Objection parry', l: 'sidestep back', r: 'sidestep forward', start: 'pause' },
+  stage1: { y: 'light, grab', b: 'jump', a: 'special', x: 'heavy', yx: 'Injunction', l: 'Objection parry', r: 'sidestep back', start: 'pause' },
   stage2: { y: 'cast', b: 'jump', a: 'Injunction', x: 'swap enchantment', l: '—', r: 'hold: stand and aim', start: 'pause' },
 };
 
@@ -29,7 +29,13 @@ export function controlsFor(stage) {
   return [
     { pad: 'D-pad', keys: 'arrows / WASD', gamepad: 'd-pad / stick', does: 'walk; double tap: run' },
     ...['y', 'b', 'a', 'x'].map((b) => ({ pad: b.toUpperCase(), keys: keysFor(b), gamepad: PAD[b], does: does[b] })),
-    { pad: 'L / R', keys: `${keysFor('l')} / ${keysFor('r')}`, gamepad: 'shoulders', does: stage === 'stage2' ? does.r : 'sidestep' },
+    ...(stage === 'stage2'
+      ? [{ pad: 'L / R', keys: `${keysFor('l')} / ${keysFor('r')}`, gamepad: 'shoulders', does: does.r }]
+      : [
+        { pad: 'Y+X', keys: `${keysFor('y')} + ${keysFor('x')}`, gamepad: 'left + top together', does: does.yx },
+        { pad: 'L', keys: keysFor('l'), gamepad: 'LB / LT', does: does.l },
+        { pad: 'R', keys: keysFor('r'), gamepad: 'RB / RT', does: does.r },
+      ]),
     { pad: 'Start', keys: keysFor('start'), gamepad: PAD.start, does: does.start },
   ];
 }

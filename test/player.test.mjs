@@ -69,12 +69,12 @@ test('B beside the office chair picks it up; B again throws it and it knocks a f
   assert.equal(chair.state, 'gone');
 });
 
-test('grab a reeling dummy, then a direction and B throws it', () => {
+test('walk into a reeling dummy and B grabs it, then a direction and B throws it', () => {
   const { world, tune, p, dummy } = floor('ward', 100, 108);
   run(world, tune, 1, () => pad([], ['b']));
   for (let i = 0; i < 40 && p.state !== 'idle'; i++) stepFloor(world, idle, tune);
   assert.equal(dummy().state, 'hurt');
-  run(world, tune, 1, () => pad([], ['b']));
+  run(world, tune, 1, () => pad(['right'], ['b']));
   for (let i = 0; i < 4 && p.state !== 'grab'; i++) stepFloor(world, idle, tune);
   assert.equal(p.state, 'grab');
   const events = run(world, tune, 3, (i) => (i === 0 ? pad(['right'], ['b']) : idle));

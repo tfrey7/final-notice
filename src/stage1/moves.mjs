@@ -48,6 +48,29 @@ export const TUNING = {
   foeSpeed: [0.5, 0.125, 2, 0.125],
   foeWindup: [20, 4, 60, 1],
   foeCooldown: [70, 10, 200, 5],
+  // The heavy attack (SNES X) and the combo routes it ends: a route dial at 0 turns that route off.
+  heavyStartup: [7, 2, 16, 1],
+  heavyActive: [3, 1, 8, 1],
+  heavyRecovery: [18, 4, 36, 1],
+  heavyReach: [24, 10, 44, 1],
+  heavyDamage: [2, 0, 6, 1],
+  heavyPush: [3, 0, 8, 0.25],
+  routeLLL: [1, 0, 1, 1],
+  routeLLH: [1, 0, 1, 1],
+  routeLH: [1, 0, 1, 1],
+  routeDazedH: [1, 0, 1, 1],
+  knockbackDamage: [3, 0, 8, 1],
+  knockbackX: [4.5, 0, 8, 0.25],
+  launcherDamage: [2, 0, 6, 1],
+  launcherUp: [5, 0, 9, 0.25],
+  dazedDamage: [5, 0, 12, 1],
+  // The auditor's own special (SNES A): Ward's lunge, Mercer's sweep.
+  specialStartup: [6, 1, 16, 1],
+  specialActive: [6, 1, 16, 1],
+  specialRecovery: [20, 4, 40, 1],
+  specialDamage: [3, 0, 8, 1],
+  specialReach: [48, 16, 80, 2],
+  specialCooldown: [90, 0, 300, 10],
   parryFrames: [12, 1, 30, 1],
   parryLockout: [24, 0, 60, 1],
   parryStagger: [48, 16, 120, 2],
@@ -181,6 +204,44 @@ function startPunch(f, combo) {
   f.buffer = 0;
 }
 
+const lightsMax = (tune) => (tune.routeLLL ? 3 : 2);
+
+// The heavy a light chain leads into: after one light the launcher, after two the knockback.
+function heavyRoute(combo, tune) {
+  if (combo === 1 && tune.routeLH) return 'launcher';
+  if (combo === 2 && tune.routeLLH) return 'knockback';
+  return null;
+}
+
+function startHeavy(f, route) {
+  set(f, 'heavy');
+  f.route = route;
+  f.landed = false;
+  f.buffer = 0;
+  f.heavyBuffer = 0;
+}
+
+// A foe a parry left reeling, or one still stunned from the auditor's last blow.
+export const dazed = (o) => o.state === 'hurt' && o.stagger > 0;
+
+function heavyHit(world, f, foe, tune) {
+  const dir = f.facing;
+  const route = dazed(foe) && tune.routeDazedH ? 'crush' : f.route;
+  const hit = {
+    crush: { damage: tune.dazedDamage, heavy: true },
+    launcher: { damage: tune.launcherDamage, heavy: true },
+    knockback: { damage: tune.knockbackDamage, heavy: true },
+    heavy: { damage: tune.heavyDamage, heavy: false },
+  }[route];
+  if (!landHit(world, foe, { ...hit, dir }, tune)) return false;
+  if (route === 'launcher' && foe.state === 'knockdown') Object.assign(foe, { vx: dir * tune.knockback, vz: tune.launcherUp });
+  if (route === 'knockback' && foe.state === 'knockdown') foe.vx = dir * tune.knockbackX;
+  if (route === 'heavy' && foe.state === 'hurt') foe.vx = dir * tune.heavyPush;
+  f.route = route;
+  if (route !== 'heavy') world.events.push(route);
+  return true;
+}
+
 function foesOf(world, f) {
   return world.fighters.filter((o) => o.team !== f.team && o.state !== 'ko');
 }
@@ -201,8 +262,15 @@ function tryGrab(world, f, tune) {
 }
 
 function controlFree(world, f, input, tune) {
+  // A light press mid-chain continues the combo; walking into a reeling foe, or a fresh press, grabs.
   if (f.buffer > 0) {
-    if (!tryGrab(world, f, tune)) startPunch(f, f.chain > 0 && f.lastCombo < 3 ? f.lastCombo + 1 : 1);
+    const chained = f.chain > 0 && f.lastCombo < lightsMax(tune);
+    const walkingIn = input.held.has(f.facing > 0 ? 'right' : 'left');
+    if (!((walkingIn || !chained) && tryGrab(world, f, tune))) startPunch(f, chained ? f.lastCombo + 1 : 1);
+    return;
+  }
+  if (f.heavyBuffer > 0) {
+    startHeavy(f, (f.chain > 0 && heavyRoute(f.lastCombo, tune)) || 'heavy');
     return;
   }
   if (input.pressed.has('a')) {
@@ -227,6 +295,7 @@ function controlFree(world, f, input, tune) {
 
 function updatePlayer(world, f, input, tune) {
   if (input.pressed.has('b')) f.buffer = tune.bufferFrames + 1;
+  if (input.pressed.has('heavy')) f.heavyBuffer = tune.bufferFrames + 1;
   if (f.chain > 0) f.chain--;
   if (f.invuln > 0) f.invuln--;
   f.t++;
@@ -245,10 +314,26 @@ function updatePlayer(world, f, input, tune) {
           f.landed = landHit(world, foe, { damage: heavy ? tune.finisherDamage : tune.punchDamage, heavy, dir: f.facing }, tune);
         }
       }
-      if (f.t > startup + active && f.landed && f.combo < 3 && f.buffer > 0) startPunch(f, f.combo + 1);
+      const route = f.landed && f.heavyBuffer > 0 && heavyRoute(f.combo, tune);
+      if (f.t > startup + active && route) startHeavy(f, route);
+      else if (f.t > startup + active && f.landed && f.combo < lightsMax(tune) && f.buffer > 0) startPunch(f, f.combo + 1);
       else if (f.t >= startup + active + recovery) {
         f.lastCombo = f.combo;
         f.chain = f.landed ? tune.comboWindow : 0;
+        set(f, 'idle');
+      }
+      break;
+    }
+    case 'heavy': {
+      const [startup, active, recovery] = [tune.heavyStartup, tune.heavyActive, tune.heavyRecovery];
+      if (f.t === 1 && f.route !== 'heavy') f.x += f.facing * tune.comboStep;
+      if (!f.landed && f.t > startup && f.t <= startup + active) {
+        const foe = foesOf(world, f).find((o) => o.state !== 'held' && inReach(f, o, tune.heavyReach, tune) && o.z < 16);
+        if (foe) f.landed = heavyHit(world, f, foe, tune);
+      }
+      if (f.t >= startup + active + recovery) {
+        f.lastCombo = 0;
+        f.chain = 0;
         set(f, 'idle');
       }
       break;
@@ -312,6 +397,7 @@ function updatePlayer(world, f, input, tune) {
       updateCommon(world, f, tune);
   }
   if (f.buffer > 0) f.buffer--;
+  if (f.heavyBuffer > 0) f.heavyBuffer--;
 }
 
 // Hurt, knockdown, lying down and getting up: the same for everyone.
@@ -418,6 +504,7 @@ export function step(world, input, tune = defaultTune()) {
   if (world.hitStop > 0) {
     world.hitStop--;
     if (input.pressed.has('b')) p.buffer = tune.bufferFrames + 1;
+    if (input.pressed.has('heavy')) p.heavyBuffer = tune.bufferFrames + 1;
     return world;
   }
   updatePlayer(world, p, input, tune);

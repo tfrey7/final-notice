@@ -69,10 +69,10 @@ test('a staggered foe stays open far longer than a plain hit stuns him', () => {
   assert.ok(open > tune.hitstun * 2);
 });
 
-test('the SNES X button is the parry; the NES pad has none', () => {
-  let snes = createPad(PADS.snes);
-  snes = updatePad(snes, new Set(['x']));
+test('the SNES L shoulder is the parry, X is not; the NES pad has none', () => {
+  const snes = updatePad(createPad(PADS.snes), new Set(['l']));
   assert.equal(snes.parry, true);
+  assert.equal(updatePad(createPad(PADS.snes), new Set(['x'])).parry, false);
   let nes = createPad(PADS.nes);
   nes = updatePad(nes, new Set(['select']));
   assert.ok(!nes.parry);

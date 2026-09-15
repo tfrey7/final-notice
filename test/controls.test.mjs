@@ -28,8 +28,11 @@ test('V and I are the SNES X button, and the list says what X does on each stage
   assert.equal(PADS.snes.keys.KeyV, 'x');
   assert.equal(keysFor('x'), 'V / I');
   const x = (stage) => controlsFor(stage).find((r) => r.pad === 'X');
-  assert.equal(x('stage1').does, 'Objection parry');
+  assert.equal(x('stage1').does, 'heavy');
   assert.equal(x('stage2').does, 'swap enchantment');
+  const row = (pad) => controlsFor('stage1').find((r) => r.pad === pad);
+  assert.deepEqual([row('Y+X').does, row('L').does, row('A').does], ['Injunction', 'Objection parry', 'special']);
+  assert.equal(row('Y+X').keys, 'Z / J + V / I');
   const stage1 = controlsFor('stage1').map((r) => r.does).join();
-  for (const word of ['punch, grab', 'jump', 'Injunction', 'run', 'sidestep']) assert.ok(stage1.includes(word), word);
+  for (const word of ['light, grab', 'jump', 'Injunction', 'run', 'sidestep']) assert.ok(stage1.includes(word), word);
 });

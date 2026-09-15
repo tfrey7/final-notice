@@ -304,6 +304,14 @@ export class SnesLabScene extends Phaser.Scene {
     drawReadout(g, this.fill, f, { x, top, w: bw, h: bh, feet: f.y, lying }, {
       tune: this.tune, frame: this.game.loop.frame, cooldown: this.world.cooldown, boxes: this.boxes, turn: this.turns.includes(f),
     });
+    if (f.state === 'heavy') g.fillStyle(0xd0d0d0, 0.7).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - 14, top + 14, 14, 10);
+    if (f.state === 'special') {
+      const t = this.tune;
+      const on = f.t > t.specialStartup && f.t <= t.specialStartup + t.specialActive;
+      const reach = f.move === 'sweep' ? t.specialReach / 2 : t.punchReach;
+      const x0 = f.move === 'sweep' ? x - reach : f.facing > 0 ? x : x - reach;
+      g.fillStyle(0xb8b8c0, on ? 0.6 : 0.2).fillRect(x0, top + 20, f.move === 'sweep' ? reach * 2 : reach, 14);
+    }
     if (f.marked > 0) g.fillStyle(0xc02838).fillRect(x + 6, top - 22, 10, 7);
     if (f.weapon) this.drawWeapon(f.weapon.kind, x + f.facing * (bw / 2 + 4), top + 34);
     if (f.state === 'spray') g.fillStyle(0xe8f0f8, 0.5).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - this.world.weaponTune.extinguisherReach, top + 16, this.world.weaponTune.extinguisherReach, 14);

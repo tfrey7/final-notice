@@ -4,7 +4,7 @@ import {
   createPad, updatePad, entered, keysToButtons, gamepadToButtons, scriptedButtons, DEMO_SCRIPT, DOUBLE_TAP_FRAMES, PADS, padFor,
 } from '../src/input.mjs';
 import { platformFor } from '../src/platform.mjs';
-import { MAX_HITS } from '../src/injunction.mjs';
+import { MAX_HITS, freeInjunction } from '../src/injunction.mjs';
 import { player } from '../src/stage1/moves.mjs';
 import { newFloor, stepFloor, tuneFor } from '../src/stage1/player.mjs';
 import { STAGE1 } from '../src/stage1/tuning.mjs';
@@ -81,9 +81,14 @@ test('SNES Y attacks and B jumps in the stages\' words; A, X, L and R are intent
   assert.equal(snes([['a'], ['a']]).chord, false, 'once per press');
   assert.equal(snes([['a', 'b']]).chord, true);
   assert.equal(snes([['y', 'b']]).chord, false, 'no A+B chord on the SNES');
+  assert.equal(snes([['a']]).special, true, 'A is the special on Stage 1');
   assert.equal(snes([['x']]).swap, true);
+  assert.equal(snes([['x']]).heavy, true);
+  assert.equal(snes([['y'], ['y', 'x']]).clear, true, 'Y then X a frame apart is the clear');
+  assert.equal(snes([['y'], ['y', 'x']]).heavy, false);
+  assert.equal(snes([['y'], [], [], [], [], ['x']]).clear, false, 'a slower light then heavy is not');
   assert.equal(snes([['select']]).swap, false, 'Select is unused in play');
-  assert.deepEqual([snes([['l']]).step, snes([['r']]).step, snes([['r'], ['r']]).step], [-1, 1, 0]);
+  assert.deepEqual([snes([['l']]).step, snes([['r']]).step, snes([['l']]).parry], [0, -1, true]);
   assert.deepEqual([snes([['r'], ['r']]).aim, snes([['y']]).aim], [true, false]);
   assert.equal(snes([['right'], [], ['right']]).dash, null, 'no double-tap step');
   assert.equal(snes([['right'], [], ['right']]).run, 'right', 'the double tap is a run');
@@ -113,7 +118,7 @@ test('the NES pad keeps its double tap, A+B and Select and never answers SNES in
   assert.equal(updatePad(createPad(), new Set(['y', 'l', 'r', 'x'])).held.size, 0);
 });
 
-test('Stage 1 on the SNES pad: L and R step back and forward, A alone throws the injunction', () => {
+test('Stage 1 on the SNES pad: R steps back, Y and X together throw the injunction, A is the special', () => {
   const pressOn = (down, setup = () => {}) => {
     const tune = tuneFor('ward');
     const world = newFloor('ward', tune);
@@ -121,10 +126,10 @@ test('Stage 1 on the SNES pad: L and R step back and forward, A alone throws the
     stepFloor(world, snes([down]), tune);
     return world;
   };
-  const back = player(pressOn(['l']));
+  const back = player(pressOn(['r']));
   assert.deepEqual([back.state, back.stepDir], ['step', -back.facing]);
   const turned = player(pressOn(['r'], (w) => { player(w).facing = -1; }));
-  assert.deepEqual([turned.state, turned.stepDir], ['step', -1], 'forward is the way the auditor faces');
+  assert.deepEqual([turned.state, turned.stepDir], ['step', 1], 'back is away from the way the auditor faces');
   const tapped = newFloor('ward');
   ['right', null, 'right'].reduce((pad, b, f) => {
     const next = updatePad(pad, new Set(b ? [b] : []), f);
@@ -132,7 +137,10 @@ test('Stage 1 on the SNES pad: L and R step back and forward, A alone throws the
     return next;
   }, createPad(PADS.snes));
   assert.notEqual(player(tapped).state, 'step', 'no double-tap step');
-  assert.ok(pressOn(['a'], (w) => { w.meterHits = MAX_HITS; }).events.includes('injunction'));
+  const cooled = (w) => { w.cooldown = freeInjunction(); };
+  assert.ok(pressOn(['y', 'x'], cooled).events.includes('injunction'));
+  assert.ok(!pressOn(['a'], cooled).events.includes('injunction'), 'A alone no longer clears the room');
+  assert.equal(player(pressOn(['a'], cooled)).state, 'special');
 });
 
 test('Stage 2 on the SNES pad: X swaps, R held plants the feet, A alone throws the injunction', () => {

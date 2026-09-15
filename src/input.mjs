@@ -51,6 +51,8 @@ export const padFor = (profile) => PADS[profile?.name] ?? PADS.nes;
 export const STICK_DEAD = 0.5;
 
 export const DOUBLE_TAP_FRAMES = 12;
+// Y then X (or X then Y) this close together is the room clear; any slower is light then heavy.
+export const CLEAR_FRAMES = 3;
 export const HISTORY = 16;
 
 export function createPad(layout = PADS.nes) {
@@ -76,15 +78,25 @@ export function updatePad(pad, down, frame = pad.frame + 1) {
       taps[dir] = frame;
     }
   }
-  // L and R are the SNES step, so its double tap is only a run.
+  // Stage 1 on the SNES: Y light, X heavy, A the auditor's special, L the parry, R a sidestep back,
+  // Y and X pressed within CLEAR_FRAMES of each other the room clear. Stage 2 still reads A as
+  // `chord` and X as `swap`. The double tap is only a run.
   if (layout.name === 'snes') {
+    const at = { ...pad.at };
+    for (const b of ['b', 'swap']) if (pressed.has(b)) at[b] = frame;
+    const fresh = (b) => now.has(b) && at[b] !== undefined && frame - at[b] <= CLEAR_FRAMES;
+    const clear = (pressed.has('b') || pressed.has('swap')) && fresh('b') && fresh('swap');
+    if (clear) { delete at.b; delete at.swap; }
     return {
-      layout, frame, held: now, pressed, released, taps, history, dash: null, run: dash,
+      layout, frame, held: now, pressed, released, taps, history, dash: null, run: dash, at,
       chord: pressed.has('injunction'),
-      step: pressed.has('l') ? -1 : pressed.has('r') ? 1 : 0,
+      clear,
+      heavy: pressed.has('swap') && !clear,
+      special: pressed.has('injunction'),
+      step: pressed.has('r') ? -1 : 0,
       aim: now.has('r'),
       swap: pressed.has('swap'),
-      parry: pressed.has('swap'),
+      parry: pressed.has('l'),
     };
   }
   const chord = now.has('a') && now.has('b') && (pressed.has('a') || pressed.has('b'));
