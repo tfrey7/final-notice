@@ -3,6 +3,7 @@
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
 import { defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
 import { stepStaff, struggle } from './staff.mjs';
+import { stepWeapons, weaponPad } from './weapons.mjs';
 import { HITS_PER_SEGMENT, RING, SEGMENTS, addHits, cooldownSegments, fireCooldown, pushDir, restoreAtCheckpoint, ringVictims, segments, startRing, stepRing, tickCooldown, wantsFreeInjunction, wantsInjunction, withoutAB } from '../injunction.mjs';
 
 export { HITS_PER_SEGMENT };
@@ -173,12 +174,13 @@ export function stepFloor(world, pad, tune) {
   const frozen = world.hitStop > 0;
   openParry(world, pad, tune, frozen, events);
   const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
-    : struggle(world, pad, events) ?? beforeStep(world, pad, tune, events);
+    : struggle(world, pad, events) ?? beforeStep(world, weaponPad(world, pad, tune, events), tune, events);
   const before = foeHp(world);
   step(world, input, tune);
   const p = player(world);
   if (!frozen) {
     moveProps(world, tune, events);
+    stepWeapons(world, tune, events);
     stepStaff(world, tune, events);
     if (p.state === 'punch' && p.t === 0) events.push('punch');
   }

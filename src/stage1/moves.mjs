@@ -122,7 +122,9 @@ export function landHit(world, target, { damage, heavy, dir, body, from }, tune)
     target.guardDown = target.guardBreakFrames;
     world.events.push('guardBreak');
   }
-  target.hp = Math.max(0, target.hp - damage);
+  // A red APPROVED stamp (weapons.mjs) marks a foe to take extra from every blow.
+  const bonus = target.marked > 0 ? world.weaponTune?.stampBonus ?? 0 : 0;
+  target.hp = Math.max(0, target.hp - damage - bonus);
   if (target.hitsToFall && ++target.taken >= target.hitsToFall) heavy = true;
   if (target.hp === 0) heavy = true;
   if (heavy) target.taken = 0;

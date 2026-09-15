@@ -33,6 +33,7 @@ import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
 import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
+import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
@@ -56,6 +57,14 @@ const FOE_PALETTES = {
   supervisor: [rgb15(2, 2, 4), rgb15(6, 10, 22), rgb15(18, 22, 30)],
 };
 const PROP_PALETTE = [rgb15(2, 2, 4), rgb15(16, 10, 4), rgb15(28, 24, 14)];
+// Grey boxes for the office weapons and the furniture that drops them, until their art lands.
+const FURNITURE = { desk: { w: 54, h: 32, palette: PROP_PALETTE }, cabinet: { w: 30, h: 54, palette: [rgb15(2, 2, 4), rgb15(13, 14, 16), rgb15(22, 23, 25)] } };
+const WEAPON_BOX = {
+  stapler: { w: 14, h: 8, palette: [WHITE, rgb15(6, 6, 7), rgb15(14, 14, 16)] },
+  binder: { w: 12, h: 16, palette: [WHITE, rgb15(6, 12, 22), rgb15(12, 18, 28)] },
+  extinguisher: { w: 9, h: 20, palette: [WHITE, rgb15(26, 6, 4), rgb15(30, 18, 16)] },
+  stamp: { w: 12, h: 10, palette: [WHITE, rgb15(24, 3, 5), rgb15(31, 31, 31)] },
+};
 const WARD_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', hurt: 'hit', held: 'hit', knockdown: 'hit', bound: 'hit', down: 'recoil', ko: 'recoil', jump: 'wind', carry: 'idle', throw: 'punch2', grab: 'punch1', step: 'walk' };
 
 export class SnesStage1Scene extends Phaser.Scene {
@@ -93,6 +102,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.entrance = this.card && !params.has('card') ? { t: Number(params.get('entrance') ?? 0), still: params.has('entrance') } : null;
     } else {
       this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint), SNES_STAGE1);
+      armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
     }
     this.world.cooldown = freeInjunction();
 
@@ -240,6 +250,11 @@ export class SnesStage1Scene extends Phaser.Scene {
     return artOr(this, name, { w, h, palette }).frame('stand', ms, Math.round(sx - w / 2), Math.round(f.y - h - f.z));
   }
 
+  weaponSprites(kind, sx, bottom) {
+    const { w, h, palette } = WEAPON_BOX[kind];
+    return artOr(this, `weapon:${kind}`, { w, h, palette }).frame('stand', 0, Math.round(sx - w / 2), Math.round(bottom - h));
+  }
+
   playerSprites(p, sx, ms) {
     if (p.invuln > 0 && p.invuln % 4 < 2 && p.state !== 'step') return [];
     const flip = p.facing < 0;
@@ -289,9 +304,25 @@ export class SnesStage1Scene extends Phaser.Scene {
       ...w.props.filter((o) => o.state !== 'gone').map((o) => ({ y: o.y + (o.state === 'held' ? 1 : 0), o })),
       ...(w.tapes ?? []).map((tape) => ({ y: tape.y + 1, tape })),
       ...(w.firstAid ?? []).filter((b) => !b.taken).map((box) => ({ y: box.y - 1, box })),
+      ...(w.smash ?? []).map((s) => ({ y: s.y - 2, s })),
+      ...(w.weapons ?? []).filter((wp) => !(wp.state === 'floor' && wp.t > w.weaponTune.weaponLife - 90 && wp.t % 8 < 4)).map((wp) => ({ y: wp.y, wp })),
     ].sort((a, b) => a.y - b.y);
     const at = (x) => x - cam - shake.x;
-    const sprites = things.flatMap(({ f, o, tape, box }) => {
+    const sprites = things.flatMap(({ f, o, tape, box, s, wp }) => {
+      if (s) {
+        const { w: sw, h, palette } = FURNITURE[s.kind];
+        const sh = s.state === 'broken' ? 10 : h;
+        return artOr(this, `prop:${s.kind}${s.state === 'broken' ? ':broken' : ''}`, { w: sw, h: sh, palette }).frame('stand', 0, Math.round(at(s.x) - sw / 2), s.y - sh);
+      }
+      if (wp) return this.weaponSprites(wp.kind, at(wp.x), wp.y - wp.z * STAGE1.scale);
+      if (f?.state === 'spray' && w.weaponTune) {
+        const reach = Math.round(w.weaponTune.extinguisherReach);
+        const cloud = artOr(this, `fx:spray:${reach}`, { w: reach, h: 16, palette: [rgb15(24, 26, 28), rgb15(28, 30, 31), WHITE] });
+        return [...this.playerSprites(f, at(f.x), f.t * MS), ...this.weaponSprites('extinguisher', at(f.x) + f.facing * 22, f.y - 26),
+          ...cloud.frame('stand', 0, Math.round(at(f.x) + (f.facing > 0 ? 24 : -24 - reach)), f.y - 40)];
+      }
+      if (f?.team === 'player' && f.weapon) return [...this.playerSprites(f, at(f.x), f.t * MS), ...this.weaponSprites(f.weapon.kind, at(f.x) + f.facing * 22, f.y - 26 - f.z)];
+      if (f?.marked > 0) return [...this.foeSprites(f, at(f.x), f.t * MS), ...this.weaponSprites('stamp', at(f.x), f.y - BODY_H - 6 - f.z)];
       if (o) return artOr(this, `prop:${o.kind}`, { w: 24, h: 24, palette: PROP_PALETTE }).frame('stand', 0, Math.round(at(o.x) - 12), Math.round(o.y - 24 - o.z * STAGE1.scale));
       if (box) return artOr(this, 'prop:firstAid', { w: 24, h: 16, palette: [rgb15(2, 2, 4), WHITE, rgb15(28, 4, 4)] }).frame('stand', 0, Math.round(at(box.x) - 12), box.y - 16);
       if (tape) return artOr(this, 'prop:tape', { w: 24, h: 8, palette: [rgb15(2, 2, 4), rgb15(26, 4, 4), WHITE] }).frame('stand', 0, Math.round(at(tape.x) - 12), tape.y - 40);

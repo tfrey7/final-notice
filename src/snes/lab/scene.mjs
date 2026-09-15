@@ -17,6 +17,15 @@ import { scaledTune } from '../stage1/finisher.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { buildDials, labKinds, settingsText, takeTurns, waveKinds } from '../../lab/dials.mjs';
 import { mountLabPanel } from '../../lab/panel.mjs';
+import { armWorld, scaledWeapons } from '../../stage1/weapons.mjs';
+
+// One piece of furniture per weapon, along the back wall; a respawn stands them all back up.
+const SMASH = [
+  { kind: 'desk', x: 76, y: 160, drop: 'stapler' }, { kind: 'cabinet', x: 132, y: 154, drop: 'binder' },
+  { kind: 'cabinet', x: 188, y: 154, drop: 'extinguisher' }, { kind: 'desk', x: 244, y: 160, drop: 'stamp' },
+];
+const FURNITURE = { desk: { w: 36, h: 22, c: 0x7a6a50 }, cabinet: { w: 20, h: 36, c: 0x6c7480 } };
+const WEAPON_BOX = { stapler: { w: 10, h: 5, c: 0x303038 }, binder: { w: 8, h: 11, c: 0x3464b4 }, extinguisher: { w: 6, h: 13, c: 0xd83828 }, stamp: { w: 8, h: 7, c: 0xc02838 } };
 
 const FLOOR = { left: 16, right: WIDTH - 16, top: 150, bottom: 216 };
 const START_COUNTS = { associate: 2, manager: 1, counsel: 0, supervisor: 0 };
@@ -98,7 +107,7 @@ export class SnesLabScene extends Phaser.Scene {
         takeTurns(world, f, this.dial('maxAttackers'));
       },
     });
-    return w;
+    return armWorld(w, SMASH);
   }
 
   respawn() {
@@ -107,6 +116,7 @@ export class SnesLabScene extends Phaser.Scene {
     w.bench = [];
     w.tapes = [];
     w.spawned = 0;
+    for (const s of w.smash) Object.assign(s, { hits: 0, state: 'standing' });
     spawnStaff(w, waveKinds(this.counts), this.tune);
     this.clear = 0;
   }
@@ -118,6 +128,8 @@ export class SnesLabScene extends Phaser.Scene {
     for (const [k, v] of Object.entries(turned)) Object.assign(KINDS[k], v);
     if (this.dial('meterFull')) this.world.meterHits = MAX_HITS;
     this.world.cooldown.frames = this.dial('injunctionCooldown');
+    const weapons = Object.fromEntries(this.dials.filter((d) => d.group === 'weapons').map((d) => [d.key, d.value]));
+    this.world.weaponTune = scaledWeapons(weapons, STAGE1.scale);
   }
 
   update() {
@@ -166,9 +178,12 @@ export class SnesLabScene extends Phaser.Scene {
     for (let x = 0; x <= WIDTH; x += 32) g.fillStyle(GREY.trim).fillRect(x, 40, 1, FLOOR.top - 52);
 
     const things = [...w.fighters.map((f) => ({ y: f.y, f })), ...w.props.filter((o) => o.state !== 'gone').map((o) => ({ y: o.y, o })),
-      ...(w.tapes ?? []).map((t) => ({ y: t.y, t }))].sort((a, b) => a.y - b.y);
-    for (const { f, o, t } of things) {
-      if (o) this.drawProp(o);
+      ...(w.tapes ?? []).map((t) => ({ y: t.y, t })), ...w.smash.map((s) => ({ y: s.y, s })), ...w.weapons.map((wp) => ({ y: wp.y, wp }))]
+      .sort((a, b) => a.y - b.y);
+    for (const { f, o, t, s, wp } of things) {
+      if (s) this.drawFurniture(s);
+      else if (wp) this.drawWeapon(wp.kind, wp.x, wp.y - wp.z, wp.state === 'floor' && wp.t > w.weaponTune.weaponLife - 90 && wp.t % 8 < 4);
+      else if (o) this.drawProp(o);
       else if (t) g.fillStyle(0xc03030).fillRect(Math.round(t.x - 10), t.y - 36, 20, 4);
       else this.drawFighter(f);
     }
@@ -185,6 +200,21 @@ export class SnesLabScene extends Phaser.Scene {
     g.fillStyle(GREY.shadow).fillRect(Math.round(o.x - 9), o.y - 2, 18, 4);
     g.fillStyle(0x8a7a6a).fillRect(Math.round(o.x - 9), Math.round(o.y - 20 - o.z), 18, 18);
     g.lineStyle(1, 0x222222).strokeRect(Math.round(o.x - 9), Math.round(o.y - 20 - o.z), 18, 18);
+  }
+
+  drawFurniture(s) {
+    const { w, h, c } = FURNITURE[s.kind];
+    const bh = s.state === 'broken' ? 6 : h;
+    this.g.fillStyle(GREY.shadow).fillRect(s.x - w / 2, s.y - 2, w, 4);
+    this.g.fillStyle(s.state === 'broken' ? 0x4a4238 : c).fillRect(s.x - w / 2, s.y - bh, w, bh);
+    this.g.lineStyle(1, s.hits ? 0xe0a040 : 0x18181c).strokeRect(s.x - w / 2, s.y - bh, w, bh);
+  }
+
+  drawWeapon(kind, x, y, hidden = false) {
+    if (hidden) return;
+    const { w, h, c } = WEAPON_BOX[kind];
+    this.g.fillStyle(c).fillRect(Math.round(x - w / 2), Math.round(y - h), w, h);
+    this.g.lineStyle(1, 0xe8e8e8).strokeRect(Math.round(x - w / 2), Math.round(y - h), w, h);
   }
 
   drawFighter(f) {
@@ -210,6 +240,9 @@ export class SnesLabScene extends Phaser.Scene {
       this.drawReach(f, x, top);
     }
     if (f.kind) drawString(this.fill, LETTER[f.kind], x - 3, top - 12, WHITE);
+    if (f.marked > 0) g.fillStyle(0xc02838).fillRect(x + 6, top - 12, 10, 7);
+    if (f.weapon) this.drawWeapon(f.weapon.kind, x + f.facing * (bw / 2 + 4), top + 34);
+    if (f.state === 'spray') g.fillStyle(0xe8f0f8, 0.5).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - this.world.weaponTune.extinguisherReach, top + 16, this.world.weaponTune.extinguisherReach, 14);
   }
 
   // A swing's reach as an outline on its row: the player's punch or kick, a foe's wind-up and punch.

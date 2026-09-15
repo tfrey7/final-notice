@@ -3,6 +3,7 @@
 // Dials change the lab's live tables only; nothing here writes the game's defaults.
 import { TUNING } from '../stage1/moves.mjs';
 import { KINDS } from '../stage1/staff.mjs';
+import { WEAPONS } from '../stage1/weapons.mjs';
 import { COOLDOWN_FRAMES } from '../injunction.mjs';
 
 // Dials the brawl design will want but the fighting does not have yet; shown and copied, not wired.
@@ -29,6 +30,7 @@ export function buildDials(base) {
   return [
     ...group('lab', LAB),
     ...group('moves', TUNING, base),
+    ...group('weapons', WEAPONS),
     ...group('planned', PLANNED),
   ];
 }
@@ -84,6 +86,8 @@ export function settingsText(dials, counts, who) {
     '[lab]', byGroup('lab'),
     '',
     '[moves] (before the SNES 1.5x pixel scale)', byGroup('moves'),
+    '',
+    '[weapons] (before the SNES 1.5x pixel scale)', byGroup('weapons'),
     '',
     '[planned, not wired yet]', byGroup('planned'),
   ].join('\n');

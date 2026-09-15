@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { LAB, PLANNED, buildDials, labKinds, nudge, settingsText, takeTurns, waveKinds } from '../src/lab/dials.mjs';
 import { TUNING, defaultTune, fighter } from '../src/stage1/moves.mjs';
 import { KINDS } from '../src/stage1/staff.mjs';
+import { WEAPONS } from '../src/stage1/weapons.mjs';
 
 test('every TUNING value, the lab dials and the planned dials each get one dial', () => {
   const dials = buildDials(defaultTune());
   const keys = dials.map((d) => d.key);
-  for (const k of [...Object.keys(TUNING), ...Object.keys(LAB), ...Object.keys(PLANNED)]) assert.ok(keys.includes(k), k);
+  for (const k of [...Object.keys(TUNING), ...Object.keys(LAB), ...Object.keys(WEAPONS), ...Object.keys(PLANNED)]) assert.ok(keys.includes(k), k);
   assert.equal(new Set(keys).size, keys.length);
 });
 
@@ -58,4 +59,5 @@ test('settings text names the wave and every changed dial', () => {
   assert.match(text, /changed: hitStop 3 -> 4/);
   assert.match(text, /parryFrames: 12/);
   assert.equal(dials.find((d) => d.key === 'parryFrames').group, 'moves');
+  assert.match(text, /\[weapons\][^[]*binderUses: 6/);
 });
