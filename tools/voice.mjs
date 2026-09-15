@@ -4,6 +4,7 @@
 //
 //   node tools/voice.mjs <character> "<line>" <out.wav>
 //   node tools/voice.mjs --sheet <dir>      every cast member saying their sample line
+//   node tools/voice.mjs --barks <dir>      each fighter's brawl barks, one WAV per character
 //   node tools/voice.mjs --cast             the cast and their settings
 //   node tools/voice.mjs --partners [<dir>] bakes Ward and Mercer's fight lines (src/snes/barks.mjs)
 //                                           into src/snes/audio/barks-brr.mjs, and writes <who>-barks.wav reels
@@ -15,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { castNames, digitize, parseWav, renderLine, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 import { allLines } from '../src/snes/barks.mjs';
+import { BARKS, barkLines } from '../src/snes/audio/barks.mjs';
 import { pack } from './snes-bank.mjs';
 import { wav } from './snes-render.mjs';
 
@@ -100,6 +102,17 @@ if (process.argv[1]?.endsWith('voice.mjs')) {
   } else if (first === '--partners') {
     if (rest[0]) mkdirSync(rest[0], { recursive: true });
     await bakeBarks(rest[0]);
+  } else if (first === '--barks') {
+    mkdirSync(rest[0], { recursive: true });
+    const gap = new Float32Array(Math.round(32000 * 0.2));
+    for (const who of Object.keys(BARKS)) {
+      const parts = [];
+      for (const { text } of barkLines().filter((l) => l.who === who)) parts.push(renderLine(who, await take(who, text)), { left: gap, right: gap });
+      const glue = (side) => Float32Array.from(parts.flatMap((p) => [...p[side]]));
+      const out = join(rest[0], `${who}.wav`);
+      writeFileSync(out, wav({ left: glue('left'), right: glue('right'), sampleRate: 32000 }));
+      console.log(out);
+    }
   } else if (first && rest.length === 2) {
     writeFileSync(rest[1], wav(renderLine(first, await take(first, rest[0]))));
     console.log(rest[1]);

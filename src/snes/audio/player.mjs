@@ -540,6 +540,11 @@ export function bark(id) {
   if (BARKS[id] && seq) seq.sfx(barkEffect(id));
 }
 
+// A sound built on the fly, such as a voice line whose sample was loaded at run time.
+export function sfxDef(def) {
+  if (seq) seq.sfx(def);
+}
+
 export function channelStatus() {
   return VOICE_NAMES.map((channel, i) => ({
     channel,

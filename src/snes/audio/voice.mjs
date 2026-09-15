@@ -46,23 +46,23 @@ export const CAST = {
     sample: 'Forty-seven lifetimes. I helped build it.',
   },
   associate: {
-    name: 'Security Associate', notes: 'short bark: young, clipped, loud',
-    voice: 'am_liam', speed: 1.15, pitch: 1, drive: 3.2, highHz: 250,
+    name: 'Security Associate', notes: 'wiry young woman, fast rusher: clipped, loud bark',
+    voice: 'af_nova', speed: 1.15, pitch: 1, drive: 3.2, highHz: 250,
     sample: 'Keep working!',
   },
   supervisor: {
-    name: 'Security Supervisor', notes: 'grunt: heavy and flat',
-    voice: 'am_eric', speed: 1, pitch: -2, drive: 3, highHz: 180,
+    name: 'Security Supervisor', notes: 'stocky woman, the blocker: low, stern and flat',
+    voice: 'af_kore', speed: 1, pitch: -2, drive: 3, highHz: 180,
     sample: 'Working and billed.',
   },
   manager: {
-    name: 'Security Manager', notes: 'grunt: low, slow rumble',
+    name: 'Security Manager', notes: 'enormous bald man, grabs and charges: low, slow rumble',
     voice: 'bm_lewis', speed: 0.9, pitch: -4, drive: 2.6, highHz: 100,
     sample: 'Keep them at their desks.',
   },
   counsel: {
-    name: 'Security Counsel', notes: 'bark: thin and lawyerly',
-    voice: 'am_adam', speed: 1.05, pitch: 1, drive: 1.8, highHz: 400, lowHz: 4000,
+    name: 'Security Counsel', notes: 'tall narrow woman, ranged paperwork: crisp, cold, lawyerly',
+    voice: 'bf_emma', speed: 1.05, pitch: 0, drive: 1.8, highHz: 400, lowHz: 4000,
     sample: 'Signed each one over.',
   },
   speaker: {
@@ -84,6 +84,14 @@ export function voiceOf(who) {
 
 // The pace Kokoro is asked for, so the take lands at `speed` once the S-DSP pitches it.
 export const takeSpeed = (v) => Math.round((v.speed / 2 ** (v.pitch / 12)) * 1000) / 1000;
+
+// A take's file name in assets/voice/takes: the Kokoro voice and a hash of what it was asked.
+export async function takeFile(who, text) {
+  const v = voiceOf(who);
+  const digest = await globalThis.crypto.subtle.digest('SHA-1', new TextEncoder().encode(`${v.voice}|${takeSpeed(v)}|${text}`));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${v.voice}-${hex.slice(0, 10)}.wav`;
+}
 
 // A WAV file's first channel as floats in -1..1: 16-bit PCM or 32-bit float.
 export function parseWav(bytes) {

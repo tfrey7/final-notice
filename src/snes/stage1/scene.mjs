@@ -14,6 +14,8 @@ import { bark, barkFrames, endHold, holdMusic, playSong, sfx } from '../audio/pl
 import { brawlSound } from '../audio/brawl.mjs';
 import { bark as pickBark, barkKind, newBarker } from '../barks.mjs';
 import { VELLUM_PINCH, VELLUM_SONG, vellumPinch } from '../audio/cues.mjs';
+import { barkMoments, createBarker, snapshot } from '../audio/barks.mjs';
+import { loadBarks, playBark } from '../audio/barkplayer.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
 import RECEPTION from '../bg/reception.mjs';
@@ -116,6 +118,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.base = registerTuning(`snes-brawl-${this.who}`, weighed(tuneFor(this.who), BRAWL_WEIGHT), RANGES);
     this.tune = scaledTune(this.base, STAGE1.scale);
     this.fin = null;
+    this.barker = createBarker();
+    loadBarks();
     this.slowdown = createSlowdown();
     if (this.office) {
       this.world = enterOffice(newFloor(this.who, this.tune), this.tune);
@@ -206,8 +210,11 @@ export class SnesStage1Scene extends Phaser.Scene {
     const bossHp = boss?.hp;
     const playerHp = p.hp;
     const before = livingFoes(w);
-    this.registry.set('stage1Frames', (this.registry.get('stage1Frames') ?? 0) + 1);
+    const frames = (this.registry.get('stage1Frames') ?? 0) + 1;
+    this.registry.set('stage1Frames', frames);
+    const voices = snapshot(w.fighters);
     stepFloor(w, pad, this.tune);
+    for (const said of this.barker(barkMoments(voices, w.fighters), frames)) playBark(said);
     if (boss) w.hitStop = bossHitStop(w, boss, bossHp, playerHp, p);
     if (boss && !this.pinch && vellumPinch(boss.hp, boss.maxHp)) {
       this.pinch = true;
