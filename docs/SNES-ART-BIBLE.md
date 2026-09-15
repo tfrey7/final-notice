@@ -67,6 +67,24 @@ A foe changes these slots, never their order, so palette swaps line up.
   the wind-up leans the upper body back three and down one; impact lunges it forward two; recoil
   throws it back three. The head moves whole, so it stays identical.
 
+## Grounded redo (item 1974)
+
+Tim on 1972: "way too ugly and cartoony". The redo keeps the painting and drops the cartoon.
+
+- **Natural proportions come from the painting.** Shrink the whole figure by one scale from idle and
+  never enlarge the head or hands; the head is 8x11 on a 60 px man.
+- **Classify by material, then shade by ramp.** Each shrunk pixel is suit, skin, hair, shirt, tie or
+  shoe by hue and brightness; each material maps its brightness onto its own slots. The suit's
+  fold ramp is matched by rank to idle's, so every frame spends its colours the same way (the
+  consistency score's colour rule), and a checker only where a value sits between two steps.
+- **A coloured outline, not a black ring.** Edges facing the light (left) take the rim, edges facing
+  away take the next darker step of their own material; nothing is drawn outside the silhouette.
+- **The head is one hand-drawn realistic 3/4 head**: brows over two eyes, a nose edge on the light
+  side, a shadowed jaw, no open mouth. It is `head` in the module and every frame carries it.
+- **Judge with both checks.** `spritesmith bible-check` is the NES bible; on SNES only its contrast
+  and silhouette rules apply. `spritesmith consistency` scores colour and shape against idle; the
+  uppercut and hit fail its shape overlap by their pose alone, as 1905's do.
+
 ## What the model does not give
 
 - **Walk cycles.** Its four walk paintings are near the same stride; a real cycle needs contact,

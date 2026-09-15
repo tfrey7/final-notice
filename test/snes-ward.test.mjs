@@ -4,15 +4,12 @@ import ward from '../src/snes/art/ward.mjs';
 
 const STAGE1 = ['idle', 'idle2', 'walk1', 'walk2', 'walk3', 'walk4', 'punch1', 'wind', 'punch2', 'impact', 'punch3', 'hit', 'recoil'];
 
-// The hand-drawn head, as the frames hold it: hair 7-8, skin 9-B, eyes and mouth 1; '.' is anything.
-const HEAD = [
-  '..88888..', '.88888877', '888877777', '877BBBB77', '77B77A77A', '7BB1AA1AA',
-  '79B1AA1A9', '9BAAAAAAA', '.9AAAAA9.', '..9A119..', '...999...',
-];
+// The module's one hand-drawn head: hair 7-8, skin 9-B, eyes 1; '.' is anything.
+const HEAD = ward.head;
 
 function hasHead({ w, h, pixels }) {
   for (let y = 0; y + HEAD.length <= h; y++) {
-    for (let x = 0; x + 9 <= w; x++) {
+    for (let x = 0; x + HEAD[0].length <= w; x++) {
       if (HEAD.every((row, r) => [...row].every((c, i) => c === '.' || pixels[y + r][x + i] === c))) return true;
     }
   }
