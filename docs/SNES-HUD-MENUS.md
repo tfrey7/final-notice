@@ -229,7 +229,7 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
 
 ### Pause and inventory
 
-*`kb_get snes-hud-menus-pause-and-inventory` · version 1*
+*`kb_get snes-hud-menus-pause-and-inventory` · version 2*
 
 ![Pause mockup](shots/item-1975/mockup-1.png)
 
@@ -241,8 +241,9 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
   effect sit under the slots.
 - **An ON HOLD stamp** lands once when pause opens (4 frames, a thud) and is then static;
   a second pause within a few seconds skips it.
-- **Sound: hold music.** Pause ducks the stage track and plays a looping hold-music arrangement of
-  the CorporateWave theme (`docs/THEME.md`), quoted as a fragment (lesson S10). Cursor is a pencil
+- **Sound: hold music.** Pause ducks the stage track and plays a looping on-hold tune of its own,
+  corporate wave down a phone line. It is not the title theme (every track stands alone,
+  `docs/MUSIC.md`); a one-bar nod to the hook is the most it borrows. Cursor is a pencil
   tick, confirm a stamp, cancel a paper slide.
 
 ### Select

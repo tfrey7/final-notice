@@ -46,7 +46,7 @@ Out of scope, as for the NES: a real ROM (a later epic could feed the same data 
 
 ## What made the references great, and what we take
 
-*`kb_get snes-plan-what-made-the-references-great-and-what-we-take` · version 1*
+*`kb_get snes-plan-what-made-the-references-great-and-what-we-take` · version 2*
 
 Checked against sources in `docs/SNES-CLASSICS.md` (lessons S1-S10, a source for every claim);
 what could not be confirmed is marked *unverified* below and is our choice, not a quote.
@@ -58,10 +58,11 @@ what could not be confirmed is marked *unverified* below and is our choice, not 
 | TMNT IV: Turtles in Time (Konami, 1992) | Throwing foes at the screen, on a button (random in the arcade) — **drawn frames, not Mode 7**, which cannot scale sprites; Mode 7 is the into-the-screen Neon Night-Riders ride; arcade score arranged for SNES; variety by time-period stages. Sampled drums and palette-swapped foes *unverified* for IV | the "throw into the camera" finisher on the last foe of an area, drawn as 3-4 growing frames; palette-swapped foes (sourced to River City Ransom and TMNT II in `docs/NES-CLASSICS.md`) |
 | Super Castlevania IV (Konami, 1991) | Mode 7 rotating rooms (Stage 4) in several set pieces, the player still in control; eight-way whip and swinging from rings; mood from Adachi and Kudo's score and near-subliminal sound effects; parallax. Chandeliers are platforms, Mode 7 *unverified*; "sampled orchestra" *unverified* | Mode 7 reserved for three moments: the Great Seal press, the Retention alarm spin in Scene 2, the title logo zoom; the pad stays live during the spin; low office effects for mood |
 | Donkey Kong Country (Rare, 1994) | SGI-rendered models compressed into 16-colour sprite palettes and background tiles; praised parallax (layer count *unverified*); David Wise's tiny single-cycle Wavestation/U-110 samples, filtered and clipped to fit 64 KiB; rhythmic environmental sounds; echo in the cave music | model-painted art cleaned to one SNES palette per character; 2-3 parallax layers per area (our number); a short-loop bank; echo on Stage 2 kept short (the buffer shares the 64 KiB); office ambience written on the beat |
-| Chrono Trigger (Square, 1995) | Mitsuda built the score on leitmotifs of the main theme, quoted whole, in fragments and reshaped; 64 tracks. "Small instrument set" and "melody first" *unverified* | one CorporateWave melody (`docs/THEME.md`) quoted per cue — whole on the title, fragments in scenes, reshaped for bosses |
+| Chrono Trigger (Square, 1995) | Mitsuda built the score on leitmotifs of the main theme, quoted whole, in fragments and reshaped; 64 tracks. "Small instrument set" and "melody first" *unverified* | **not the leitmotif method** (Tim, 14:40 EDT 09-15: "each track stands alone (while still being consistent with the entire project)"). Every cue is its own song with its own melody, harmony and groove; the soundtrack holds together through one instrument set, era and mood. The main theme (`docs/THEME.md`) plays on the title and in story scenes, and anywhere else at most as a brief nod (a bar on one instrument) |
 
 Tim's pillars applied: **freshness through remixing few assets** (palette swaps, colour math and
-parallax re-use tiles; one melody across every cue); **late-era corporate wave audio** (DX-style
+parallax re-use tiles; in music the few assets are the sample bank, never one melody: every track is
+its own song); **late-era corporate wave audio** (DX-style
 electric piano, slap bass, gated snare, warm pads, sax/brass lead, all through the S-DSP echo);
 **hide until needed** (debug views and the sound test only behind flags; HUD appears in play, fades
 out when idle in scenes); **controls and feel first** (input and tuning land before any art).

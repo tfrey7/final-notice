@@ -1,8 +1,10 @@
 # The Final Notice theme
 
 One original melody, sincere and comforting, like late-80s corporate hold music played on a Famicom.
-Every music cue arranges this tune; none writes a new one. The notes live in code as `MELODY` and
-`CHORDS` in `src/audio/songs/title.mjs`, so an arrangement imports them rather than copying.
+It is the title's song and the story scenes' song, and nobody else's: every other track is its own
+song with its own melody, harmony and groove (`docs/MUSIC.md`, *The rule: every track stands alone*),
+and borrows at most a brief nod to the hook. The notes live in code as `MELODY` and `CHORDS` in
+`src/audio/songs/title.mjs`, so the title and scene arrangements import them rather than copying.
 
 ## Key, metre, tempo
 
@@ -19,7 +21,7 @@ Every music cue arranges this tune; none writes a new one. The notes live in cod
 | 17-20 | B | the bridge: starts on the top note D6 and walks down | half, on C |
 | 21-24 | A'' | the hook once more, shortened to four bars | full, on F |
 
-The hook is bars 1-2: **C5 F5 A5 G5 F5 | E5 C5**. An arrangement that keeps nothing else keeps that.
+The hook is bars 1-2: **C5 F5 A5 G5 F5 | E5 C5**. A nod in another track quotes no more than that.
 
 ## The melody
 
@@ -73,9 +75,9 @@ drums, and from bar 9 a faint pulse 2 echo of the melody a quarter note behind.
 
 ## SNES arrangement
 
-The SNES cues port the NES songs, not rewrite them: `src/snes/audio/songs/title.mjs` imports the NES
-title's `FORM` (sections, chords, lead lines, key shifts) and re-voices it, so the melody stays note
-for note. The style every SNES music card copies:
+The SNES title ports the NES title rather than rewriting it: `src/snes/audio/songs/title.mjs` imports
+the NES title's `FORM` (sections, chords, lead lines, key shifts) and re-voices it, so the melody stays
+note for note. Its voicing, below, is the title's; other SNES cues write their own songs:
 
 | Voice | Title | Rule |
 | --- | --- | --- |
@@ -94,7 +96,7 @@ for note. The style every SNES music card copies:
 - **A loop is checked by RMS**: render the song offline in node, and the loop bar's RMS on the second
   pass must match the first within 10%.
 
-## Rules for the next arrangement
+## Rules for arranging the theme (title and story scenes only)
 
 - Keep the key relationship: transpose the whole thing if the cue needs it, never reharmonise the hook.
 - Keep bars whole: every channel's rows are a multiple of 8 and all channels end together.

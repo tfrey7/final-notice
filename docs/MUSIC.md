@@ -3,13 +3,18 @@
 Tim's ruling (01:09 EDT 2026-09-15): the NES theme was authentic but "not corporate wave enough". The
 theme now plays on the 2A03 plus Konami's VRC6 cartridge chip, the Famicom Castlevania III setup.
 
-## The rule: a shared motif, used lightly; every track its own identity
+## The rule: every track stands alone
 
-Tim (01:38 EDT 2026-09-15): the music sounded great but "super repetitive"; keep the shared motif but
-go easy on it, and make every track a banger that stands out in its own way. So:
+Tim (01:38 EDT 2026-09-15): the music sounded great but "super repetitive"; make every track a banger
+that stands out in its own way. Tim (14:40 EDT 2026-09-15): "each track stands alone (while still
+being consistent with the entire project)". So:
 
-- **The title's hook is a nod, not a backbone.** A stage quotes its contour once, a few notes in the
-  intro, in the stage's own key. The melody is the stage's own.
+- **Every track is its own song**: its own melody, harmony and groove, never a variation of one
+  shared theme.
+- **Consistent through the sound, not a tune**: the instrument set (the bank), the era and the mood
+  tie the soundtrack together.
+- **The main theme (`docs/THEME.md`) plays only on the title and in story scenes.** Anywhere else it
+  is at most a brief nod: a bar, or a few notes of the hook, in the track's own key.
 - **Every track has its own tempo, key, groove and lead voice**, and a real form of at least 90 s
   before it loops: intro, A, B, a breakdown, and a return that changes something (key, fills, a
   counter-line).
@@ -26,6 +31,20 @@ go easy on it, and make every track a banger that stands out in its own way. So:
 
 The first versions stay on the sound test as stage1 (v1), stage2 (v1), boss (v1) and ending (v1); the
 title keeps both earlier arrangements, title (v1) and title (v2).
+
+### Cues that are the shared melody reworked (to rewrite)
+
+Checked 2026-09-15 (item 2193) by what each song file imports and quotes.
+
+| Cue | What it borrows | Verdict |
+| --- | --- | --- |
+| SNES `hold` (pause hold music) | the title hook as its whole eight-bar tune | **rewrite** as its own on-hold tune |
+| NES `stage1 (v1)`, `stage2 (v1)`, `ending (v1)` | the title melody and chords, bar for bar | superseded, sound test only; rewrite only if they come back into play |
+| SNES `seal`, `disposal` | one bar of the hook, in C minor, on the bell | a nod: within the rule |
+| SNES `title`, `title-v1`; NES `title`, `title-v1`, `title-v2`, `scene`, `scene-v1` | the theme itself | title and story scenes: within the rule |
+
+Every other SNES cue (`stage1`, `stage2`, the chase sketches, `boss`, `vellum`, `scene`, `scene3`,
+`ending`, the jingles) is written from scratch.
 
 ## DPCM drums
 

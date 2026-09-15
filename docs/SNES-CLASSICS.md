@@ -222,9 +222,11 @@ Japanese Super Famicom release in December 1990 is *(from memory, unverified)*.
 
 **Final Notice takes**
 
-- **Confirmed:** one CorporateWave melody (`docs/THEME.md`) remixed per cue.
-- **Added:** vary how it is quoted: the whole tune on the title, a fragment in a scene, a new
-  tune built around two of its notes for a boss; not the same arrangement retempo'd.
+- **Not taken** (Tim, 14:40 EDT 2026-09-15: "each track stands alone"): the leitmotif method made
+  our tracks sound alike. Every cue is its own song; the soundtrack holds together through one
+  instrument set, era and mood (`docs/MUSIC.md`, *The rule*).
+- **Kept:** the main theme (`docs/THEME.md`) plays whole on the title and in story scenes, and
+  anywhere else at most as a brief nod.
 
 ### Donkey Kong Country, for music
 
@@ -244,7 +246,7 @@ environmental rhythm, and echo spent where it pays, all inside 64 KiB.
 | S7 | **Clean a render into one palette.** Millions of colours down to 16 per sprite; tiles for backgrounds. | Donkey Kong Country |
 | S8 | **Small samples, many sounds.** Single-cycle waves, filtered, clipped; echo budgeted from the same 64 KiB. | Donkey Kong Country |
 | S9 | **Ambience keeps time.** Environmental sounds written on the beat. | Donkey Kong Country |
-| S10 | **One theme, quoted many ways.** Whole, in fragments, reshaped. | Chrono Trigger |
+| S10 | **One sound, many songs.** Every track its own melody; the main theme on the title and story scenes, a nod at most elsewhere. (Chrono Trigger's leitmotifs, not taken: Tim 09-15.) | Chrono Trigger |
 
 ## Checklist against `docs/SNES-PLAN.md`
 
@@ -257,7 +259,7 @@ environmental rhythm, and echo spent where it pays, all inside 64 KiB.
 | §3 TMNT IV | Throw finisher on a button, drawn in growing frames, no scaling | S4 | 1928, 1919 |
 | §3 Castlevania IV | Mode 7 only for the three named moments; the pad stays live | S5 | 1909, 1927, 1932, 1926 |
 | §3 DKC | One 15-colour palette per character from the model; short-loop bank; short echo | S7, S8, S9 | 1905, 1912, 1923 |
-| §3 Chrono Trigger | One melody, quoted whole, in fragments and reshaped | S10 | 1915, 1922-1925 |
+| §3 Chrono Trigger | Every cue its own song; the main theme only on the title and story scenes | S10 | 1915, 1922-1925, 2193 |
 | §6 sound | Quiet office effects under Stage 2 | S6, S9 | 1923, 1925 |
 
 ## Sources
