@@ -13,6 +13,8 @@ import { pollPad } from '../../input.mjs';
 import { SONGS as FLOW_SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { SCENE3_SONG } from '../audio/cues.mjs';
 import { SPEAKERS } from '../../story/script.mjs';
+import { sceneVoiceLines } from '../../story/voicelines.mjs';
+import { loadSceneVoices, speak } from '../audio/scenevoices.mjs';
 import { SCENE_IDS, FRAMES_PER_LETTER, startPlayer, tick, press, letters } from '../../story/cinema.mjs';
 import { FrontScreen, IN_FRAMES, bufferFill, inStep } from './front.mjs';
 import {
@@ -56,8 +58,12 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.spin = null;
     this.leaving = null;
     this.finished = false;
+    this.spoken = sceneVoiceLines(sceneId, state.auditor);
+    this.voiceEnd = 0;
+    this.said = -1;
     this.view = new FrontScreen(this, `snes-${this.scene.key}`);
     this.paint(this.pic, this.page());
+    if (this.pinned == null) loadSceneVoices(sceneId, state.auditor).then(() => this.say(), () => {});
     loadArt('portraits').then((def) => { this.art = def; this.paint(this.pic, this.page()); }, () => {});
     if (this.page().fromPlay) {
       this.intro = IN_FRAMES;
@@ -116,13 +122,14 @@ export class SnesCinemaScene extends Phaser.Scene {
     if (live) {
       const page = this.page();
       const typedOut = this.player.typed >= letters(page);
-      if (page.fadeAfter != null && typedOut && this.held++ >= page.fadeAfter) {
+      if (page.fadeAfter != null && typedOut && this.frames >= this.voiceEnd && this.held++ >= page.fadeAfter) {
         if (page.endCut) return this.finish();
         this.leaving = 0;
         return this.render(15);
       }
       const acted = page.acting && this.clock >= page.frames;
-      if (acted || ADVANCE.some((b) => pad.pressed.has(b))) {
+      const speaking = this.frames < this.voiceEnd && typedOut;
+      if (!speaking && (acted || ADVANCE.some((b) => pad.pressed.has(b)))) {
         const before = this.player;
         this.player = press(before, 'a');
         if (this.player.done) {
@@ -152,10 +159,23 @@ export class SnesCinemaScene extends Phaser.Scene {
     this.change = 0;
   }
 
+  // The beat's line, once, as its first page of text comes up; the page then stays until it ends.
+  say() {
+    const page = this.page();
+    if (page.acting || page.beat == null || page.beat === this.said) return;
+    const line = this.spoken[page.beat];
+    if (!line) return;
+    const frames = speak(line);
+    if (!frames) return;
+    this.said = page.beat;
+    this.voiceEnd = this.frames + frames;
+  }
+
   arrive() {
     const page = this.page();
     this.clock = 0;
     this.held = 0;
+    this.say();
     if (page.music === 'cut') stopSong();
     else if (page.music === 'pad') {
       const voices = this.scene.key === 'scene3' ? [...PAD_VOICES, DRONE_VOICE] : PAD_VOICES;

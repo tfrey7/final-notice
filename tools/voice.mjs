@@ -54,7 +54,24 @@ export async function heard(bytes) {
 }
 
 const words = (s) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').trim().split(/\s+/);
-export const readsBack = (text, said) => words(text).join(' ') === words(said).join(' ');
+
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+
+// Whisper writes a number as digits however it was said, so both sides count as numbers first:
+// "forty-seven" and "47" are the same word.
+export function numerals(list) {
+  const out = [];
+  for (const w of list) {
+    const n = TENS[w] ?? (ONES.includes(w) ? ONES.indexOf(w) : null);
+    const last = Number(out.at(-1));
+    if (n != null && n < 10 && last >= 20 && last <= 90 && last % 10 === 0) out[out.length - 1] = String(last + n);
+    else out.push(n == null ? w : String(n));
+  }
+  return out;
+}
+
+export const readsBack = (text, said) => numerals(words(text)).join(' ') === numerals(words(said)).join(' ');
 
 async function kokoroTake(who, text) {
   const path = kokoroTakePath(who, text);
