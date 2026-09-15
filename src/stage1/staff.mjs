@@ -51,12 +51,13 @@ function fillSeats(world, tune) {
 }
 
 // Where each kind wants to stand: the Associate and Supervisor square up, the Manager goes round to
-// the auditor's back, Counsel holds his distance.
+// the auditor's back, Counsel holds his distance. The Manager picks his back side once and keeps it
+// until he swings or is hit, so turning round catches him.
 export function spot(f, p, tune) {
   const k = kindsOf(tune)[f.kind];
   const side = Math.sign(f.x - p.x) || 1;
   if (k.flank) {
-    const back = -p.facing;
+    const back = f.flankSide ??= -p.facing;
     if (side === back) return { x: p.x + back * k.flank, y: p.y };
     return { x: p.x + back * k.flank, y: p.y + (f.y < p.y ? -k.flank : k.flank) };
   }
@@ -96,7 +97,10 @@ export function thinkStaff(world, f, tune) {
       f.facing = Math.sign(p.x - f.x) || f.facing;
       const stance = guarding ? 'guard' : moving ? 'walk' : 'idle';
       if (stance !== f.state) set(f, stance);
-      if (readyToStrike(world, f, p, k, tune)) set(f, 'windup');
+      if (readyToStrike(world, f, p, k, tune)) {
+        set(f, 'windup');
+        f.flankSide = null;
+      }
       break;
     }
     case 'windup':
@@ -119,6 +123,7 @@ export function thinkStaff(world, f, tune) {
     case 'held':
       break;
     default:
+      f.flankSide = null;
       updateCommon(world, f, tune);
   }
 }

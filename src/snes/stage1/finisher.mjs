@@ -11,11 +11,16 @@ export const STAFF_SCALED = ['speed', 'reach', 'stand', 'flank', 'keep', 'near']
 const grown = (table, keys, scale) => ({ ...table, ...Object.fromEntries(keys.filter((k) => k in table).map((k) => [k, table[k] * scale])) });
 
 // The player's tune grown, carrying the staff foes' table weighed and grown to match, which
-// staff.mjs reads in place of its NES KINDS.
-export const scaledTune = (base, scale) => ({
-  ...grown(base, SCALED, scale),
-  kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale)])),
-});
+// staff.mjs reads in place of its NES KINDS. A flanker walks no faster than the auditor, so he can
+// be caught.
+export function scaledTune(base, scale) {
+  const tune = grown(base, SCALED, scale);
+  const staff = (k) => {
+    const out = grown(weighed(k, STAFF_WEIGHT), STAFF_SCALED, scale);
+    return k.flank ? { ...out, speed: Math.min(out.speed, tune.walkX) } : out;
+  };
+  return { ...tune, kinds: Object.fromEntries(Object.entries(KINDS).map(([kind, k]) => [kind, staff(k)])) };
+}
 
 export const livingFoes = (world) => world.fighters.filter((f) => f.kind && f.state !== 'ko');
 
