@@ -53,7 +53,7 @@ export const TUNING = {
 export const defaultTune = () => Object.fromEntries(Object.entries(TUNING).map(([k, [v]]) => [k, v]));
 
 export const FLOOR = { left: 16, right: 240, top: 160, bottom: 216 };
-const DOWNED = ['knockdown', 'down', 'getup', 'ko'];
+export const DOWNED = ['knockdown', 'down', 'getup', 'ko'];
 
 export function fighter(id, team, x, y, tune) {
   return {
@@ -75,7 +75,7 @@ function wave(tune, n) {
   return [fighter(`foe${n}a`, 'foe', 200, 176, tune), fighter(`foe${n}b`, 'foe', 220, 204, tune)];
 }
 
-const set = (f, state) => { f.state = state; f.t = 0; };
+export const set = (f, state) => { f.state = state; f.t = 0; };
 const clampFloor = (f, floor = FLOOR) => {
   f.x = Math.min(floor.right, Math.max(floor.left, f.x));
   f.y = Math.min(floor.bottom, Math.max(floor.top, f.y));
@@ -89,16 +89,29 @@ function punchTimes(f, tune) {
 }
 
 // In front of the attacker, on the same depth line, within reach.
-function inReach(a, b, reach, tune) {
+export function inReach(a, b, reach, tune) {
   const ahead = (b.x - a.x) * a.facing;
   return ahead >= 0 && ahead <= reach && Math.abs(b.y - a.y) <= tune.depthReach;
 }
 
 // Lands a hit: hit-stop for everyone, knockback or a knockdown. Answers false when it cannot land.
-export function landHit(world, target, { damage, heavy, dir }, tune) {
+// A guard stops every blow but a body thrown into it (`body`), which breaks the guard instead.
+export function landHit(world, target, { damage, heavy, dir, body }, tune) {
   if (target.invuln > 0 || DOWNED.includes(target.state)) return false;
+  if (target.state === 'guard' && !body) {
+    world.hitStop = tune.hitStop;
+    world.events.push('blocked');
+    target.x += dir * tune.knockback;
+    return false;
+  }
+  if (target.state === 'guard') {
+    target.guardDown = target.guardBreakFrames;
+    world.events.push('guardBreak');
+  }
   target.hp = Math.max(0, target.hp - damage);
+  if (target.hitsToFall && ++target.taken >= target.hitsToFall) heavy = true;
   if (target.hp === 0) heavy = true;
+  if (heavy) target.taken = 0;
   world.hitStop = heavy ? tune.hitStopHeavy : tune.hitStop;
   world.events.push(heavy ? 'heavy' : 'hit');
   if (target.target) release(world, target);
@@ -266,12 +279,15 @@ function updatePlayer(world, f, input, tune) {
 }
 
 // Hurt, knockdown, lying down and getting up: the same for everyone.
-function updateCommon(world, f, tune) {
+export function updateCommon(world, f, tune) {
   switch (f.state) {
     case 'hurt':
       f.x += f.vx;
       f.vx *= 0.75;
-      if (f.t >= tune.hitstun) set(f, 'idle');
+      if (f.t >= tune.hitstun) {
+        f.taken = 0;
+        set(f, 'idle');
+      }
       break;
     case 'knockdown': {
       f.x += f.vx;
@@ -280,7 +296,9 @@ function updateCommon(world, f, tune) {
       // A body flying through the fight bowls over any other foe it touches.
       const bowled = world.fighters.find((o) => o !== f && o.team === f.team && Math.abs(o.x - f.x) < 12
         && Math.abs(o.y - f.y) <= tune.depthReach && !DOWNED.includes(o.state));
-      if (bowled && Math.abs(f.vx) > 1 && tune.bowl) landHit(world, bowled, { damage: tune.throwDamage, heavy: true, dir: Math.sign(f.vx) }, tune);
+      if (bowled && Math.abs(f.vx) > 1 && (tune.bowl || bowled.state === 'guard')) {
+        landHit(world, bowled, { damage: tune.throwDamage, heavy: true, dir: Math.sign(f.vx), body: true }, tune);
+      }
       if (f.z <= 0) {
         f.z = 0;
         set(f, 'down');
@@ -365,7 +383,7 @@ export function step(world, input, tune = defaultTune()) {
     return world;
   }
   updatePlayer(world, p, input, tune);
-  for (const f of world.fighters) if (f.team === 'foe') updateFoe(world, f, tune);
+  for (const f of world.fighters) if (f.team === 'foe') (f.kind && world.think ? world.think : updateFoe)(world, f, tune);
   for (const f of world.fighters) clampFloor(f, world.floor);
 
   world.fighters = world.fighters.filter((f) => f.state !== 'ko' || f.t < 40);

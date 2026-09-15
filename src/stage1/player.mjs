@@ -2,6 +2,7 @@
 // carried props, the practice dummy, the scrolling camera, the injunction meter and lives.
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
 import { defaultTune, fighter, landHit, player, step } from './moves.mjs';
+import { stepStaff, struggle } from './staff.mjs';
 
 export const SCREEN_W = 256;
 export const FLOOR_W = SCREEN_W * 4;
@@ -123,12 +124,14 @@ const foeHp = (world) => world.fighters.filter((f) => f.team !== 'player').reduc
 export function stepFloor(world, pad, tune) {
   const events = [];
   const frozen = world.hitStop > 0;
-  const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null } : beforeStep(world, pad, tune, events);
+  const input = frozen ? { held: pad.held, pressed: new Set(pad.pressed), dash: null }
+    : struggle(world, pad, events) ?? beforeStep(world, pad, tune, events);
   const before = foeHp(world);
   step(world, input, tune);
   const p = player(world);
   if (!frozen) {
     moveProps(world, tune, events);
+    stepStaff(world, tune, events);
     if (p.state === 'punch' && p.t === 0) events.push('punch');
   }
   if (foeHp(world) < before) world.meterHits++;
@@ -139,7 +142,7 @@ export function stepFloor(world, pad, tune) {
     Object.assign(p, { x: world.checkpointX, y: START.y, z: 0, vx: 0, vz: 0 });
     world.cameraX = Math.max(0, world.checkpointX - SCREEN_W / 2);
   }
-  if (!world.fighters.some((f) => f.dummy)) world.fighters.push(dummy(tune, 128));
+  if (!world.think && !world.fighters.some((f) => f.dummy)) world.fighters.push(dummy(tune, 128));
   world.events.push(...events);
   world.cameraX = cameraX(world.cameraX, p.x);
   return world;
