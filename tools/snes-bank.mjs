@@ -14,24 +14,32 @@ const PEAK = 22000;
 const midiToHz = (m) => 440 * 2 ** ((m - 69) / 12);
 
 // rate: roughly the rate to store at; attack and loop in seconds; bright lifts the treble the
-// S-DSP's Gaussian filter takes off; hit: a one-shot of that many seconds.
+// S-DSP's Gaussian filter takes off, kept small so the top stays soft; hit: a one-shot of that
+// many seconds.
 export const RECIPES = {
-  epiano: { program: 4, key: 60, rate: 16000, attack: 0.3, loop: 0.06, bright: 0.5 },
-  pad: { program: 89, key: 60, rate: 12000, attack: 0.25, loop: 0.4, bright: 0.3 },
-  bell: { program: 14, key: 72, rate: 22000, attack: 0.25, loop: 0.05, bright: 0.3 },
-  slap: { program: 36, key: 40, rate: 16000, attack: 0.14, loop: 0.05, bright: 0.4 },
-  synbass: { program: 38, key: 36, rate: 12000, attack: 0.1, loop: 0.05, bright: 0.3 },
-  sax: { program: 65, key: 67, rate: 16000, attack: 0.16, loop: 0.12, bright: 0.4 },
-  brass: { program: 61, key: 60, rate: 16000, attack: 0.14, loop: 0.1, bright: 0.4 },
-  strings: { program: 48, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.3 },
-  choir: { program: 52, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.3 },
+  epiano: { program: 4, key: 60, rate: 16000, attack: 0.3, loop: 0.06, bright: 0.25 },
+  pad: { program: 89, key: 60, rate: 12000, attack: 0.25, loop: 0.4, bright: 0.15 },
+  bell: { program: 14, key: 72, rate: 22000, attack: 0.25, loop: 0.05, bright: 0.15 },
+  slap: { program: 36, key: 40, rate: 16000, attack: 0.14, loop: 0.05, bright: 0.2 },
+  synbass: { program: 38, key: 36, rate: 12000, attack: 0.1, loop: 0.05, bright: 0.15 },
+  sax: { program: 65, key: 67, rate: 16000, attack: 0.16, loop: 0.12, bright: 0.2 },
+  brass: { program: 61, key: 60, rate: 16000, attack: 0.14, loop: 0.1, bright: 0.2 },
+  strings: { program: 48, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
+  choir: { program: 52, key: 60, rate: 14000, attack: 0.2, loop: 0.35, bright: 0.15 },
   sqlead: { program: 80, key: 72, rate: 16000, attack: 0.03, loop: 0.03, bright: 0 },
-  gkick: { bank: 128, program: 16, key: 36, rate: 16000, hit: 0.3, bright: 0.2 },
-  gsnare: { bank: 128, program: 16, key: 38, rate: 16000, hit: 0.28, bright: 0.3 },
+  piano: { program: 0, key: 60, rate: 14000, attack: 0.22, loop: 0.05, bright: 0.1 },
+  slowstr: { program: 49, key: 60, rate: 11000, attack: 0.3, loop: 0.3, bright: 0 },
+  subbass: { program: 35, key: 33, rate: 8000, attack: 0.12, loop: 0.05, bright: 0 },
+  timpani: { program: 47, key: 43, rate: 11000, attack: 0.3, loop: 0.1, bright: 0 },
+  gkick: { bank: 128, program: 16, key: 36, rate: 16000, hit: 0.3, bright: 0.1 },
+  gsnare: { bank: 128, program: 16, key: 38, rate: 16000, hit: 0.28, bright: 0.15 },
   chat: { bank: 128, program: 0, key: 42, rate: 22000, hit: 0.08, bright: 0 },
-  ohat: { bank: 128, program: 0, key: 46, rate: 16000, hit: 0.3, bright: 0.2 },
-  clap: { bank: 128, program: 0, key: 39, rate: 16000, hit: 0.25, bright: 0.2 },
-  orch: { program: 55, key: 60, rate: 16000, hit: 0.5, bright: 0.3 },
+  ohat: { bank: 128, program: 0, key: 46, rate: 16000, hit: 0.3, bright: 0.1 },
+  clap: { bank: 128, program: 0, key: 39, rate: 16000, hit: 0.25, bright: 0.1 },
+  orch: { program: 55, key: 60, rate: 16000, hit: 0.5, bright: 0.15 },
+  ltom: { bank: 128, program: 16, key: 41, rate: 11000, hit: 0.32, bright: 0 },
+  htom: { bank: 128, program: 16, key: 45, rate: 11000, hit: 0.28, bright: 0 },
+  crash: { bank: 128, program: 0, key: 49, rate: 11000, hit: 0.6, bright: 0 },
 };
 
 // Plays the SoundFont's own loop out to `seconds`, so a short looped sample has room to cut from.

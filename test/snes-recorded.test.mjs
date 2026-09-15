@@ -5,10 +5,10 @@ import { INSTRUMENTS as V1 } from '../src/snes/audio/bank.mjs';
 import { compileSong, renderSong, SAMPLES as PLAYER_SAMPLES, INSTRUMENTS_V1 } from '../src/snes/audio/player.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 import DATA from '../src/snes/audio/recorded-brr.mjs';
-import { pack } from '../tools/snes-bank.mjs';
+import { pack, RECIPES } from '../tools/snes-bank.mjs';
 
-const DRUMS = ['gkick', 'gsnare', 'chat', 'ohat', 'clap', 'orch'];
-const BRIEF = ['epiano', 'pad', 'strings', 'choir', 'bell', 'slap', 'synbass', 'sax', 'brass', ...DRUMS];
+const DRUMS = ['gkick', 'gsnare', 'chat', 'ohat', 'clap', 'orch', 'ltom', 'htom', 'crash'];
+const BRIEF = ['epiano', 'pad', 'strings', 'choir', 'bell', 'slap', 'synbass', 'sax', 'brass', 'piano', 'slowstr', 'subbass', 'timpani', ...DRUMS];
 
 test('the recorded bank covers the brief, and the synthesised bank stays as v1', () => {
   for (const key of BRIEF) assert.ok(INSTRUMENTS[key], key);
@@ -18,6 +18,10 @@ test('the recorded bank covers the brief, and the synthesised bank stays as v1',
     assert.ok(DATA[key].preset && DATA[key].sample, `${key} names its source`);
     for (const rows of inst.demo) assert.equal(rows.split(/\s+/).length, 20, `${key} demo is 20 rows`);
   }
+});
+
+test('every recipe keeps the treble lift light, so the top stays soft', () => {
+  for (const [key, recipe] of Object.entries(RECIPES)) assert.ok(recipe.bright <= 0.25, `${key} lifts ${recipe.bright}`);
 });
 
 test('the stored blocks round-trip through the 9-byte BRR packing and fit 64 KB', () => {

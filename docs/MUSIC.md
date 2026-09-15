@@ -108,8 +108,10 @@ one recorded sample an instrument, cut by `tools/snes-bank.mjs` from a SoundFont
   16-sample BRR blocks at once: the tool picks the storage rate that makes both true (12-22 kHz, as the
   games did; the S-DSP plays everything out at 32 kHz), crossfades the loop's end into the audio just
   before it, then BRR-encodes. Drums and the orchestra hit are one-shots with a faded tail.
-- **A little treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top.
-- **43.6 KB for sixteen instruments**, inside the 64 KB of sound RAM.
+- **A light treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top. It
+  was halved (item 2156) after the judge heard "a bright haze across the top"; the new orchestral
+  and drum samples take none, keeping the era's soft top.
+- **58.8 KB for twenty-three instruments**, inside the 64 KB of sound RAM.
 - The synthesised bank stays on the sound test as "(v1)": the instruments, the bank walk `bank (v1)`,
   and the first arrangements `title (v1)` and `stage1 (v1)`. The jingles and effects moved to the new
   bank in place.
@@ -135,6 +137,13 @@ it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/
 | open hat | `ohat` | Standard kit / Hi-Hat Half-Open(L) | 16000 Hz |
 | clap | `clap` | Standard kit / Clap(L) | 16000 Hz |
 | orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 16000 Hz |
+| grand piano | `piano` | Yamaha Grand Piano / P200 Piano D5(L) | 14096 Hz |
+| slow string pad | `slowstr` | Slow Strings / Strings C#5L | 11007 Hz |
+| fretless sub-bass | `subbass` | Fretless Bass / Fretless A#1 | 8080 Hz |
+| timpani | `timpani` | Timpani / Timpani 3(L) | 10976 Hz |
+| low tom | `ltom` | Power kit / Tom Floor(L) | 11000 Hz |
+| high tom | `htom` | Power kit / Tom Low(L) | 11000 Hz |
+| crash cymbal | `crash` | Standard kit / Crsh 1(L) | 11000 Hz |
 
 **Licence, every sample:** FluidR3_GM, MIT licence, Copyright (c) 2000-2002, 2008 Frank Wen
 (the licence text is the `COPYING` file at https://github.com/pianobooster/fluid-soundfont). The

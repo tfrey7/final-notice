@@ -48,6 +48,14 @@ export const INSTRUMENTS = {
     label: 'choir', group: 'Keys', adsr: [10, 3, 6, 2], vol: 72, echo: true,
     demo: ['G4 - - - - - - - - - F4 - - - - - - - . .', 'Eb4 - - - - - - - - - D4 - - - - - - - . .', 'Bb3 - - - - - - - - - Bb3 - - - - - - - . .'],
   }),
+  piano: inst('piano', {
+    label: 'grand piano', group: 'Keys', adsr: [15, 3, 3, 17], vol: 100, echo: true,
+    demo: ['C5 - Eb5 - G5 - C6 - - - Bb5 - Ab5 - G5 - - - . .', 'Eb4 - - - G4 - - - Ab4 - - - F4 - - - - - . .', 'C3 - - - - - - - Ab2 - - - - - - - - - . .'],
+  }),
+  slowstr: inst('slowstr', {
+    label: 'slow string pad', group: 'Keys', adsr: [6, 2, 6, 1], vol: 76, echo: true,
+    demo: ['G4 - - - - - - - - - Ab4 - - - - - - - . .', 'Eb4 - - - - - - - - - F4 - - - - - - - . .', 'C4 - - - - - - - - - C4 - - - - - - - . .'],
+  }),
   bell: inst('bell', {
     label: 'tubular bell', group: 'Keys', adsr: [15, 5, 2, 19], vol: 100, pan: 30, echo: true,
     demo: ['Bb5 . G5 . Eb5 . F5 . G5 - - - Bb5 - - - - - . .'],
@@ -59,6 +67,10 @@ export const INSTRUMENTS = {
   synbass: inst('synbass', {
     label: 'synth bass', group: 'Bass', adsr: [15, 2, 5, 14], vol: 104,
     demo: ['C2 - C2 . C3 . C2 - Ab1 - Ab1 . Ab2 . Ab1 - Bb1 - Bb2 .'],
+  }),
+  subbass: inst('subbass', {
+    label: 'fretless sub-bass', group: 'Bass', adsr: [15, 2, 5, 15], vol: 124,
+    demo: ['C2 - - - - - G1 - C2 - - - Ab1 - - - Bb1 - - .'],
   }),
   sax: inst('sax', {
     label: 'alto sax', group: 'Lead', adsr: [14, 6, 6, 6], vol: 100, echo: true,
@@ -81,6 +93,13 @@ export const INSTRUMENTS = {
   chat: inst('chat', { label: 'closed hat', group: 'Drums', adsr: HIT, vol: 96, pan: 24, demo: ['C4 - C4 - C4 - C4 - C4 - C4 - C4 - C4 - C4 C4 C4 -'] }),
   ohat: inst('ohat', { label: 'open hat', group: 'Drums', adsr: HIT, vol: 84, pan: 24, demo: ['. . C4 - . . C4 - . . C4 - . . C4 - . . C4 -'] }),
   clap: inst('clap', { label: 'clap', group: 'Drums', adsr: HIT, vol: 112, echo: true, demo: ['. . . . C4 - - - . . . . C4 - - - . . C4 -'] }),
+  timpani: inst('timpani', {
+    label: 'timpani', group: 'Drums', adsr: [15, 3, 2, 18], vol: 120, echo: true,
+    demo: ['C2 - - - G1 - - - C2 . C2 . C2 . C2 . G1 - C2 -'],
+  }),
+  ltom: inst('ltom', { label: 'low tom', group: 'Drums', adsr: HIT, vol: 116, pan: -24, demo: ['C4 - - - C4 - - - . . C4 - C4 - . . C4 - - -'] }),
+  htom: inst('htom', { label: 'high tom', group: 'Drums', adsr: HIT, vol: 112, pan: 24, demo: ['C4 - - - . . C4 - C4 - . . C4 - C4 - . . C4 -'] }),
+  crash: inst('crash', { label: 'crash cymbal', group: 'Drums', adsr: HIT, vol: 84, pan: 30, echo: true, demo: ['C4 - - - - - - - - - - - - - - - C4 - - -'] }),
   orch: inst('orch', { label: 'orchestra hit', group: 'Drums', adsr: HIT, vol: 104, echo: true, demo: ['C4 - - - - - . . Eb4 - - - - - . . G4 - - -'] }),
 };
 
