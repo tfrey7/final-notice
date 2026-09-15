@@ -17,12 +17,15 @@ import { carry, inHand, swapHand } from './pickups.mjs';
 import { drawStage2Hud } from './hud.mjs';
 import { drawRing } from '../hud.mjs';
 import { HITS_PER_SEGMENT, ringShape } from '../injunction.mjs';
-import { arenaLocked, createStage, layoutFrom, stepStage } from './areas.mjs';
+import { BOSS_AREA, arenaLocked, createStage, layoutFrom, stepStage } from './areas.mjs';
 import { drawPrompts, drawStageParts } from './areadraw.mjs';
+import { createArena, poseArena, reachedArena, stepArena } from './greatseal.mjs';
+import { drawSeal, drawSealBack, loadSealArt } from './sealdraw.mjs';
+import { bossBarLayout, drawBossBar } from '../hud.mjs';
 
 const MS = 1000 / 60;
 const C = { sky: nes(0x0f), shelf: nes(0x07), block: nes(0x17), edge: nes(0x27), box: nes(0x07), boxEdge: nes(0x27), flash: nes(0x30), burst: nes(0x38) };
-const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp', belt: 'conveyor', tell: 'alarm' };
+const SOUNDS = { cast: 'cast', jump: 'jump', hit: 'hit', break: 'waxBreak', pit: 'hit', hurt: 'hit', carbonCopy: 'carbonCopy', redTape: 'redTape', margin: 'margin', pickup: 'pickup', injunction: 'injunction', alarm: 'alarm', doorShut: 'stamp', belt: 'conveyor', tell: 'alarm', stamp: 'stamp', bindingBreak: 'waxBreak', sealOpen: 'alarm' };
 const AREA_ART = ['archiveAccess', 'retentionOrder', 'originalCopy', 'disposalLine'];
 const CAST_POSE = { right: 'fwd', left: 'fwd', upRight: 'diagUp', upLeft: 'diagUp', up: 'up', downRight: 'diagDown', downLeft: 'diagDown', down: 'down' };
 
@@ -46,6 +49,8 @@ export class EscapeScene extends Phaser.Scene {
     if (WHO.includes(params.get('who'))) flow = { ...flow, auditor: params.get('who') };
     this.registry.set('flow', flow);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
+    // ?hold=<frames> stops the run after that many of its own frames, for a screenshot of one moment.
+    this.holdAt = params.has('hold') ? Number(params.get('hold')) : null;
 
     const archive = await loadArt('bg-archive').catch(() => null);
     this.run = createStage(flow.auditor, layoutFrom(Object.fromEntries(AREA_ART.map((n) => [n, archive?.areas?.[n]?.solid]))), flow.checkpoint);
@@ -56,8 +61,14 @@ export class EscapeScene extends Phaser.Scene {
     // ?meter=<segments> starts with that much of the injunction meter filled.
     if (params.has('meter')) this.run.meterHits = Number(params.get('meter')) * HITS_PER_SEGMENT;
     window.finalNoticeStage2 = this.run;
-    this.song = 'stage2';
-    playSong(this.song);
+    if (flow.checkpoint === BOSS_AREA.id) {
+      this.enterArena();
+      // ?pose=stamp|seal stages the fight for a screenshot.
+      if (params.has('pose')) poseArena(this.run, params.get('pose'));
+    } else {
+      this.song = 'stage2';
+      playSong(this.song);
+    }
 
     this.bg = this.add.graphics();
     this.layer = new SpriteLayer(this);
@@ -68,13 +79,23 @@ export class EscapeScene extends Phaser.Scene {
     if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
     this.who = await loadAuditor(this, flow.auditor);
     this.actors = loadActorArt(this, artOr);
+    await loadArt('greatseal').catch(() => null);
+    this.sealArt = loadSealArt(this, artOr);
     this.ready = true;
+  }
+
+  // The locked boss arena replaces the strip; a lost life inside it restarts here.
+  enterArena() {
+    this.run = createArena(this.run?.player.auditor ?? this.registry.get('flow').auditor);
+    window.finalNoticeStage2 = this.run;
+    playSong(this.song = 'boss');
   }
 
   update() {
     if (!this.ready) return;
     const frame = this.game.loop.frame;
     if (this.freezeAt !== null && frame >= this.freezeAt) return;
+    if (this.holdAt !== null && this.run.frame >= this.holdAt) return;
     const { run } = this;
     const targets = run.foes.length + run.locks.length + run.targets.length;
     const work = {
@@ -84,10 +105,20 @@ export class EscapeScene extends Phaser.Scene {
     };
     if (!slowdownTick(this.slowdown, work)) { this.draw(this.registry.get('flow')); return; }
     const pad = pollPad(frame);
-    stepStage(this.run, pad);
+    if (run.boss) {
+      stepArena(run, pad);
+    } else {
+      stepStage(run, pad);
+      if (reachedArena(run)) {
+        this.enterArena();
+        this.run.events.push({ type: 'checkpoint', id: BOSS_AREA.id });
+      }
+    }
     let flow = this.registry.get('flow');
     for (const e of this.run.events) {
       if (SOUNDS[e.type]) sfx(SOUNDS[e.type]);
+      if (e.type === 'bossDown') playSong(this.song = 'stageClear');
+      if (e.type === 'stageClear') { showFlow(this, next(flow, e)); return; }
       if (e.type === 'checkpoint') this.registry.set('flow', flow = next(flow, e));
       if (e.type === 'lifeLost') {
         flow = next(flow, e);
@@ -96,7 +127,7 @@ export class EscapeScene extends Phaser.Scene {
       }
     }
     // The boss theme while the Custodian's screen is locked, back to the stage's once the ledger is taken.
-    const song = arenaLocked(this.run) ? 'boss' : 'stage2';
+    const song = this.run.boss ? this.song : arenaLocked(this.run) ? 'boss' : 'stage2';
     if (song !== this.song) playSong(this.song = song);
     this.draw(flow);
   }
@@ -105,9 +136,13 @@ export class EscapeScene extends Phaser.Scene {
     const { run } = this;
     const cx = run.camX;
     const g = this.bg.clear();
-    g.fillStyle(C.sky).fillRect(0, 0, WIDTH, HEIGHT);
-    g.fillStyle(C.shelf);
-    for (let sx = -((cx >> 1) % 48); sx < WIDTH; sx += 48) g.fillRect(sx, SAFE + 48, 32, 128);
+    if (run.boss) {
+      drawSealBack(g, run);
+    } else {
+      g.fillStyle(C.sky).fillRect(0, 0, WIDTH, HEIGHT);
+      g.fillStyle(C.shelf);
+      for (let sx = -((cx >> 1) % 48); sx < WIDTH; sx += 48) g.fillRect(sx, SAFE + 48, 32, 128);
+    }
     const { area } = run;
     for (let col = Math.floor(cx / TILE); col <= Math.floor((cx + WIDTH) / TILE); col++) {
       for (let row = 0; row < area.rows; row++) {
@@ -145,12 +180,14 @@ export class EscapeScene extends Phaser.Scene {
       sprites.push(...keep(this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip)));
     }
     drawActors(run, this.actors, this.fx.clear(), sprites);
-    drawStageParts(this.fx, run);
+    if (run.boss) drawSeal(this.fx, run, this.sealArt, sprites);
+    else drawStageParts(this.fx, run);
     this.layer.draw(sprites);
     const hud = this.hud.clear();
     if (run.ring) drawRing(hud, ringShape(run.ring), Math.round(run.ring.x - cx), run.ring.y);
     drawStage2Hud(hud, run, flow);
-    drawPrompts(hud, run);
+    if (!run.boss) drawPrompts(hud, run);
+    else if (!run.exit) drawBossBar(hud, bossBarLayout({ name: 'director', hp: run.boss.hp, maxHp: run.boss.maxHp }), drawText);
     if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
     this.debug?.draw(this.layer.stats, this.slowdown);
   }

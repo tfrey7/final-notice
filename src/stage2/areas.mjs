@@ -226,3 +226,4 @@ export function stepStage(w, pad) {
 
 // The teaching prompts showing for where the auditor stands on the landing.
 export const promptsFor = (w) => (w.stage.checkpoint > 0 ? [] : w.stage.prompts.filter((q) => w.player.x >= q.from && w.player.x < q.to).map((q) => q.text));
+export const BOSS_AREA = { name: 'greatSeal', id: 'stage2-area5' }; // entered past the strip's far end (greatseal.mjs)
