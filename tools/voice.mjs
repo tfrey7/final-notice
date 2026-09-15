@@ -9,11 +9,12 @@
 //   node tools/voice.mjs --partners [<dir>] bakes Ward and Mercer's fight lines (src/snes/barks.mjs)
 //                                           into src/snes/audio/barks-brr.mjs, and writes <who>-barks.wav reels
 
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { castNames, digitize, parseWav, renderLine, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
+import { castNames, digitize, parseWav, renderLine, takeKey, takePrefix, takeSpeed, voiceOf } from '../src/snes/audio/voice.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 import { allLines } from '../src/snes/barks.mjs';
 import { BARKS, barkLines } from '../src/snes/audio/barks.mjs';
@@ -22,21 +23,69 @@ import { wav } from './snes-render.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const KOKORO = process.env.FINAL_NOTICE_KOKORO_URL ?? 'http://127.0.0.1:8936/speak';
+const CHATTERBOX = process.env.FINAL_NOTICE_CHATTERBOX_URL ?? 'http://127.0.0.1:8937/speak';
+const WHISPER = process.env.FINAL_NOTICE_WHISPER_URL ?? 'http://127.0.0.1:8939/transcribe';
+const CONTAINER = process.env.CHATTERBOX_CONTAINER ?? 'jarvis-voice-chatterbox-1';
+const REF_DIR = '/tmp/final-notice-voice-refs';
+// Chatterbox fumbles short lines about half the time, so a take Whisper misreads is retaken.
+const TRIES = 4;
 
-export function takePath(who, text) {
+const fileFor = (v, text) => join(ROOT, 'assets', 'voice', 'takes', `${takePrefix(v)}-${createHash('sha1').update(takeKey(v, text)).digest('hex').slice(0, 10)}.wav`);
+
+export const takePath = (who, text) => fileFor(voiceOf(who), text);
+// The Kokoro take whoever acts the character; a Chatterbox character borrows its voice from the sample line's.
+export const kokoroTakePath = (who, text) => fileFor({ ...voiceOf(who), actor: 'kokoro' }, text);
+
+async function post(url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`${url} answered ${res.status}: ${await res.text()}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+export async function heard(bytes) {
+  const res = await fetch(WHISPER, { method: 'POST', body: bytes });
+  if (!res.ok) return `(whisper ${res.status})`;
+  const body = await res.text();
+  try {
+    return JSON.parse(body).text?.trim() ?? body;
+  } catch {
+    return body.trim();
+  }
+}
+
+const words = (s) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').trim().split(/\s+/);
+export const readsBack = (text, said) => words(text).join(' ') === words(said).join(' ');
+
+async function kokoroTake(who, text) {
+  const path = kokoroTakePath(who, text);
+  if (!existsSync(path)) {
+    const v = voiceOf(who);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, await post(KOKORO, { text, voice: v.voice, speed: takeSpeed(v) }));
+  }
+  return path;
+}
+
+// A Chatterbox take of the line, retaken until Whisper hears it through the chain; the first take if none is.
+async function act(who, text) {
   const v = voiceOf(who);
-  const hash = createHash('sha1').update(`${v.voice}|${takeSpeed(v)}|${text}`).digest('hex').slice(0, 10);
-  return join(ROOT, 'assets', 'voice', 'takes', `${v.voice}-${hash}.wav`);
+  const ref = await kokoroTake(who, v.sample);
+  execFileSync('docker', ['exec', CONTAINER, 'mkdir', '-p', REF_DIR]);
+  execFileSync('docker', ['cp', ref, `${CONTAINER}:${REF_DIR}/${who}.wav`]);
+  let first = null;
+  for (let t = 0; t < TRIES; t++) {
+    const bytes = await post(CHATTERBOX, { text, ref: `..${REF_DIR}/${who}.wav`, exaggeration: v.exaggeration, cfg_weight: 0.3 });
+    first ??= bytes;
+    if (readsBack(text, await heard(wav(renderLine(who, parseWav(bytes)))))) return bytes;
+  }
+  return first;
 }
 
 export async function take(who, text) {
   const path = takePath(who, text);
   if (!existsSync(path)) {
-    const v = voiceOf(who);
-    const res = await fetch(KOKORO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: v.voice, speed: takeSpeed(v) }) });
-    if (!res.ok) throw new Error(`Kokoro answered ${res.status} for ${who}`);
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+    if (voiceOf(who).actor !== 'chatterbox') await kokoroTake(who, text);
+    else writeFileSync(path, await act(who, text));
   }
   return parseWav(readFileSync(path));
 }

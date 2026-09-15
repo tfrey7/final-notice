@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { digitize, parseWav, renderLine, voiceOf } from '../src/snes/audio/voice.mjs';
-import { take, takePath } from './voice.mjs';
+import { kokoroTakePath } from './voice.mjs';
 import { wav } from './snes-render.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -78,9 +78,7 @@ if (process.argv[1]?.endsWith('intro-voices.mjs')) {
     const path = join(takes, `${name}.wav`);
     if (!existsSync(path)) {
       if (!refs.has(line.who)) {
-        const { sample } = voiceOf(line.who);
-        await take(line.who, sample);
-        execFileSync('docker', ['cp', takePath(line.who, sample), `${CONTAINER}:${REF_DIR}/${line.who}.wav`]);
+        execFileSync('docker', ['cp', kokoroTakePath(line.who, voiceOf(line.who).sample), `${CONTAINER}:${REF_DIR}/${line.who}.wav`]);
         refs.add(line.who);
       }
       let best = null;
