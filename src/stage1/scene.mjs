@@ -3,6 +3,9 @@
 import { SAFE, WIDTH } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
+import { keep } from '../nes/limits.mjs';
+import { createSlowdown, pairs, slowdownTick } from '../nes/slowdown.mjs';
+import { NesDebug, nesDebugOn } from '../nes/debug.mjs';
 import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
 import { SONGS, jumpTo, next } from '../flow.mjs';
@@ -133,6 +136,8 @@ export class Stage1Scene extends Phaser.Scene {
       : artOr(this, 'mercer', { w: 16, h: 16, palette: [0x0f, 0x02, 0x28] }).frame('portrait', 0, x, y);
     for (const s of portrait) this.add.image(s.x, s.y, s.key).setOrigin(0).setScrollFactor(0).setDepth(21).setFlip(s.flipX, s.flipY);
     this.layer = new SpriteLayer(this);
+    this.slowdown = createSlowdown();
+    if (nesDebugOn()) this.debug = new NesDebug(this, drawText);
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; });
     if (this.office) remark(this, 'vellumOffice');
@@ -196,10 +201,14 @@ export class Stage1Scene extends Phaser.Scene {
   update() {
     if (!this.ready) return;
     const loopFrame = this.game.loop.frame;
+    if (this.freezeAt !== null && loopFrame >= this.freezeAt) return;
+    const w = this.world;
+    const live = (w.props ?? []).filter((o) => o.state !== 'gone').length + (w.tapes ?? []).length;
+    const work = { objects: w.fighters.length + live, collisions: pairs(w.fighters.length) + w.fighters.length * live, sprites: this.layer.stats?.count ?? 0 };
+    if (!slowdownTick(this.slowdown, work)) { this.draw(); return; }
     const pad = pollPad(loopFrame);
     const flow = this.registry.get('flow');
     if (pad.pressed.has('start')) { showFlow(this, next(flow, { type: 'stageClear' })); return; }
-    if (this.freezeAt !== null && loopFrame >= this.freezeAt) return;
 
     stepFloor(this.world, pad, this.tune);
     if (this.areas) stepAreas(this.world, this.tune);
@@ -233,7 +242,7 @@ export class Stage1Scene extends Phaser.Scene {
       ...(w.tapes ?? []).map((tape) => ({ y: tape.y + 1, tape })),
       ...(w.firstAid ?? []).filter((b) => !b.taken).map((box) => ({ y: box.y - 1, box })),
     ].sort((a, b) => a.y - b.y);
-    const sprites = things.flatMap(({ f, o, tape, box }) => {
+    const spritesOf = ({ f, o, tape, box }) => {
       if (o) return this.props.frame(o.kind, 0, o.x - 8, o.y - 16 - o.z);
       if (box) return this.aid.frame('firstAid', 0, box.x - 8, box.y - 12);
       if (tape) return tapeSprites(this, tape);
@@ -248,7 +257,9 @@ export class Stage1Scene extends Phaser.Scene {
       if (f.dummy) return this.dummyArt.frame('idle', 0, f.x - 8, f.y - 32 - f.z + lying * 2);
       const foeMs = f.state === 'windup' ? 0 : f.state === 'punch' ? 150 : ms;
       return this.cast.frame(`associate.${FOE[f.state]}`, foeMs, f.x - 12, top + lying, flip);
-    });
+    };
+    const boss = this.office && vellum(w);
+    const sprites = things.flatMap((t) => keep(spritesOf(t), t.f && (t.f.team === 'player' || t.f === boss)));
     this.layer.draw(sprites);
 
     const flow = this.registry.get('flow');
@@ -256,7 +267,6 @@ export class Stage1Scene extends Phaser.Scene {
     const g = this.hud.clear();
     if (w.ring) drawRing(g, ringShape(w.ring), Math.round(w.ring.x - w.cameraX), w.ring.y);
     drawHud(g, hudLayout({ name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter }), drawText);
-    const boss = this.office && vellum(w);
     if (boss) drawBossBar(g, bossBarLayout({ name: 'vellum', hp: boss.hp, maxHp: boss.maxHp }), drawText);
     if (p.state === 'bound') drawText(g, 'MASH!', Math.round(p.x - w.cameraX) - 20, p.y - 56, nes(0x30));
     const run = this.areas && w.run;
@@ -272,5 +282,6 @@ export class Stage1Scene extends Phaser.Scene {
       drawText(g, `F${this.game.loop.frame} ${move} STOP ${w.hitStop}`, 8, SAFE + 28, nes(0x30));
       drawText(g, foes.join(' '), 8, SAFE + 40, nes(0x38));
     }
+    this.debug?.draw(this.layer.stats, this.slowdown);
   }
 }

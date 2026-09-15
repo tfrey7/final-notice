@@ -26,7 +26,7 @@
 // plays every animation, and test/nes.test.mjs checks every module against artProblems().
 
 import { nes, isIndex, paletteSetProblems } from './palette.mjs';
-import { TILE, MAX_SPRITES, tileValid, frameOnePalette, attributeProblems, visibleSprites } from './limits.mjs';
+import { TILE, MAX_SPRITES, tileValid, frameOnePalette, attributeProblems, frameSprites } from './limits.mjs';
 
 export function tilePalettes({ cols, rows, attributes }) {
   const areaCols = Math.ceil(cols / 2);
@@ -149,7 +149,8 @@ export function artOr(scene, name, fallback = { w: 16, h: 16, palette: [0x0f, 0x
     frame(anim, ms = 0, x = 0, y = 0, flipX = false) {
       const a = def.animations[anim] ?? Object.values(def.animations)[0];
       const f = a.frames[Math.floor((ms * (a.fps ?? 8)) / 1000) % a.frames.length];
-      return placeFrame(f, x, y, flipX).map((p) => ({ ...p, key: keyFor(p.tile, f.palette) }));
+      const palette = def.palettes[f.palette].join();
+      return placeFrame(f, x, y, flipX).map((p) => ({ ...p, palette, key: keyFor(p.tile, f.palette) }));
     },
   };
 }
@@ -169,7 +170,7 @@ function standIn(scene, name, { w, h, palette }) {
         return px === py || px === w - 1 - py ? '3' : '2';
       }).join(''));
       const key = bakeTile(scene, `nes:stand:${name}:${w}x${h}:${tx},${ty}`, grid, [null, nes(edge), nes(fill), nes(mark)]);
-      parts.push({ key, x: tx * TILE, y: ty * TILE, flipX: false, flipY: false });
+      parts.push({ key, x: tx * TILE, y: ty * TILE, flipX: false, flipY: false, palette: palette.join() });
     }
   }
   return {
@@ -181,18 +182,21 @@ function standIn(scene, name, { w, h, palette }) {
   };
 }
 
-// Draws a frame's worth of hardware sprites, in priority order, through the 8-a-scanline limit.
+// Draws a frame's worth of hardware sprites, in priority order, through every sprite limit
+// (frameSprites); `stats` holds what the limits did, for the ?nesdebug overlay.
 export class SpriteLayer {
   constructor(scene, depth = 10) {
     this.scene = scene;
     this.depth = depth;
     this.pool = [];
     this.frameNo = 0;
+    this.stats = null;
   }
 
   draw(sprites) {
     const list = sprites.slice(0, MAX_SPRITES);
-    const shown = visibleSprites(list, this.frameNo++);
+    const { shown, stats } = frameSprites(sprites, this.frameNo++);
+    this.stats = stats;
     list.forEach((s, i) => {
       let img = this.pool[i];
       if (!img) {

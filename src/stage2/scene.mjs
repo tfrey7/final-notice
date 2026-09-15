@@ -3,6 +3,9 @@
 import { WIDTH, HEIGHT, SAFE } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
+import { keep } from '../nes/limits.mjs';
+import { createSlowdown, slowdownTick } from '../nes/slowdown.mjs';
+import { NesDebug, nesDebugOn } from '../nes/debug.mjs';
 import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
 import { AUDITORS as WHO, jumpTo, next } from '../flow.mjs';
@@ -58,8 +61,10 @@ export class EscapeScene extends Phaser.Scene {
 
     this.bg = this.add.graphics();
     this.layer = new SpriteLayer(this);
+    this.slowdown = createSlowdown();
     this.fx = this.add.graphics().setDepth(15);
     this.hud = this.add.graphics().setDepth(20);
+    if (nesDebugOn()) this.debug = new NesDebug(this, drawText);
     if (params.has('tune') && !document.querySelector('details')) mountTunePanel();
     this.who = await loadAuditor(this, flow.auditor);
     this.actors = loadActorArt(this, artOr);
@@ -69,8 +74,16 @@ export class EscapeScene extends Phaser.Scene {
   update() {
     if (!this.ready) return;
     const frame = this.game.loop.frame;
-    const pad = pollPad(frame);
     if (this.freezeAt !== null && frame >= this.freezeAt) return;
+    const { run } = this;
+    const targets = run.foes.length + run.locks.length + run.targets.length;
+    const work = {
+      objects: 1 + run.foes.length + run.casts.length + run.pickups.length + run.glyphs.length + run.locks.length,
+      collisions: run.casts.length * targets + run.foes.length + run.pickups.length + run.glyphs.length,
+      sprites: this.layer.stats?.count ?? 0,
+    };
+    if (!slowdownTick(this.slowdown, work)) { this.draw(this.registry.get('flow')); return; }
+    const pad = pollPad(frame);
     stepStage(this.run, pad);
     let flow = this.registry.get('flow');
     for (const e of this.run.events) {
@@ -129,7 +142,7 @@ export class EscapeScene extends Phaser.Scene {
         else if (Math.abs(p.vx) > 0.2) anim = n.run;
         else anim = n.idle;
       }
-      sprites.push(...this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip));
+      sprites.push(...keep(this.who.art.frame(anim, run.frame * MS * 1.5, Math.round(p.x - 8 - cx), Math.round(p.y - 32), flip)));
     }
     drawActors(run, this.actors, this.fx.clear(), sprites);
     drawStageParts(this.fx, run);
@@ -139,5 +152,6 @@ export class EscapeScene extends Phaser.Scene {
     drawStage2Hud(hud, run, flow);
     drawPrompts(hud, run);
     if (this.freezeAt !== null) drawText(this.hud, `F${this.game.loop.frame} ${inHand(run).toUpperCase()} CASTS ${run.casts.length} ${p.castDir.toUpperCase()}`, 8, HEIGHT - SAFE - 10, nes(0x30));
+    this.debug?.draw(this.layer.stats, this.slowdown);
   }
 }
