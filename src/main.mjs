@@ -3,8 +3,9 @@ import { WIDTH, HEIGHT, integerZoom } from './nes/screen.mjs';
 import { nes } from './nes/palette.mjs';
 import { NesTestScene } from './nes/testscene.mjs';
 import { ArtScene } from './nes/artscene.mjs';
-import { SCREENS, jumpTo } from './flow.mjs';
+import { AUDITORS, SCREENS, jumpTo } from './flow.mjs';
 import { PlaceholderScene } from './scenes/placeholder.mjs';
+import { CinemaScene } from './scenes/cinema.mjs';
 import { EscapeScene } from './stage2/scene.mjs';
 import { Stage1Scene } from './scenes/stage1.mjs';
 import { TitleScene } from './scenes/title.mjs';
@@ -16,10 +17,13 @@ SCENES.title = new TitleScene();
 SCENES.select = new SelectScene();
 SCENES.stage1 = new Stage1Scene();
 SCENES.stage2 = new EscapeScene();
+for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = new CinemaScene(key);
 
-// ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen.
+// ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen,
+// ?who=<auditor> picks who is playing.
 const params = new URLSearchParams(location.search);
 const start = jumpTo(params.get('go') ?? 'title');
+if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
 if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
