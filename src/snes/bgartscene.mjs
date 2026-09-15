@@ -6,7 +6,8 @@ import { bakeArea, composeArea, sweep } from './bgart.mjs';
 import { drawText } from '../text/font.mjs';
 
 // ?snes&art=<module>: a background module's areas panning; keys 1-9 pick an area, or &area=<n>;
-// &x=<pixels> pins the camera for a screenshot, &clean hides the label.
+// &x=<pixels> pins the camera for a screenshot, &frame=<n> pins an animated area's frame, &clean
+// hides the label. An area with `frames` (scenes sharing a tileset) steps through them at `fps`.
 export function bgArtScene(key, areas) {
   return class extends Phaser.Scene {
     constructor() {
@@ -16,9 +17,10 @@ export function bgArtScene(key, areas) {
     create() {
       const params = new URLSearchParams(location.search);
       this.pinned = params.has('x') ? Number(params.get('x')) : null;
+      this.frame = params.has('frame') ? Number(params.get('frame')) : null;
       this.clean = params.has('clean');
       this.index = Math.min(areas.length - 1, Math.max(0, Number(params.get('area') ?? 1) - 1));
-      this.baked = areas.map(bakeArea);
+      this.baked = areas.map((a) => (a.frames ?? [a.scene]).map((scene) => bakeArea({ ...a, scene })));
       this.tex = this.textures.createCanvas(`snes-art-${key}`, WIDTH, HEIGHT);
       this.pixels = this.tex.context.createImageData(WIDTH, HEIGHT);
       this.add.image(0, 0, `snes-art-${key}`).setOrigin(0);
@@ -33,7 +35,9 @@ export function bgArtScene(key, areas) {
     update(time) {
       const area = areas[this.index];
       const camX = this.pinned ?? sweep(area.span, time);
-      toRgba(composeArea(area, this.baked[this.index], camX), this.pixels.data);
+      const baked = this.baked[this.index];
+      const f = (this.frame ?? Math.floor((time * (area.fps ?? 8)) / 1000)) % baked.length;
+      toRgba(composeArea(area, baked[f], camX), this.pixels.data);
       this.tex.context.putImageData(this.pixels, 0, 0);
       this.tex.refresh();
       const g = this.label.clear();
