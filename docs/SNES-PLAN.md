@@ -1,10 +1,18 @@
-# SNES plan
+# Final Notice on the Super Nintendo — the plan, and the cards that build it
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
-## One game, two machines
+*`kb_get snes-plan-introduction` · version 1*
 
-*`kb_get snes-plan-one-game-two-machines` · version 1*
+Tim, 07:30 EDT 2026-09-15: *"Final Notice work: let's try for an SNES version now, and all that
+entails"*. The NES version (epic 1785, `docs/NES-PLAN.md`) is frozen, playable and kept. Every card
+under epic **1898** builds one piece of what follows. Where the NES plan filled a gap the SNES no
+longer needs to, this plan says so (**back:**); where the SNES still cannot do what the design pack
+asks, it says **gap:**.
+
+## 1. One game, two machines
+
+*`kb_get snes-plan-one-game-two-machines` · version 2*
 
 The SNES version is a sibling build of the same game, not a new game. It reuses, unchanged:
 `src/flow.mjs` (scene order, lives, continues, checkpoints), `src/story/script.mjs`, the stage logic
@@ -24,9 +32,9 @@ machine draws and sounds: screen, colour, art, backgrounds, effects, synth, song
   keeps its logic and scales its reach, hitboxes and speeds through one factor in its tuning table
   (`stage1.scale`, `stage2.scale`), tuned by feel with `?tune`, never by rewriting moves.
 
-## What "SNES game" means here
+## 2. What "SNES game" means here
 
-*`kb_get snes-plan-what-snes-game-means-here` · version 2*
+*`kb_get snes-plan-what-snes-game-means-here` · version 3*
 
 Held to the real machine, checked by `src/snes/limits.mjs` in tests, drawn by Phaser 4.2.1 as now.
 
@@ -44,9 +52,9 @@ Held to the real machine, checked by `src/snes/limits.mjs` in tests, drawn by Ph
 
 Out of scope, as for the NES: a real ROM (a later epic could feed the same data to a ca65/WLA build).
 
-## What made the references great, and what we take
+## 3. What made the references great, and what we take
 
-*`kb_get snes-plan-what-made-the-references-great-and-what-we-take` · version 2*
+*`kb_get snes-plan-what-made-the-references-great-and-what-we-take` · version 3*
 
 Checked against sources in `docs/SNES-CLASSICS.md` (lessons S1-S10, a source for every claim);
 what could not be confirmed is marked *unverified* below and is our choice, not a quote.
@@ -67,9 +75,9 @@ electric piano, slap bass, gated snare, warm pads, sax/brass lead, all through t
 **hide until needed** (debug views and the sound test only behind flags; HUD appears in play, fades
 out when idle in scenes); **controls and feel first** (input and tuning land before any art).
 
-## Controls
+## 4. Controls
 
-*`kb_get snes-plan-controls` · version 2*
+*`kb_get snes-plan-controls` · version 3*
 
 | SNES pad | Keyboard | Gamepad | Stage 1 | Stage 2 |
 | --- | --- | --- | --- | --- |
@@ -90,9 +98,9 @@ out when idle in scenes); **controls and feel first** (input and tuning land bef
 **back:** the NES double-tap step and A+B injunction become real buttons; Select is unused in play.
 The NES mapping stays for `?famicom`. `src/input.mjs` answers the pad for the active profile; `src/controls.mjs` draws the list.
 
-## Art
+## 5. Art
 
-*`kb_get snes-plan-art` · version 1*
+*`kb_get snes-plan-art` · version 2*
 
 Tim's ruling for sprites (07:26 EDT): **Spritesmith's Final Notice model paints the poses, a worker
 hand-cleans them to SNES limits.** One worker on sprites at a time, in the order below, and
@@ -136,9 +144,9 @@ Phaser texture; `artOr(name, fallback)` works exactly as on the NES.
 Parallax, per area: BG1 play layer, BG2 the far wall or skyline at half speed, BG3 the HUD; a
 sub-screen layer for window glass and lamp glows by colour math.
 
-## Sound
+## 6. Sound
 
-*`kb_get snes-plan-sound` · version 1*
+*`kb_get snes-plan-sound` · version 2*
 
 The NES tracker format stays (`src/audio/player.mjs` rows), widened to 8 voices and an instrument
 column. `src/snes/audio/spc.mjs` renders it: BRR-style 4-bit sample loops at 32 kHz with Gaussian
@@ -157,11 +165,9 @@ Songs are ported from the NES arrangements, not rewritten: same cues, same melod
 (`docs/THEME.md`, `docs/MUSIC.md`), each file `src/snes/audio/songs/<cue>.mjs`. The sound test is
 `sound.html?snes`. Effects keep their NES names, so gameplay calls do not change.
 
-## Stages, bosses and scenes
+## 7. Stages, bosses and scenes — what the SNES adds
 
-### what the SNES adds
-
-*`kb_get snes-plan-stages-bosses-and-scenes-what-the-snes-adds` · version 1*
+*`kb_get snes-plan-stages-bosses-and-scenes-what-the-snes-adds` · version 2*
 
 Stage layout, foes, bosses, lines and scene order are exactly `docs/NES-PLAN.md` sections 4-8. The
 SNES cards add, and only add:
@@ -181,9 +187,9 @@ SNES cards add, and only add:
 - **CRT:** the existing `src/crt/` modes gain an SNES look — RGB/S-video sharper than the NES
   composite, the 8:7 aspect, softer scanlines; `composite` keeps its blur and dot crawl.
 
-## Code layout (who owns which files)
+## 8. Code layout (who owns which files)
 
-*`kb_get snes-plan-code-layout` · version 1*
+*`kb_get snes-plan-code-layout` · version 2*
 
 | Files | Owner card |
 | --- | --- |
@@ -203,3 +209,35 @@ SNES cards add, and only add:
 
 Debug routes (`?snes&hw`, `?snes&layers`, `?snes&fx`) live in one table in `src/snes/debug.mjs`;
 each card adds its own row, and a one-row clash is resolved by keeping both.
+
+## 9. The cards
+
+*`kb_get snes-plan-the-cards` · version 1*
+
+Each card is at most 30 minutes, under epic 1898, and ends with something Tim can see or hear. The
+waits are set on the cards.
+
+| Wave | Card | Waits on |
+| --- | --- | --- |
+| 1 | 1902 engine: profile switch, screen, colour, limits, art format, `?snes&hw` | — |
+| 1 | 1904 SPC700-style synth, 8-voice player, `sound.html?snes` | — |
+| 1 | 1905 Ward bake-off: model poses hand-cleaned to SNES limits, first bible | — |
+| 1 | 1906 research: `docs/SNES-CLASSICS.md` | — |
+| 2 | 1907 pad input; 1908 layers and parallax; 1909 effects; 1910 CRT look; 1911 text and HUD | 1902 |
+| 2 | 1912 instrument bank | 1904 |
+| 2 | backgrounds: 1916 title and UI; 1917 Reception and Service Floor; 1918 archive 1-3 | 1902, 1908 |
+| 3 | 1915 title theme on samples | 1912 |
+| 3 | sprites, one at a time: 1914 Mercer (risk ask, held for Tim's go on Ward) → 1919 Associate + Manager → 1930 Counsel + Supervisor + Custodian → 1933 Vellum → 1935 Great Seal → 1936 spells → 1937 portraits and backdrops | the one before (1914 on 1905) |
+| 3 | backgrounds: 1920 Internal Review + Waiting + Vellum's office; 1921 Disposal Line + arena | 1917; 1918 |
+| 4 | 1922 stage 1 track; 1923 stage 2 track; 1924 boss + scene + ending | 1915 |
+| 4 | 1925 jingles + effects | 1912 |
+| 4 | 1926 title, select, game over | 1907, 1909, 1911 |
+| 4 | 1927 cinema scenes | 1909, 1911 |
+| 4 | 1928 Stage 1 on the SNES; 1929 Stage 2 on the SNES | 1907, 1908, 1911 |
+| 5 | 1931 Vellum on the SNES | 1928 |
+| 5 | 1932 Great Seal and exit run on the SNES | 1929, 1909 |
+| 6 | 1934 whole run: flow, cues, ending, slowdown and sprite drop in play | 1926, 1927, 1931, 1932 |
+| closer | 1938 plays it all, frame strip plus clips, flips the default | 1934, 1937, every background, music and CRT card, 1906 |
+
+Art never blocks gameplay (`artOr` stand-ins) and gameplay never blocks art; songs never block
+scenes (unknown cue names play nothing).

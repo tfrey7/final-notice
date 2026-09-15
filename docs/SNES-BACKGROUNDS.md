@@ -1,10 +1,26 @@
-# SNES backgrounds
+# The best SNES backgrounds, and the rules Final Notice takes from them
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
-## The machine, in the four facts that shape a background
+*`kb_get snes-backgrounds-introduction` · version 1*
 
-*`kb_get snes-backgrounds-the-machine-in-the-four-facts-that-shape-a` · version 1*
+Tim, 08:15 EDT 2026-09-15, on the first pass of the Reception and Service Floor backgrounds: *"do
+some research on the best looking SNES backgrounds, FF6, chrono trigger, etc"*. Target: late-1995
+SNES, grounded realism, the corporate-wave office at night. This studies eight games, then turns
+them into a rulebook (section 3) and three small study crops drawn inside the machine's limits
+(section 4). Hardware limits are `docs/SNES-PLAN.md` section 2; the working style the stage modules
+already share is the header of `src/snes/bg/claims.mjs`. This page does not repeat either.
+
+**How to read the marks.** *(verified: link)* means the linked page was read and says it.
+*(search summary: link)* means a search engine's summary of that page said it; the page itself was
+not opened. *(from memory, unverified)* means nobody checked. Several fan wikis and The Cutting
+Room Floor refuse automatic reading, so per-room details carry more of the last mark than we would
+like. Reference screenshots are found at [Background HQ][bghq] and [The Spriters Resource][tsr];
+anything saved for study goes in the gitignored `docs/refs/`.
+
+## 1. The machine, in the four facts that shape a background
+
+*`kb_get snes-backgrounds-the-machine-in-the-four-facts-that-shape-a` · version 2*
 
 - **Layers and colours per mode.** Mode 1, the mode almost every game below uses for play, gives
   BG1 and BG2 at 4 bits per pixel (15 colours plus clear per tile) and BG3 at 2 bits; Mode 3 is one
@@ -27,16 +43,16 @@
   of pixels *(verified: [Fabien Sanglard][fs-ppu])*. A prop drawn as sprites steals from the
   fighters; props belong in BG1.
 
-## The eight games
+## 2. The eight games
 
-*`kb_get snes-backgrounds-the-eight-games` · version 1*
+*`kb_get snes-backgrounds-the-eight-games` · version 2*
 
 Each study gives what the game does with **materials**, **light and atmosphere**, **depth** and
 **composition**, then what is known of its budget.
 
 ### Final Fantasy VI (Square, 1994)
 
-*`kb_get snes-backgrounds-final-fantasy-vi` · version 1*
+*`kb_get snes-backgrounds-final-fantasy-vi` · version 2*
 
 - **Materials.** Tiles are 16x16 metatiles of 8x8 tiles, and walls and floors are built from
   two- or three-step ramps with a single highlight row on the lit edge rather than per-pixel
@@ -58,7 +74,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Chrono Trigger (Square, 1995)
 
-*`kb_get snes-backgrounds-chrono-trigger` · version 1*
+*`kb_get snes-backgrounds-chrono-trigger` · version 2*
 
 - **Materials.** Stone and wood carry soft two-step dithered transitions and hand-placed cracks and
   moss at edges, never an even scatter; the noise is at the joins, the faces are flat
@@ -79,7 +95,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Seiken Densetsu 3 / Trials of Mana (Square, 1995)
 
-*`kb_get snes-backgrounds-seiken-densetsu-3-trials-of-mana` · version 1*
+*`kb_get snes-backgrounds-seiken-densetsu-3-trials-of-mana` · version 2*
 
 - **Materials.** Pastel, painterly ramps; "Seiken Densetsu isn't meant to be 'realistic' like Final
   Fantasy" (Tanaka) *(verified: [shmuplations, SD3 1995 interview][sd3-int])*. Leaves and grass are
@@ -95,7 +111,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Terranigma (Quintet, 1995)
 
-*`kb_get snes-backgrounds-terranigma` · version 1*
+*`kb_get snes-backgrounds-terranigma` · version 2*
 
 - **Light and atmosphere.** A sky faked by subtracting yellow from the map to leave blue
   *(search summary, source page not identified)*. Underworld and cave interiors lean on one dominant
@@ -109,7 +125,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Donkey Kong Country 2 (Rare, 1995)
 
-*`kb_get snes-backgrounds-donkey-kong-country-2` · version 1*
+*`kb_get snes-backgrounds-donkey-kong-country-2` · version 2*
 
 - **Materials.** Pre-rendered on SGI machines: "pre-rendered images are modelled as 3D objects and
   then transformed into 2D sprites and background layers" *(verified: [Wikipedia, DKC2][dkc2-wp])*.
@@ -128,7 +144,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Super Metroid (Nintendo, 1994)
 
-*`kb_get snes-backgrounds-super-metroid` · version 1*
+*`kb_get snes-backgrounds-super-metroid` · version 2*
 
 - **Materials.** Rock and metal are 3-4 step ramps with hard dark outlines only where two
   surfaces meet; the backdrop rock is the same material at half contrast *(from memory, unverified)*.
@@ -143,7 +159,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Super Castlevania IV (Konami, 1991)
 
-*`kb_get snes-backgrounds-super-castlevania-iv` · version 1*
+*`kb_get snes-backgrounds-super-castlevania-iv` · version 2*
 
 - **Depth.** Mode 7 rotates whole rooms; because Mode 7 applies only to backgrounds, the platforms
   are sprites and the rotating boss Koranot is the background *(search summary: [Wikipedia, Mode 7][m7-wp])*.
@@ -156,7 +172,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### Street Fighter Alpha 2 (Capcom, SNES 1996)
 
-*`kb_get snes-backgrounds-street-fighter-alpha-2` · version 1*
+*`kb_get snes-backgrounds-street-fighter-alpha-2` · version 2*
 
 - **Materials and scale.** The stages are the arcade's, "slightly downscaled for the resolution of
   the SNES" *(search summary: [GameFAQs review][sfa2-gf])*.
@@ -169,7 +185,7 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 
 ### What the eight agree on
 
-*`kb_get snes-backgrounds-what-the-eight-agree-on` · version 1*
+*`kb_get snes-backgrounds-what-the-eight-agree-on` · version 2*
 
 1. **Flat faces, detail at the joins.** Texture lives where two materials meet; broad faces are
    calm ramps. (FF6, Chrono Trigger, Super Metroid.)
@@ -182,17 +198,17 @@ Each study gives what the game does with **materials**, **light and atmosphere**
 6. **The play band is the calmest, highest-contrast band.** (SFA2, Super Metroid.)
 7. **Paint with the sprites on the canvas.** (Chrono Trigger, SD3.)
 
-## Final Notice SNES backgrounds
+## 3. Final Notice SNES backgrounds
 
-*`kb_get snes-backgrounds-final-notice-snes-backgrounds` · version 1*
+*`kb_get snes-backgrounds-final-notice-snes-backgrounds` · version 2*
 
 The rulebook. Numbers are for Mode 1 at 298x224, 8x8 tiles, one 15-colour palette a tile, and the
 384-unique-tiles-an-area test already in `test/snes-layers.test.mjs`. Ramps are dark to light, lit
 from the upper left, as `claims.mjs` sets out.
 
-### Materials
+### 3.1 Materials
 
-*`kb_get snes-backgrounds-materials` · version 1*
+*`kb_get snes-backgrounds-materials` · version 2*
 
 | Material | Ramp | How it reads | Never |
 | --- | --- | --- | --- |
@@ -206,9 +222,9 @@ from the upper left, as `claims.mjs` sets out.
 Shadows and outlines use the area's deep blue or purple (SD3), never pure black, and **the
 darkest colour of BG2 is lighter than the darkest of BG1**.
 
-### Lighting
+### 3.2 Lighting
 
-*`kb_get snes-backgrounds-lighting` · version 1*
+*`kb_get snes-backgrounds-lighting` · version 2*
 
 - **One key light per area**, named at the top of the module: Reception's midnight windows, the
   Service Floor's desk lamps, the archive's reading lamps. Every highlight on a prop agrees with it.
@@ -225,9 +241,9 @@ darkest colour of BG2 is lighter than the darkest of BG1**.
 - **Flashes** (lightning, the Great Seal's stamp) are a whole-palette or master-brightness change
   for 2-4 frames.
 
-### Depth
+### 3.3 Depth
 
-*`kb_get snes-backgrounds-depth` · version 1*
+*`kb_get snes-backgrounds-depth` · version 2*
 
 - **Stage 1: three planes.** BG2 far wall or skyline at half speed, BG1 play layer, and a colour-math
   haze or glass band between them. **Stage 2: four.** Far shelving (BG2, a quarter speed via HDMA
@@ -239,9 +255,9 @@ darkest colour of BG2 is lighter than the darkest of BG1**.
 - **Scale cues**: a doorway is 64-72 px for a 56-64 px character; ceiling tiles and carpet lanes
   shrink toward the horizon line, not only the floor.
 
-### Composition
+### 3.4 Composition
 
-*`kb_get snes-backgrounds-composition` · version 1*
+*`kb_get snes-backgrounds-composition` · version 2*
 
 - **The fighters' band is calm.** From the floor top (`FLOOR` = 152) to 72 px above it, BG1 keeps to
   its two middle ramp steps; high contrast, signs and clutter go above head height or at the floor's
@@ -255,9 +271,9 @@ darkest colour of BG2 is lighter than the darkest of BG1**.
 - **Paint with the sprites in place**: judge a background with Ward and a foe standing on it,
   as Naora did.
 
-## Study crops
+## 4. Study crops
 
-*`kb_get snes-backgrounds-study-crops` · version 1*
+*`kb_get snes-backgrounds-study-crops` · version 2*
 
 Three crops, each 64x48 (8x6 tiles), one BG palette of 15 colours or fewer, every texture keyed to a
 period that dedupes, and colour math applied as the SNES would at output. A throwaway script
@@ -277,3 +293,40 @@ further over a whole floor, since its grid repeats; the carpet is **6 colours**,
 lifts it to 14 on screen and 31 unique tiles, which is why the pool is colour math rather than
 painted tiles; the skyline is **48 of 48** unique, so the far layer is the budget's big spender and
 its towers should repeat on a 96-128 px period across a whole screen.
+
+## 5. Sources
+
+*`kb_get snes-backgrounds-sources` · version 1*
+
+[bghq]: https://bghq.com/bgs.php?c=1a
+[tsr]: https://www.spriters-resource.com/snes/dkc/
+[sd-bg]: https://snes.nesdev.org/wiki/Backgrounds
+[sd-cm]: https://snes.nesdev.org/wiki/Color_math
+[fs-ppu]: https://fabiensanglard.net/snes_ppus_why/
+[ct-int]: https://shmuplations.com/chronotrigger2/
+[shibuya-se]: https://www.square-enix-games.com/en_GB/news/final-fantasy-pixel-remaster-kazuko-shibuya
+[sd3-int]: https://shmuplations.com/seikendensetsu3/
+[m7-fandom]: https://nintendo.fandom.com/wiki/Mode_7
+[terra-rgr]: http://retrogameresource.com/index.php/2018/05/10/europes-chrono-trigger-terranigma-snes-resource/
+[dkc2-wp]: https://en.wikipedia.org/wiki/Donkey_Kong_Country_2
+[dkc-making]: https://episodiccontentmag.com/2016/02/19/dkcountry1_chapter2/
+[smile]: https://www.metroidconstruction.com/SMMM/smile_2.5_guide.txt
+[m7-wp]: https://en.wikipedia.org/wiki/Mode_7
+[sc4-tunnel]: https://www.youtube.com/watch?v=pafOj9IrtuY
+[sfa2-gf]: https://gamefaqs.gamespot.com/snes/588699-street-fighter-alpha-2/reviews/170642
+[sdd1]: https://snescentral.com/chips.php?chiptype=S-DD1
+[sfa2-rw]: https://articles.retroware.com/2021/03/08/the-curious-case-of-street-fighter-alpha-2-on-the-snes/
+
+- [SNESdev Wiki, Backgrounds][sd-bg] and [Color math][sd-cm]
+- [Fabien Sanglard, SNES: sprites and backgrounds rendering][fs-ppu]
+- [shmuplations, Chrono Trigger 1995 developer interviews][ct-int]
+- [shmuplations, Seiken Densetsu 3 1995 developer interview][sd3-int]
+- [Square Enix blog, Kazuko Shibuya on the Pixel Remaster][shibuya-se]
+- [Episodic Content, Kings of the Jungle: the making of Donkey Kong Country, chapter 2][dkc-making]
+- [Wikipedia, Donkey Kong Country 2][dkc2-wp]; [Wikipedia, Mode 7][m7-wp]
+- [Retro Game Resource, Terranigma][terra-rgr]; [Nintendo Fandom, Mode 7][m7-fandom]
+- [Metroid Construction, SMILE 2.5 guide][smile]
+- [YouTube, Castlevania IV 4-3 tunnel background][sc4-tunnel]
+- [SNES Central, S-DD1][sdd1]; [Retroware, The curious case of SFA2 on the SNES][sfa2-rw];
+  [GameFAQs, SFA2 review][sfa2-gf]
+- Screens to study: [Background HQ, DKC2][bghq]; [The Spriters Resource][tsr]

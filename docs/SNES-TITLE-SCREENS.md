@@ -1,12 +1,26 @@
-# SNES title screens
+# Final Notice on the Super Nintendo — the title screen
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
-## what the best SNES titles did
+*`kb_get snes-title-screens-introduction` · version 1*
+
+Tim, 08:17 EDT 2026-09-15: *"we also need to do dedicated research on what makes a good title
+screen"*. Part 1 is what the best SNES titles did, with a source for every claim; anything we could
+not confirm in a source is marked *unverified* and is our memory of the game, not a quote. Part 2 is
+three title concepts for Final Notice as 256x224 boards. Part 3 is the pick and the cards that build
+it under epic **1898**, reworking the title card 1926 landed.
+
+Neighbours, not repeated here: the wordless opening that plays *before* the title is
+`docs/SNES-CUTSCENES.md` (card 1976, boards O1-O8); the menu that follows Start (NEW AUDIT, CONTINUE,
+SETTINGS on a memo slip) and its transitions are `docs/SNES-HUD-MENUS.md` (card 1975, cards 2002 and
+2005); background painting is card 1977's. Card 2020 ("an incredible intro and title screen") waits on
+this doc and is where the opening and this title are joined.
+
+## Part 1 — what the best SNES titles did
 
 ### The eleven, one at a time
 
-*`kb_get snes-title-screens-the-eleven-one-at-a-time` · version 1*
+*`kb_get snes-title-screens-the-eleven-one-at-a-time` · version 2*
 
 **Chrono Trigger (Square, 1995).** A pendulum swings past the screen, loses energy and stops in frame,
 and only then does the title emerge beside it — the theme of time, told before a word [1]. The sound
@@ -101,7 +115,7 @@ on the title is *from memory, unverified*.
 
 ### The questions, answered
 
-*`kb_get snes-title-screens-the-questions-answered` · version 1*
+*`kb_get snes-title-screens-the-questions-answered` · version 2*
 
 **The first five seconds.** The best titles open on *one* thing: a tick (Chrono Trigger, Terranigma),
 an organ chord (FF6), a whole-tone drone (Super Metroid), whale song (Mana). The picture is quiet or
@@ -146,9 +160,9 @@ flamingos, added on an artist's whim [24]). A real-time-clock change is *not* do
 the eleven — the SNES has no clock — so a sky that follows the player's clock is our own browser-era
 touch, kept small.
 
-## three title concepts for Final Notice
+## Part 2 — three title concepts for Final Notice
 
-*`kb_get snes-title-screens-three-title-concepts-for-final-notice` · version 1*
+*`kb_get snes-title-screens-three-title-concepts-for-final-notice` · version 2*
 
 Every board is drawn at 256x224 by `docs/boards/title.html` with the game's own SNES code
 (`src/snes/fx.mjs` for brightness, colour math, windows and Mode 7; `src/snes/text.mjs` for type), so
@@ -158,7 +172,7 @@ bass, gated drums) and hand over to the memo menu on Start.
 
 ### A. Collections — the underworld auditors
 
-*`kb_get snes-title-screens-a-collections-the-underworld-auditors` · version 1*
+*`kb_get snes-title-screens-a-collections-the-underworld-auditors` · version 2*
 
 ![Concept A boards A1-A4](shots/item-1978/concept-0.png)
 
@@ -171,7 +185,7 @@ board O5), so a second stamp seconds later cheapens both.
 
 ### B. After Hours — the late-80s corporate office (recommended)
 
-*`kb_get snes-title-screens-b-after-hours-the-late-80s-corporate-office` · version 1*
+*`kb_get snes-title-screens-b-after-hours-the-late-80s-corporate-office` · version 2*
 
 ![Concept B boards B1-B4](shots/item-1978/concept-1.png)
 
@@ -185,7 +199,7 @@ Mode 7 scale, one-frame fixed-colour flash.
 
 ### C. Quarterly Dusk — corporate wave
 
-*`kb_get snes-title-screens-c-quarterly-dusk-corporate-wave` · version 1*
+*`kb_get snes-title-screens-c-quarterly-dusk-corporate-wave` · version 2*
 
 ![Concept C boards C1-C4](shots/item-1978/concept-2.png)
 
@@ -195,9 +209,9 @@ chrome logo as sprites (BG1 is the floor), a palette-cycled shine. *Against it:*
 brighter and more cartoony than the grounded late-1995 look the game is aiming for — and its logo would
 have to be OBJ tiles, which caps its size.
 
-## the pick, and the cards that build it
+## Part 3 — the pick, and the cards that build it
 
-*`kb_get snes-title-screens-the-pick-and-the-cards-that-build-it` · version 1*
+*`kb_get snes-title-screens-the-pick-and-the-cards-that-build-it` · version 2*
 
 **Pick: B, After Hours.** It is the only concept that uses the Part 1 lessons without fighting the
 rest of the game: one object tells the story (the building goes home, one floor doesn't — who is still
@@ -225,3 +239,42 @@ The rules the build follows:
 | 2023 | Sky gradient by the player's clock (dusk, night, pre-dawn); the clerk in the lit floor moves; PAST DUE at midnight | 2021 |
 
 Card 2020 then joins the opening (2009, 2013) to this title and posts the clip.
+
+## Sources
+
+*`kb_get snes-title-screens-sources` · version 1*
+
+Read in full for this doc: 6, 24. The rest were read as search excerpts and are cited for the sentence
+they carried, no more. Several fan wikis and TCRF pages refused our fetches; where a claim rests only
+on memory it says *unverified* in the text.
+
+1. The Spriters Resource, Chrono Trigger title screen (with pendulum description via search): https://www.spriters-resource.com/snes/chronotrigger/asset/56950/
+2. Threads post on the Chrono Trigger title tick-tock: https://www.threads.com/@kingkrawlie/post/C7zTmmNPP7a/the-tick-tock-sound-of-the-clock-on-the-chrono-trigger-title-screen-which-then-g
+3. Tropedia, Attract Mode: https://tropedia.fandom.com/wiki/Attract_Mode
+4. Chrono Wiki, Chrono Trigger (song): https://chrono.fandom.com/wiki/Chrono_Trigger_(Song)
+5. Chrono Compendium, Using Mode 7 scenes: https://chronocompendium.com/Term/Using_Mode_7_scenes.html
+6. TheGamer, "Final Fantasy 6's Intro Sequence Is Perfection": https://www.thegamer.com/final-fantasy-6s-intro-sequence-is-still-perfection/
+7. The Believer, "Noun Music: The Soundtrack of Final Fantasy VI": https://www.thebeliever.net/logger/noun-music-the-soundtrack-of-final-fantasy-vi/
+8. Final Fantasy Wiki, Terra's Theme: https://finalfantasy.fandom.com/wiki/Terra's_Theme
+9. Eric Mack, "Exploring the Design of the Super Metroid Intro for Non-Designers: Part I, The Title Screen": http://ericmack.online/exploring-the-design-of-the-super-metroid-intro-for-non-designers-part-i-the-title-screen/
+10. Wikitroid, Demo Screen: https://metroid.fandom.com/wiki/Demo_Screen
+11. Wikitroid, Attract mode: https://metroid.fandom.com/wiki/Attract_mode
+12. Horror Obsessive, "Mainlining the Castlevania Series: Super Castlevania IV": https://horrorobsessive.com/2019/10/10/mainlining-the-castlevania-series-super-castlevania-iv-snes-3/
+13. Rely on Horror, Review: Super Castlevania IV: https://www.relyonhorror.com/reviews/review-super-castlevania-iv/
+14. Wikipedia, Super Castlevania IV: https://en.wikipedia.org/wiki/Super_Castlevania_IV
+15. Super Mario Wiki, Donkey Kong Country 2: Diddy's Kong Quest: https://www.mariowiki.com/Donkey_Kong_Country_2:_Diddy's_Kong_Quest
+16. Super Mario Wiki, Gang-Plank Galleon (theme): https://www.mariowiki.com/Gang-Plank_Galleon_(theme)
+17. Super Mario Wiki, Cranky Kong: https://www.mariowiki.com/Cranky_Kong
+18. Wikipedia, Street Fighter Alpha 2: https://en.wikipedia.org/wiki/Street_Fighter_Alpha_2
+19. GameFAQs, Street Fighter Alpha 2 (SNES) cheats: https://gamefaqs.gamespot.com/snes/588699-street-fighter-alpha-2/cheats
+20. The Cutting Room Floor, Final Fight (SNES): https://tcrf.net/Final_Fight_(SNES)
+21. Steemit, "The Quintet Quintet: Soundtrack Review: Terranigma": https://steemit.com/review/@terry93d/the-quintet-quintet-or-soundtrack-review-terranigma
+22. The Cutting Room Floor, Terranigma: https://tcrf.net/Terranigma
+23. FandomSpot, "Top 20 Best SNES Title Screens, Ranked": https://www.fandomspot.com/snes-best-title-screens/
+24. Secret of Mana: Redux, "How was the incredible title screen sequence for Secret of Mana made?": https://manaredux.com/lore/how-was-the-incredible-title-screen-sequence-for-secret-of-mana-made/
+25. Wiki of Mana, Fear of the Heavens: https://wikiofmana.com/wiki/Fear_of_the_Heavens
+26. VGMPF, Fear of the Heavens: https://www.vgmpf.com/Wiki/index.php/Fear_of_the_Heavens
+27. TV Tropes, Nightmare Fuel: EarthBound (1994): https://tvtropes.org/pmwiki/pmwiki.php/NightmareFuel/EarthBound1994
+28. The Cutting Room Floor, Contra III: The Alien Wars: https://tcrf.net/Contra_III:_The_Alien_Wars
+29. Twentieth Century Gamer, Contra III: The Alien Wars: https://twentiethcenturygamer.wordpress.com/2020/05/01/contra-iii-the-alien-wars-super-nintendo/
+30. Retronauts, "Super NES Mini Countdown: #7 Contra III": https://retronauts.com/article/577/super-nes-mini-countdown-7-contra-iii-the-alien-wars

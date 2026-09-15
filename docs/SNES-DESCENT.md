@@ -1,10 +1,21 @@
-# The descent
+# The descent: corporate wave → Backrooms → gothic cosmic
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
+*`kb_get snes-descent-introduction` · version 1*
+
+Tim, 10:28 EDT 2026-09-15: "as the game progresses, it transitions from standard corporate world
+into backrooms-esque corporate world, until finally escalating to dark gothic cthulu world. you can
+see the designs evolving over time as the levels progress".
+
+This is the bible for that arc on the SNES build. It sits on top of `SNES-BACKGROUNDS.md` (materials,
+lighting, depth, composition), `SNES-ART-BIBLE.md` (sprites) and `SNES-HUD-MENUS.md` (windows), and
+changes only what drifts along the arc. Where it and those docs disagree about something that drifts,
+this one wins; everything else they say still holds.
+
 ## Why the world decays: the plot is the descent
 
-*`kb_get snes-descent-why-the-world-decays-the-plot-is-the-descent` · version 1 · **superseded by** `kb_get final-notice-story`*
+*`kb_get snes-descent-why-the-world-decays-the-plot-is-the-descent` · version 2 · **superseded by** `kb_get final-notice-story`*
 
 The auditors are sent to find where forty-seven lifetimes went. Every step closer to the answer is a
 step down the building and up the chain of approval: Vellum's office, the archive downstairs, the
@@ -31,9 +42,9 @@ rules follow:
 Bellwether is never touched by the descent. His office is at 0 in every scene, including Scene 3's
 phone call, which is the point: the one clean room on the line.
 
-## The beat map
+## 1. The beat map
 
-*`kb_get snes-descent-the-beat-map` · version 1 · **superseded by** `kb_get final-notice-story`*
+*`kb_get snes-descent-the-beat-map` · version 2 · **superseded by** `kb_get final-notice-story`*
 
 The descent runs 0 to 100. A number is the drift of that screen's palette, props and music at its
 **entry**; within an area it may climb by up to 5 toward the next beat.
@@ -65,17 +76,17 @@ the last one, and it is perfect. The cover story put back on, over the thing tha
 transfer. The ending's walk out of the building then drains the number back to 0 in about ten
 seconds, so the credits roll in clean night glass.
 
-## The three bands
+## 2. The three bands
 
-*`kb_get snes-descent-the-three-bands` · version 1*
+*`kb_get snes-descent-the-three-bands` · version 2*
 
 Each band gives a palette anchor set, then props, architecture, lighting, enemies, the HUD and menu
 window tint, and the font. Colours are 15-bit (every value a multiple of 8), one 15-colour palette to
 a tile, as `SNES-BACKGROUNDS.md` §3 sets out. The drift between anchors is §3 below.
 
-### Corporate wave (0-30): night glass, marble, palms
+### 2.1 Corporate wave (0-30): night glass, marble, palms
 
-*`kb_get snes-descent-corporate-wave-night-glass-marble-palms` · version 1*
+*`kb_get snes-descent-corporate-wave-night-glass-marble-palms` · version 2*
 
 | | |
 | --- | --- |
@@ -87,9 +98,9 @@ a tile, as `SNES-BACKGROUNDS.md` §3 sets out. The drift between anchors is §3 
 | **HUD and menu windows** | the approved Form 13-B slip: manila `#E8D8A8` / pink copy, blue carbon `#5870C0` at half, gold selection frame. |
 | **Font** | the house bitmap font, clean, black ink on paper, typewriter-crisp. |
 
-### Backrooms (30-75): sickly fluorescent, damp carpet, endless repeated rooms
+### 2.2 Backrooms (30-75): sickly fluorescent, damp carpet, endless repeated rooms
 
-*`kb_get snes-descent-backrooms-sickly-fluorescent-damp-carpet` · version 1*
+*`kb_get snes-descent-backrooms-sickly-fluorescent-damp-carpet` · version 2*
 
 | | |
 | --- | --- |
@@ -101,9 +112,9 @@ a tile, as `SNES-BACKGROUNDS.md` §3 sets out. The drift between anchors is §3 
 | **HUD and menu windows** | Form 13-B photocopied: the manila goes greenish-grey `#C8C8A0`, a toner streak across the band header, the carbon copy offset 1 px further each pause, the pink copy yellowed. |
 | **Font** | the same glyphs, printed as a copy: a 1-px drop of lighter ink under every stroke, the odd pixel missing. Never a new typeface. |
 
-### Gothic cosmic (75-100): black, bruise violet, wax red
+### 2.3 Gothic cosmic (75-100): black, bruise violet, wax red
 
-*`kb_get snes-descent-gothic-cosmic-black-bruise-violet-wax-red` · version 1*
+*`kb_get snes-descent-gothic-cosmic-black-bruise-violet-wax-red` · version 2*
 
 | | |
 | --- | --- |
@@ -117,7 +128,7 @@ a tile, as `SNES-BACKGROUNDS.md` §3 sets out. The drift between anchors is §3 
 
 ### SNES limits, all bands
 
-*`kb_get snes-descent-snes-limits-all-bands` · version 1*
+*`kb_get snes-descent-snes-limits-all-bands` · version 2*
 
 - Mode 1, 298x224, BG1 play, BG2 far, BG3 fog and HUD, as today. Mode 7 only for the Great Seal.
 - One 15-colour palette to a tile; a band's anchors fit in the eight BG palettes because the drift
@@ -128,11 +139,11 @@ a tile, as `SNES-BACKGROUNDS.md` §3 sets out. The drift between anchors is §3 
 - Sprites: 15 colours each, recolours by palette only for the Staff; redesigns only for Vellum's second
   phase, the Custodian and the Seal.
 
-## How it drifts: gradually, never a cut
+## 3. How it drifts: gradually, never a cut
 
-### HDMA palette drift
+### 3.1 HDMA palette drift
 
-*`kb_get snes-descent-hdma-palette-drift` · version 1*
+*`kb_get snes-descent-hdma-palette-drift` · version 2*
 
 Every area module names its descent `d` (0-100). The palette for a slot is a lerp between the two band
 anchors either side of `d`, snapped to 5 bits a channel. Inside an area the drift is **spatial**, not
@@ -144,9 +155,9 @@ frame, which is well under the HDMA channels the stage already leaves free.
 Two moments are timed instead: Vellum pressing RETENTION (35 → 38 over one second, the fluorescent
 tubes stuttering on) and the Seal's defeat (95 → 100 over the cut to the break room).
 
-### Props that recur and warp
+### 3.2 Props that recur and warp
 
-*`kb_get snes-descent-props-that-recur-and-warp` · version 1*
+*`kb_get snes-descent-props-that-recur-and-warp` · version 2*
 
 One prop set follows the player the whole way; each has five drawn states, never more.
 
@@ -161,9 +172,9 @@ One prop set follows the player the whole way; each has five drawn states, never
 The same prop never appears twice in one screen width (`SNES-BACKGROUNDS.md` §3.4), so a player
 meets each state about once an area and can count the decay.
 
-### Wallpaper seams
+### 3.3 Wallpaper seams
 
-*`kb_get snes-descent-wallpaper-seams` · version 1*
+*`kb_get snes-descent-wallpaper-seams` · version 2*
 
 The corporate wall is a papered surface over whatever is behind it. From 20, tile seams on the
 wall start to show: a 1-px darker line on a 48 px rhythm. From 30 a seam lifts (a 2-row shadow and
@@ -172,9 +183,9 @@ From 70 the same seams show violet under yellow, and from 80 the paper is in str
 This is a tile-variant job, not colour math: three seam tiles per band boundary, placed on the prop
 rhythm. It is the most readable single cue in the arc, and it costs about 12 tiles an area.
 
-### Variety: every area is its own place
+### 3.4 Variety: every area is its own place
 
-*`kb_get snes-descent-variety-every-area-is-its-own-place` · version 1*
+*`kb_get snes-descent-variety-every-area-is-its-own-place` · version 2*
 
 Tim, on the concept frames: "i like the overall idea but the game will need more variety than just 1
 corridor". The corridor frames hold the layout still only to show the drift; the game never does.
@@ -199,16 +210,16 @@ repeated rooms" is a motif rationed to one stretch an area, never the whole area
 Rule for art cards: a background card shows its area beside the one before and after it; if two
 adjacent areas could swap without anyone noticing, one of them needs a new set piece.
 
-### What does not drift
+### 3.5 What does not drift
 
-*`kb_get snes-descent-what-does-not-drift` · version 1*
+*`kb_get snes-descent-what-does-not-drift` · version 2*
 
 The fighters' band (§3.4 of the backgrounds doc) keeps its two middle ramp steps at every `d`; the
 player's sprites never recolour; Bellwether's office and his phone call are always at 0.
 
-## Music across the arc
+## 4. Music across the arc
 
-*`kb_get snes-descent-music-across-the-arc` · version 2*
+*`kb_get snes-descent-music-across-the-arc` · version 3*
 
 The 09:23 "Split by moment" ruling (as briefed to item 2027) holds: **story moments are corporate
 wave** (title, scenes, ending: Rhodes, pad, slap bass, sax) and **action is the gothic Castlevania
@@ -233,9 +244,9 @@ The sample bank already has every instrument named here (`MUSIC.md`, *The SNES b
 done per song, in its arrangement, not by a runtime crossfade. A stage song may carry an "A" and a
 "deeper B" arrangement of its own material and switch on an area boundary.
 
-## Concept frames
+## 5. Concept frames
 
-*`kb_get snes-descent-concept-frames` · version 1*
+*`kb_get snes-descent-concept-frames` · version 2*
 
 Three frames of the **same office corridor** (a Service Floor stretch with the water cooler, a palm,
 the clock and Employee of the Month) at descent 10, 55 and 90, at native 298x224, are in
@@ -245,9 +256,9 @@ changing, which is the point: the arc is a CGRAM and prop-state job on top of ex
 They are direction sketches, drawn locally by a small palette-and-prop renderer rather than
 spritesmith, whose verbs make characters, turnarounds and tilesets but not a whole scene.
 
-## The rework
+## 6. The rework
 
-*`kb_get snes-descent-the-rework` · version 1*
+*`kb_get snes-descent-the-rework` · version 2*
 
 Filed as cards of at most 30 minutes under epic 1898. Item 2059 comes first; every art card waits on
 it. Cards already running (2027, 2053) are not held; each new card reads this doc first.

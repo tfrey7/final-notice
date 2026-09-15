@@ -2,9 +2,26 @@
 
 *Generated from the knowledge base; edit through `kb_update`, not here.*
 
-## Size: pick the game's scale, build it from 8x8 tiles
+*`kb_get nes-art-bible-introduction` · version 1*
 
-*`kb_get nes-art-bible-size-pick-the-game-s-scale-build-it-from-8x8` · version 1*
+**Every NES art card under epic 1785 follows this page.** A sprite that breaks a rule here is not
+done, whoever or whatever drew it (hand grids, a puppet script or Spritesmith). Tim, 00:58 EDT
+2026-09-15: *"these NES graphics kinda really suck dude lmao"*; he chose a local pixel-art lead, no
+paid services.
+
+The reference is how real NES character sprites are built, studied from gameplay screenshots of
+*Mega Man 2*, *Ninja Gaiden*, *River City Ransom* and *TMNT II* (the screenshots on each game's
+Wikipedia article). *Double Dragon II* and *Kung-Fu Heroes* had no NES screenshot there and the
+sprite archives refused downloads, so their points below are marked *(from memory, unverified)*.
+Hardware limits are `docs/NES-PLAN.md` §1; game lessons L1-L20 are `docs/NES-CLASSICS.md`.
+
+The first cast drawn to this page is `src/art/cast.mjs` (Ward, Mercer, Security Associate; see
+`?art=cast`), made by a puppet script: limbs drawn as thick lines, each layer outlined on its own,
+then stacked, which gives the separation lines of rule 3 for free.
+
+## 1. Size: pick the game's scale, build it from 8x8 tiles
+
+*`kb_get nes-art-bible-size-pick-the-game-s-scale-build-it-from-8x8` · version 2*
 
 | Use | Size | Seen in |
 | --- | --- | --- |
@@ -18,9 +35,9 @@
 - **Don't** let a punch or hair poke one pixel past the box into a fourth tile column: that is a 4th
   sprite on every scanline it touches, and two characters on a row start flickering.
 
-## Silhouette first
+## 2. Silhouette first
 
-*`kb_get nes-art-bible-silhouette-first` · version 1*
+*`kb_get nes-art-bible-silhouette-first` · version 2*
 
 Fill the figure in one flat colour at 1x. If you cannot tell the pose (walking, punching, hurt), no
 amount of shading will fix it.
@@ -38,9 +55,9 @@ don't (arm lost in torso)    do (air gap + outline)
  .1222221.                    .122222.121
 ```
 
-## Outline: black, and between overlapping parts too
+## 3. Outline: black, and between overlapping parts too
 
-*`kb_get nes-art-bible-outline-black-and-between-overlapping-parts-too` · version 1*
+*`kb_get nes-art-bible-outline-black-and-between-overlapping-parts-too` · version 2*
 
 Sprite colour 1 is black (`0x0F`). Every part carries a 1-px black edge, **including where a front
 limb crosses the body**: that line is what makes an arm read as an arm.
@@ -53,9 +70,9 @@ limb crosses the body**: that line is what makes an arm read as an arm.
 - **Don't** draw hair in the outline colour as one solid mass: that is the "blob of hair". Give it
   a highlight streak in colour 2 or 3, or strand pixels.
 
-## Three colours: dark, mid, light
+## 4. Three colours: dark, mid, light
 
-*`kb_get nes-art-bible-three-colours-dark-mid-light` · version 1*
+*`kb_get nes-art-bible-three-colours-dark-mid-light` · version 2*
 
 One sprite palette is 3 colours plus transparent. Spend them as a ramp, not as three unrelated
 things.
@@ -76,9 +93,9 @@ things.
 - **Colour means a job** (L3): a palette swap of the Associate is a new foe only if the colour always
   predicts what it does.
 
-## Faces in 2-4 pixels
+## 5. Faces in 2-4 pixels
 
-*`kb_get nes-art-bible-faces-in-2-4-pixels` · version 1*
+*`kb_get nes-art-bible-faces-in-2-4-pixels` · version 2*
 
 At 24x40 the head is about 8 wide and 9 tall inside its outline.
 
@@ -98,9 +115,9 @@ eye, facing right    hurt
   ..13331   <- mouth   ..13111  <- open
 ```
 
-## Hands and feet
+## 6. Hands and feet
 
-*`kb_get nes-art-bible-hands-and-feet` · version 1*
+*`kb_get nes-art-bible-hands-and-feet` · version 2*
 
 - **Do** end every arm in a 2x2 hand of colour 3; a punch ends in a **3x3 fist** with one dark
   knuckle pixel.
@@ -108,9 +125,9 @@ eye, facing right    hurt
   character faces.
 - **Don't** end a limb in the outline colour: a dark hand on a dark sleeve disappears.
 
-## Animation: few frames, held on the 60 Hz tick
+## 7. Animation: few frames, held on the 60 Hz tick
 
-*`kb_get nes-art-bible-animation-few-frames-held-on-the-60-hz-tick` · version 1*
+*`kb_get nes-art-bible-animation-few-frames-held-on-the-60-hz-tick` · version 2*
 
 | Animation | Frames | Timing | Notes |
 | --- | --- | --- | --- |
@@ -125,9 +142,9 @@ eye, facing right    hurt
 - **Don't** add in-betweens: an NES walk is 3-4 frames, and smoothness comes from steady timing,
   not frame count.
 
-## Contrast against the background
+## 8. Contrast against the background
 
-*`kb_get nes-art-bible-contrast-against-the-background` · version 1*
+*`kb_get nes-art-bible-contrast-against-the-background` · version 2*
 
 - **Do** check every sprite on the three floors it will walk on: black `0x0F`, salmon stone `0x26`,
   burgundy carpet `0x06` (Stage 1). The black outline carries it on light floors; slot 2 carries it on
@@ -137,9 +154,9 @@ eye, facing right    hurt
 - **Don't** give a character a slot-2 colour within a hue step of its floor (a burgundy suit on
   burgundy carpet).
 
-## The bar, as a checklist
+## 9. The bar, as a checklist
 
-*`kb_get nes-art-bible-the-bar-as-a-checklist` · version 1*
+*`kb_get nes-art-bible-the-bar-as-a-checklist` · version 2*
 
 A card's proof sheet shows each frame at 1x and 4x on the three floors, and passes when:
 
@@ -151,9 +168,9 @@ A card's proof sheet shows each frame at 1x and 4x on the three floors, and pass
 6. Walk has 4 frames with a visible stride and a 1-px bob.
 7. Nothing vanishes on black, salmon or burgundy.
 
-## Where the first cast stands against the bar
+## 10. Where the first cast stands against the bar
 
-*`kb_get nes-art-bible-where-the-first-cast-stands-against-the-bar` · version 1*
+*`kb_get nes-art-bible-where-the-first-cast-stands-against-the-bar` · version 2*
 
 Comparison sheet (study only, gitignored, never shipped): `docs/refs/comparison.png`, built from
 the four screenshots in `docs/refs/`.
