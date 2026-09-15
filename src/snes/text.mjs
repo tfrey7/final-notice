@@ -1,13 +1,12 @@
-// SNES text on BG3 (docs/SNES-PLAN.md sections 2 and 7): a variable-width 8 px-high font cut from the
-// NES glyphs, word wrap by pixel width, and the window a text box sits in. BG3 has 4 colours, so the
-// window frame, the text and its shadow share one palette; the blue fill is a per-scanline gradient
-// (HDMA on the fixed colour), not tile colours. Everything draws through fill(x, y, w, h, rgb15).
-import { GLYPHS } from '../text/font.mjs';
+// SNES text on BG3 (docs/SNES-PLAN.md sections 2 and 7): the variable-width menu font of
+// src/snes/font.mjs, word wrap by pixel width, and the window a text box sits in. The blue fill is a
+// per-scanline gradient (HDMA on the fixed colour), not tile colours. Everything draws through
+// fill(x, y, w, h, rgb15).
+import { GLYPHS, FONT_H, SHADE_ROWS } from './font.mjs';
 import { rgb15, channels } from './color.mjs';
 
-export const FONT_H = 8;
+export { FONT_H };
 export const GAP = 1;
-export const SPACE = 3;
 export const LINE_H = 12;
 
 // BG3's 4 colours: 0 clear, 1 edge and text shadow, 2 frame, 3 text.
@@ -15,15 +14,17 @@ export const BG3_PALETTE = [0, rgb15(2, 2, 6), rgb15(24, 24, 28), rgb15(31, 31, 
 
 export const BOX = { x: 8, y: 160, w: 240, h: 56, pad: 8, rows: 3 };
 
-// Each glyph trimmed to its lit columns: { w, rows } with rows FONT_H strings of w characters.
-function trim(rows) {
-  const lit = [...Array(8).keys()].filter((c) => rows.some((r) => r[c] === '#'));
-  if (!lit.length) return { w: SPACE, rows: rows.map(() => '.'.repeat(SPACE)) };
-  const [a, b] = [lit[0], lit[lit.length - 1]];
-  return { w: b - a + 1, rows: rows.map((r) => r.slice(a, b + 1)) };
-}
+export const SNES_GLYPHS = GLYPHS;
 
-export const SNES_GLYPHS = Object.fromEntries(Object.entries(GLYPHS).map(([ch, rows]) => [ch, trim(rows)]));
+// The three inks down a glyph: lit toward white, the colour, and shaded toward black.
+export function inkRamp(colour) {
+  const c = channels(colour);
+  return [
+    rgb15(...c.map((v) => Math.round(v + (31 - v) * 0.15))),
+    colour,
+    rgb15(...c.map((v) => Math.round(v * 0.85))),
+  ];
+}
 
 export const glyph = (ch) => SNES_GLYPHS[ch] ?? SNES_GLYPHS['?'];
 
@@ -84,11 +85,14 @@ export function windowGradient(lines, top = windowColours[0], bottom = windowCol
 }
 
 export function drawString(fill, text, x, y, colour = BG3_PALETTE[3], shadow = BG3_PALETTE[1]) {
-  for (const [dx, dy, c] of shadow == null ? [[0, 0, colour]] : [[1, 1, shadow], [0, 0, colour]]) {
+  const ramp = inkRamp(colour);
+  const passes = shadow == null ? [[0, 0, null]] : [[1, 0, shadow], [0, 1, shadow], [1, 1, shadow], [0, 0, null]];
+  for (const [dx, dy, flat] of passes) {
     let cx = x;
     for (const ch of text) {
       const g = glyph(ch);
       g.rows.forEach((row, r) => {
+        const c = flat ?? ramp[SHADE_ROWS[r]];
         for (let i = 0; i < g.w; i++) if (row[i] === '#') fill(cx + i + dx, y + r + dy, 1, 1, c);
       });
       cx += g.w + GAP;

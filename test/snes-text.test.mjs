@@ -4,7 +4,7 @@ import { isRgb15, channels, rgb15 } from '../src/snes/color.mjs';
 import { WIDTH, HEIGHT } from '../src/snes/screen.mjs';
 import { SCENES, SCENE_ORDER, AUDITORS, beatsFor } from '../src/story/script.mjs';
 import {
-  FONT_H, BOX, BG3_PALETTE, glyph, measure, wrapText, typed, pageLength, windowGradient, drawTextBox,
+  FONT_H, BOX, BG3_PALETTE, glyph, measure, wrapText, typed, pageLength, windowGradient, drawTextBox, drawString, inkRamp,
 } from '../src/snes/text.mjs';
 import {
   hudLayout, hudBoxes, inScreen, overlaps, fadeStep, hudGroups, drainStep, blend15, fadeFill,
@@ -13,11 +13,24 @@ import {
 
 const inner = BOX.w - 2 * BOX.pad;
 
-test('the font is 8 px high and variable width', () => {
+test('the font is variable width on an 8 px cap height, with descenders below', () => {
   for (const ch of 'AiWl.') assert.equal(glyph(ch).rows.length, FONT_H);
   assert.ok(glyph('i').w < glyph('W').w);
   assert.equal(measure('il'), glyph('i').w + 1 + glyph('l').w);
   assert.equal(measure(''), 0);
+  const lit = (ch) => glyph(ch).rows.map((r, i) => (r.includes('#') ? i : -1)).filter((i) => i >= 0);
+  for (const ch of 'AHZ0') assert.deepEqual([lit(ch)[0], lit(ch).at(-1)], [0, 7], ch);
+  assert.equal(lit('g').at(-1), FONT_H - 1);
+  const every = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?\'":;-/()';
+  for (const ch of every) assert.ok(glyph(ch) !== glyph('?') || ch === '?', ch);
+  assert.equal(new Set([...'0123456789'].map((d) => glyph(d).w)).size, 1, 'digits share a width');
+});
+
+test('each glyph is shaded in three inks under a one-pixel shadow', () => {
+  const inks = new Map();
+  drawString((x, y, w, h, c) => inks.set(c, (inks.get(c) ?? 0) + 1), 'H', 0, 0, rgb15(24, 24, 28), rgb15(2, 2, 6));
+  assert.equal(inks.size, 4);
+  assert.deepEqual(inkRamp(rgb15(20, 20, 20)).map((c) => channels(c)[0]), [22, 20, 17]);
 });
 
 test('BG3 text uses 4 colours, the first clear', () => {
