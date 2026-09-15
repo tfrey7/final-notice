@@ -1,6 +1,7 @@
-import { LABELS, LOOKS, STORAGE_KEY, nextMode, pickMode, screenBox } from './mode.mjs';
+import { LABELS, STORAGE_KEY, machineFor, nextMode, pickMode, pictureWidth, screenBox } from './mode.mjs';
+import { platformFor } from '../platform.mjs';
 
-// Each Phaser frame (256x240) is uploaded as a texture and drawn once through this shader onto a
+// Each Phaser frame (256x240 NES, 256x224 SNES) is uploaded as a texture and drawn once through this shader onto a
 // window-sized canvas laid over the game. Sharp pixels hides that canvas and shows Phaser's own.
 
 const VERTEX = `
@@ -16,6 +17,7 @@ uniform vec2 uOut;
 uniform vec4 uBox;
 uniform float uFrame;
 uniform float uCurve, uScan, uGlow, uBleed, uCrawl, uVignette, uMask, uSharp;
+uniform float uPicture, uLinePhase;
 
 vec3 texel(float x, float y) {
   return texture2D(uSrc, (vec2(floor(x), floor(y)) + 0.5) / uSrcSize).rgb;
@@ -36,7 +38,7 @@ vec3 decode(float tx, float row) {
   vec2 smear = (l2.yz + 2.0 * a.yz + 2.0 * b.yz + r2.yz) / 6.0;
   vec3 yiq = vec3(sharp.x, mix(sharp.yz, smear, uBleed));
   float edge = abs(r2.x - l2.x) + length(r2.yz - l2.yz);
-  float phase = 6.2832 * tx * 0.6667 + 2.0944 * (row + uFrame);
+  float phase = 6.2832 * tx * 0.6667 + uLinePhase * (row + uFrame);
   yiq.x += uCrawl * edge * cos(phase);
   yiq.yz += uCrawl * edge * vec2(sin(phase), cos(phase)) * 0.6;
   return clamp(TO_RGB * yiq, 0.0, 1.0);
@@ -64,7 +66,15 @@ void main() {
   }
 
   vec2 uv = c * 0.5 + 0.5;
-  vec2 t = uv * uSrcSize;
+  vec2 pic = uv;
+  if (uPicture < 1.0) {
+    pic.x = (uv.x - 0.5) / uPicture + 0.5;
+    if (pic.x < 0.0 || pic.x > 1.0) {
+      gl_FragColor = vec4(vec3(0.0), 1.0);
+      return;
+    }
+  }
+  vec2 t = pic * uSrcSize;
   float row = floor(t.y);
   float d = fract(t.y) - 0.5;
   float other = row + (d < 0.0 ? -1.0 : 1.0);
@@ -147,6 +157,7 @@ export function installCrt(game, params) {
   let screen = null;
   try { screen = tube(canvas); } catch (err) { console.warn('CRT shader unavailable', err); }
   let mode = screen ? pickMode(params.get('crt'), remembered()) : 'sharp';
+  const machine = machineFor(platformFor(params).crtLook);
 
   const button = document.createElement('button');
   button.id = 'crt-toggle';
@@ -175,14 +186,16 @@ export function installCrt(game, params) {
   function draw() {
     if (!screen || mode === 'sharp') return;
     const { gl, at } = screen;
-    const look = LOOKS[mode];
+    const look = machine.looks[mode];
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, game.canvas);
     gl.viewport(0, 0, canvas.width, canvas.height);
     const box = screenBox(canvas.width, canvas.height);
     gl.uniform2f(at('uSrcSize'), game.canvas.width, game.canvas.height);
     gl.uniform2f(at('uOut'), canvas.width, canvas.height);
     gl.uniform4f(at('uBox'), box.x, box.y, box.w, box.h);
-    gl.uniform1f(at('uFrame'), game.loop.frame % 3);
+    gl.uniform1f(at('uFrame'), game.loop.frame % machine.frames);
+    gl.uniform1f(at('uLinePhase'), machine.linePhase);
+    gl.uniform1f(at('uPicture'), pictureWidth(machine, game.canvas.width, game.canvas.height));
     gl.uniform1f(at('uCurve'), look.curve);
     gl.uniform1f(at('uScan'), look.scan);
     gl.uniform1f(at('uGlow'), look.glow);
