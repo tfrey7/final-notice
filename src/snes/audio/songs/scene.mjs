@@ -1,117 +1,78 @@
-// The story-scene cue, written from scratch as corporate wave: F major at about 100 bpm, a soft sax
-// over held pads, choir and strings, a synth bass that holds, brushed-light drums and a long echo. No
-// plucked keys, bells or hits. About 2:15 before the loop: intro, A, B, a bridge lifted to G major, A
-// in G, and a turnaround back to F that loops to the top of A.
+// The story-scene cue (item 2196): the title theme's melody, slowed to about 75 bpm and kept soft
+// under dialogue. The title's form without A', so the hook opens the intro, A and the return. Grand
+// piano carries the hook; strings and then the sax sing the answers an octave down; no drums until B.
+// The earlier from-scratch cue is scene-v1.mjs.
 //
-// v1 alto sax lead | v2 strings counter-line | v3 pad on the third, left | v4 pad on the seventh,
-// right | v5 choir on the fifth | v6 synth bass | v7 soft kick and snare | v8 hats
+// v1 lead | v2 strings counter-line | v3 pad on the third, left | v4 pad on the seventh, right | v5
+// choir on the fifth | v6 synth bass | v7 soft kick and snare | v8 hats
 
-import { bars, hats, rest, section, voice } from './chase-kit.mjs';
-import { tag, vibrato } from '../../../audio/songs/kit.mjs';
+import { FORM as TITLE_FORM, SCALE } from '../../../audio/songs/title.mjs';
+import { REST, chord, fold, nameOf, transpose } from '../../../audio/songs/kit.mjs';
+import { bars } from './chase-kit.mjs';
+import { arp, lead } from './title.mjs';
 import { INSTRUMENTS } from '../recorded.mjs';
 
+export { SCALE };
 export const BAR_ROWS = 16;
-const R = rest(BAR_ROWS);
+export const LOOP_BAR = 4;
+export const FORM = TITLE_FORM.filter((b) => b.part !== "A'");
+export const LEADS = FORM.map((b) => transpose(b.lead, b.shift));
 
-const A_CHORDS = ['Fmaj7', 'Em7', 'Dm7', 'Cmaj7', 'Bbmaj7', 'Am7', 'Gm7', 'C7'];
-const A_LEAD = [
-  'A4 - - - - - - - C5 - - - E5 - - -',
-  'D5 - - - - - - - - - - - B4 - - -',
-  'C5 - - - - - - - A4 - - - F4 - - -',
-  'G4 - - - - - - - - - - - . . . .',
-  'D5 - - - - - - - F5 - - - A5 - - -',
-  'G5 - - - - - - - E5 - - - C5 - - -',
-  'F5 - - - - - - - D5 - - - Bb4 - - -',
-  'C5 - - - - - - - - - - - . . . .',
-];
-const A_LEAD_2 = [...A_LEAD.slice(0, 7), 'E5 - - - - - - - G5 - - - Bb5 - - -'];
-
-const B_CHORDS = ['Dm7', 'Am7', 'Bbmaj7', 'Fmaj7', 'Gm7', 'Am7', 'Bbmaj7', 'C7'];
-const B_LEAD = [
-  'F5 - - - - - E5 - D5 - - - - - - -',
-  'C5 - - - - - - - E5 - - - G5 - - -',
-  'A5 - - - - - - - - - - - F5 - - -',
-  'E5 - - - - - - - C5 - - - - - - -',
-  'D5 - - - - - F5 - - - - - Bb5 - - -',
-  'A5 - - - - - G5 - E5 - - - - - - -',
-  'F5 - - - - - - - D5 - - - A5 - - -',
-  'G5 - - - - - - - - - - - . . . .',
-];
-
-// The bridge, in G major.
-const C_CHORDS = ['Cmaj7', 'Bm7', 'Am7', 'D7', 'Cmaj7', 'Bm7', 'Em7', 'D7'];
-const C_LEAD = [
-  'E5 - - - - - - - G5 - - - B5 - - -',
-  'A5 - - - - - - - Gb5 - - - D5 - - -',
-  'C5 - - - - - - - E5 - - - G5 - - -',
-  'Gb5 - - - - - - - - - - - . . . .',
-  'G5 - - - - - - - B5 - - - E6 - - -',
-  'D6 - - - - - - - B5 - - - Gb5 - - -',
-  'G5 - - - - - - - - - - - B5 - - -',
-  'A5 - - - - - - - - - - - . . . .',
-];
-
-const INTRO_CHORDS = ['Fmaj7', 'Em7', 'Dm7', 'C7'];
-const INTRO_LEAD = [R, R, R, '. . . . . . . . C5 - - - E5 - G5 -'];
-const TURN_CHORDS = ['Gm7', 'Am7', 'Bbmaj7', 'C7'];
-const TURN_LEAD = [
-  'Bb4 - - - - - - - D5 - - - F5 - - -',
-  'E5 - - - - - - - C5 - - - - - - -',
-  'D5 - - - - - - - F5 - - - A5 - - -',
-  'G5 - - - - - - - - - - - . . . .',
-];
-
-export const LOOP_BAR = INTRO_CHORDS.length;
-export const FORM = [
-  ...section('intro', INTRO_CHORDS, INTRO_LEAD),
-  ...section('A', A_CHORDS, A_LEAD),
-  ...section('A', A_CHORDS, A_LEAD_2),
-  ...section('B', B_CHORDS, B_LEAD),
-  ...section('B', B_CHORDS, B_LEAD),
-  ...section('bridge', C_CHORDS, C_LEAD),
-  ...section('A', A_CHORDS, A_LEAD, 2),
-  ...section('turn', TURN_CHORDS, TURN_LEAD),
-];
-
-const HELD = (letter) => [letter, ...Array(BAR_ROWS - 1).fill('-')].join(' ');
-
-const v1 = FORM.map((b) => tag(b.lead, 'sax'));
+const LEAD_VOICE = {
+  intro: ['piano', 0], A: ['piano', 0], B: ['strlead', -12], bridge: ['piano', -12], return: ['sax', -12], tag: ['piano', 0],
+};
+const v1 = FORM.map((b, i) => {
+  const [inst, octave] = LEAD_VOICE[b.part];
+  return lead(LEADS[i], inst, octave, { hold: inst === 'piano' ? 0 : 6 });
+});
 
 const COUNTER = {
-  intro: 'T - - - - - - - F - - - - - - -',
-  A: 'F - - - - - - - - - - - - - - -',
-  B: 'T - - - - - - - S - - - - - - -',
-  bridge: 'U - - - - - - - H - - - - - - -',
-  turn: 'F - - - - - - - T - - - - - - -',
+  intro: REST, A: 'F - - - - - - - - - - - - - - -', B: 'T - - - - - - - S - - - - - - -',
+  bridge: 'N - - - - - - - F - - - - - - -', return: 'O - - - - - - - N - - - - - - -', tag: 'F - - - - - - - T - - - - - - -',
 };
-const v2 = FORM.map((b) => voice(COUNTER[b.part], b.c, 'strings', b.part === 'bridge' ? 12 : 24));
-const v3 = FORM.map((b) => voice(HELD('T'), b.c, 'padL', 24));
-const v4 = FORM.map((b) => voice(HELD('S'), b.c, 'padR', 24));
-const v5 = FORM.map((b) => (b.part === 'intro' || (b.part === 'A' && b.shift === 0) ? R : voice(HELD('F'), b.c, 'choir', 24)));
+const v2 = FORM.map((b) => arp(COUNTER[b.part], chord(b.symbol, b.shift), 'strings', 12));
 
-const v6 = FORM.map((b) => voice(b.part === 'turn' && b.bar === 3 ? 'R - - - F - - - O - - - S - - -' : 'R - - - - - - - - - - - F - - -', b.c, 'bass', 12));
+const HELD = ['X', ...Array(BAR_ROWS - 1).fill('-')].join(' ');
+const pad = (tone, lo, hi, inst) =>
+  FORM.map((b) => {
+    const { root, tones } = chord(b.symbol, b.shift);
+    return HELD.replace('X', `${nameOf(fold(root + tones[tone], lo, hi))}:${inst}`);
+  });
+const v3 = pad(1, 55, 66, 'padL');
+const v4 = pad(3, 60, 71, 'padR');
+const v5 = FORM.map((b, i) =>
+  b.part === 'intro' || b.part === 'A' ? REST : HELD.replace('X', `${nameOf(fold(chord(b.symbol, b.shift).root + 7, 55, 66))}:choir`),
+);
 
-const GROOVE = 'K . . . S . . . . . K . S . . .';
-const HALF = 'K . . . . . . . S . . . . . . .';
-const kit = (p) => p.split(' ').map((t) => ({ K: 'C4:kick', S: 'C4:snare' })[t] ?? t).join(' ');
-const v7 = FORM.map((b) => (b.part === 'intro' ? R : kit(b.part === 'bridge' ? HALF : GROOVE)));
-const v8 = FORM.map((b) => (b.part === 'intro' || b.part === 'bridge' ? R : hats('c . c . c . c . c . c . c . o -')));
+const v6 = FORM.map((b) => {
+  const { root } = chord(b.symbol, b.shift);
+  const pattern = b.part === 'intro' ? HELD : 'X - - - - - - - - - - - Y - - -';
+  return pattern.replace('X', `${nameOf(root)}:bass`).replace('Y', `${nameOf(root + 7)}:bass`);
+});
+
+const beat = (p) => p.split(' ').map((t) => ({ K: 'C4:kick', S: 'C4:snare', H: 'C4:chat', O: 'C4:ohat' })[t] ?? t).join(' ');
+const v7 = FORM.map((b) =>
+  b.part === 'B' || b.part === 'return' ? beat('K . . . . . . . S . . . . . K .') : b.part === 'tag' ? beat('K . . . . . . . S . . . . . . .') : REST,
+);
+const v8 = FORM.map((b) => (b.part === 'return' ? beat('H . H . H . H . H . H . H . O -') : REST));
 
 export default {
-  tempo: 9,
+  tempo: 12,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 84, evol: 50, efb: 78, edl: 6, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
+  echo: { room: 'hall', mvol: 80, evol: 44, efb: 80, edl: 6 },
   instruments: {
-    sax: { ...INSTRUMENTS.sax, adsr: [11, 4, 6, 5], vol: 84, pan: -6, pitch: vibrato(0.12, 20, 24) },
-    strings: { ...INSTRUMENTS.strings, adsr: [9, 3, 6, 2], vol: 46, pan: 30 },
-    padL: { ...INSTRUMENTS.pad, adsr: [8, 2, 6, 0], vol: 44, pan: -44 },
-    padR: { ...INSTRUMENTS.pad, adsr: [8, 2, 6, 0], vol: 44, pan: 44 },
-    choir: { ...INSTRUMENTS.choir, adsr: [8, 3, 6, 2], vol: 36, pan: -20 },
-    bass: { ...INSTRUMENTS.synbass, adsr: [12, 2, 6, 10], vol: 80 },
-    kick: { ...INSTRUMENTS.gkick, vol: 72 },
-    snare: { ...INSTRUMENTS.gsnare, vol: 50, pan: 8 },
-    chat: { ...INSTRUMENTS.chat, vol: 30 },
-    ohat: { ...INSTRUMENTS.ohat, vol: 26 },
+    piano: { ...INSTRUMENTS.piano, adsr: [14, 3, 3, 17], vol: 84, pan: -6 },
+    strlead: { ...INSTRUMENTS.strings, adsr: [9, 3, 6, 2], vol: 74, pan: -6, vibrato: { delay: 18, period: 16, depth: 0.2 } },
+    sax: { ...INSTRUMENTS.sax, adsr: [11, 4, 6, 5], vol: 76, pan: -6, vibrato: { delay: 18, period: 14, depth: 0.22 } },
+    strings: { ...INSTRUMENTS.strings, adsr: [9, 3, 6, 2], vol: 44, pan: 30 },
+    padL: { ...INSTRUMENTS.pad, adsr: [8, 2, 6, 0], vol: 42, pan: -44 },
+    padR: { ...INSTRUMENTS.pad, adsr: [8, 2, 6, 0], vol: 42, pan: 44 },
+    choir: { ...INSTRUMENTS.choir, adsr: [8, 3, 6, 2], vol: 34, pan: -20 },
+    bass: { ...INSTRUMENTS.synbass, adsr: [12, 2, 6, 10], vol: 76 },
+    kick: { ...INSTRUMENTS.gkick, vol: 64, echo: false },
+    snare: { ...INSTRUMENTS.gsnare, vol: 44, pan: 8 },
+    chat: { ...INSTRUMENTS.chat, vol: 28 },
+    ohat: { ...INSTRUMENTS.ohat, vol: 24 },
   },
   v1: { rows: bars(v1, BAR_ROWS) },
   v2: { rows: bars(v2, BAR_ROWS) },

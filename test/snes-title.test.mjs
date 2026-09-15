@@ -5,6 +5,7 @@ import { FORM, LOOP_BAR } from '../src/audio/songs/title.mjs';
 import { compileSong, renderSong, VOICE_NAMES, SAMPLES } from '../src/snes/audio/player.mjs';
 import { sampleBytes } from '../src/snes/audio/bank.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
+import { noteToMidi } from '../src/audio/apu.mjs';
 
 const song = compileSong(title);
 
@@ -18,9 +19,17 @@ test('the SNES title parses, fills all eight voices and every voice ends on a wh
   assert.equal(song.loop, LOOP_BAR * BAR_ROWS);
 });
 
-test('the lead keeps the NES title melody note for note', () => {
-  const pitches = (rows) => rows.split(' ').map((t) => (/^[A-G]/.test(t) ? t.split(':')[0] : t));
-  assert.deepEqual(pitches(title.v1.rows.replaceAll(' | ', ' ')), pitches(LEADS.join(' ')));
+test('the lead keeps the NES title melody note for note, the sax, strings and brass an octave down', () => {
+  const shape = (rows) => rows.split(' ').map((t) => (/^[A-G]/.test(t) ? '♪' : t));
+  const played = title.v1.rows.replaceAll(' | ', ' ');
+  assert.deepEqual(shape(played), shape(LEADS.join(' ')));
+  const heard = played.split(' ').filter((t) => /^[A-G]/.test(t));
+  const written = LEADS.join(' ').split(' ').filter((t) => /^[A-G]/.test(t));
+  heard.forEach((t, i) => {
+    const drop = noteToMidi(written[i]) - noteToMidi(t.split(':')[0]);
+    assert.ok(drop === 0 || drop === 12, `note ${i}: ${written[i]} played as ${t}`);
+    if (/:brass/.test(t)) assert.ok(noteToMidi(t.split(':')[0]) <= noteToMidi('D5'), `brass at ${t}`);
+  });
 });
 
 test('the samples it uses and its echo buffer fit the 64 KB of sound RAM', () => {
