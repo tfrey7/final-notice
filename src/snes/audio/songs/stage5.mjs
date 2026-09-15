@@ -5,7 +5,7 @@
 // where the choir opens up, and a break where the organ, choir and bell stand alone.
 //
 // v1 organ lead | v2 organ figuration | v3 choir | v4 bell and timpani | v5 organ pedal | v6 kick |
-// v7 snare | v8 toms and crash
+// v7 snare, toms and crash | v8 strings counter-line
 
 import { bars, rest, section, voice } from './chase-kit.mjs';
 import { lead } from './vellum.mjs';
@@ -113,6 +113,19 @@ const TOMS = {
   fill: 'H H H H L L L L . . . . . . . .',
 };
 const toms = (p) => p.split(' ').map((t) => ({ H: 'C4:htom', L: 'C4:ltom', X: 'C4:crash' })[t] ?? t).join(' ');
+const hit = (t) => t !== '.' && t !== '-';
+const kit = (snare, tom) => {
+  const s = snare.split(' ');
+  return tom.split(' ').map((t, i) => (hit(t) ? t : hit(s[i]) ? s[i] : t === '-' ? '-' : s[i])).join(' ');
+};
+
+// A moving line in the middle, between the pedal and the lead: half-bar and dotted steps through the
+// chord, rising in one bar and falling in the next, so three parts move at once.
+const COUNTER = {
+  rise: 'R - - - - - T - - - F - - - O -',
+  fall: 'U - - - - - H - - - O - - - F -',
+  open: 'F - - - - - - - T - - - - - - -',
+};
 
 const phrase = (b) => (b.part === 'turn' || b.part === 'intro' ? 4 : 8);
 const isFill = (b) => b.bar === phrase(b) - 1;
@@ -127,8 +140,8 @@ export function arrange(form) {
     v4: form.map((b) => (isFill(b) ? voice(TIMPANI.fill, b.c, 'timpani') : b.bar % 4 === 0 ? voice(TOLL, b.c, 'bell', 24) : voice(TIMPANI.drive, b.c, 'timpani'))),
     v5: form.map((b) => voice(PEDAL[opens(b) ? 'open' : 'drive'], b.c, 'pedal')),
     v6: form.map((b) => (pounds(b) ? KICK.pound : KICK.drive).replaceAll('C4', 'C4:kick')),
-    v7: form.map((b) => (isFill(b) ? SNARE.fill : SNARE.drive).replaceAll('C4', 'C4:snare')),
-    v8: form.map((b) => toms(isFill(b) ? TOMS.fill : b.bar % 4 === 0 ? TOMS.crash : TOMS.drive)),
+    v7: form.map((b) => kit((isFill(b) ? SNARE.fill : SNARE.drive).replaceAll('C4', 'C4:snare'), toms(isFill(b) ? TOMS.fill : b.bar % 4 === 0 ? TOMS.crash : TOMS.drive))),
+    v8: form.map((b) => voice(COUNTER[opens(b) ? 'open' : b.bar % 2 ? 'fall' : 'rise'], b.c, 'counter', 12)),
   };
 }
 
@@ -139,9 +152,9 @@ export function chapelDrops(form) {
   form.forEach((b, i) => {
     const voices = [];
     if (b.part === 'intro' && b.bar < 2) voices.push('v2', 'v4', 'v6', 'v7', 'v8');
-    if (b.part === 'intro' && b.bar >= 2) voices.push('v7', 'v8');
-    if (b.part === 'A' && i < 12 && b.bar < 4) voices.push('v7', 'v8');
-    if (b.part === 'A2' && b.bar < 4) voices.push('v6', 'v7', 'v8');
+    if (b.part === 'intro' && b.bar >= 2) voices.push('v7');
+    if (b.part === 'A' && i < 12 && b.bar < 4) voices.push('v7');
+    if (b.part === 'A2' && b.bar < 4) voices.push('v6', 'v7');
     if (b.part === 'B' && b.bar < 4) voices.push('v7');
     if (b.part === 'break' && b.bar < 4) voices.push('v6', 'v7', 'v8');
     if (voices.length) drops.push({ from: i * BAR_ROWS, to: (i + 1) * BAR_ROWS, voices });
@@ -153,6 +166,7 @@ export const INSTRUMENTS_USED = {
   lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 58, vibrato: { delay: 8, period: 11, depth: 0.25 } },
   arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 39, echo: false },
   choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 35 },
+  counter: { ...INSTRUMENTS.strings, vol: 40 },
   bell: { ...INSTRUMENTS.bell, vol: 29 },
   timpani: { ...INSTRUMENTS.timpani, vol: 50 },
   pedal: { ...INSTRUMENTS.pedal, adsr: [13, 4, 7, 3], vol: 60, echo: false },
@@ -173,12 +187,12 @@ export default {
   echo: { mvol: 70, room: 'chapel', evol: 56 },
   instruments: INSTRUMENTS_USED,
   drops: chapelDrops(FORM),
-  v1: { rows: bars(parts.v1, BAR_ROWS), pan: -20 },
-  v2: { rows: bars(parts.v2, BAR_ROWS), pan: 80 },
-  v3: { rows: bars(parts.v3, BAR_ROWS), pan: -80 },
-  v4: { rows: bars(parts.v4, BAR_ROWS), pan: 45 },
+  v1: { rows: bars(parts.v1, BAR_ROWS), pan: -60 },
+  v2: { rows: bars(parts.v2, BAR_ROWS), pan: 85 },
+  v3: { rows: bars(parts.v3, BAR_ROWS), pan: -85 },
+  v4: { rows: bars(parts.v4, BAR_ROWS), pan: 60 },
   v5: { rows: bars(parts.v5, BAR_ROWS) },
   v6: { rows: bars(parts.v6, BAR_ROWS) },
-  v7: { rows: bars(parts.v7, BAR_ROWS), pan: 30 },
-  v8: { rows: bars(parts.v8, BAR_ROWS), pan: -55 },
+  v7: { rows: bars(parts.v7, BAR_ROWS), pan: 45 },
+  v8: { rows: bars(parts.v8, BAR_ROWS), pan: 30 },
 };
