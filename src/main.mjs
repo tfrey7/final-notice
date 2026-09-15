@@ -9,6 +9,8 @@ import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 import { SnesEndingScene } from './snes/scenes/ending.mjs';
 import { SnesAttractScene } from './snes/scenes/attract.mjs';
 import { opensWithOpening } from './snes/opening.mjs';
+import { SnesSplashScene } from './snes/scenes/splash.mjs';
+import { opensWithSplash } from './snes/splash.mjs';
 import { SnesStage1Scene, SnesStage3Scene, SnesStage5Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 import { SnesLabScene } from './snes/lab/scene.mjs';
@@ -43,7 +45,10 @@ let scene = sceneOrder(SCENES, start);
 // The attract intro plays before the title once a session, and ?go=opening plays it every time.
 const session = () => { try { return sessionStorage; } catch { return null; } };
 // The intro is also the title's attract loop, so it is always registered.
-scene = opensWithOpening(params, session()) ? [new SnesAttractScene(), ...scene] : [...scene, new SnesAttractScene()];
+const opening = opensWithOpening(params, session());
+scene = opening ? [new SnesAttractScene(), ...scene] : [...scene, new SnesAttractScene()];
+// Every power-on opens on the Celeryman.ai logo first, then on whatever the boot would have shown.
+if (opensWithSplash(params)) scene = [new SnesSplashScene(opening ? 'attract' : 'flow'), ...scene];
 const debug = debugScene(params);
 // ?go=lab is the brawl lab: Stage 1's fighting in a grey-box room with live dials.
 if (params.get('go') === 'lab') scene = [new SnesLabScene()];
