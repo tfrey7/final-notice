@@ -150,25 +150,27 @@ export function chapelDrops(form) {
 }
 
 export const INSTRUMENTS_USED = {
-  lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 110, vibrato: { delay: 8, period: 11, depth: 0.25 } },
-  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 48 },
-  choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 84 },
-  bell: { ...INSTRUMENTS.bell, vol: 58 },
-  timpani: { ...INSTRUMENTS.timpani, vol: 100 },
-  pedal: { ...INSTRUMENTS.organ, adsr: [12, 2, 7, 2], vol: 104 },
-  kick: { ...INSTRUMENTS.gkick, vol: 96 },
-  snare: { ...INSTRUMENTS.gsnare, vol: 66 },
-  htom: { ...INSTRUMENTS.htom, vol: 80 },
-  ltom: { ...INSTRUMENTS.ltom, vol: 88 },
-  crash: { ...INSTRUMENTS.crash, vol: 40 },
+  lead: { ...INSTRUMENTS.organ, adsr: [12, 4, 7, 2], vol: 55, vibrato: { delay: 8, period: 11, depth: 0.25 } },
+  arp: { ...INSTRUMENTS.organ, adsr: [13, 4, 6, 5], vol: 24 },
+  choir: { ...INSTRUMENTS.choir, adsr: [9, 3, 7, 1], vol: 42 },
+  bell: { ...INSTRUMENTS.bell, vol: 29 },
+  timpani: { ...INSTRUMENTS.timpani, vol: 50 },
+  pedal: { ...INSTRUMENTS.organ, adsr: [12, 2, 7, 2], vol: 52 },
+  kick: { ...INSTRUMENTS.gkick, vol: 48 },
+  snare: { ...INSTRUMENTS.gsnare, vol: 33 },
+  htom: { ...INSTRUMENTS.htom, vol: 40 },
+  ltom: { ...INSTRUMENTS.ltom, vol: 44 },
+  crash: { ...INSTRUMENTS.crash, vol: 20 },
 };
 
 const parts = arrange(FORM);
 
+// Voices sit at half level so the sum and the echo buffer stay under the chip's clamp; the master
+// volume makes up the loudness after it.
 export default {
   tempo: 7,
   loop: LOOP_BAR * BAR_ROWS,
-  echo: { mvol: 34, room: 'cathedral', evol: 32 },
+  echo: { mvol: 70, room: 'hall', evol: 30, efb: 72, edl: 7 },
   instruments: INSTRUMENTS_USED,
   drops: chapelDrops(FORM),
   v1: { rows: bars(parts.v1, BAR_ROWS), pan: -20 },
