@@ -1,6 +1,6 @@
 // The SNES title: FINAL NOTICE zooms in by Mode 7 over the parallax night skyline, then PUSH START
 // blinks; after 20 idle seconds the attract note, as on the NES. Start slides up the memo slip
-// (NEW AUDIT, CONTINUE, SETTINGS); NEW AUDIT mosaics out to select.
+// (NEW AUDIT, CONTINUE, SETTINGS); NEW AUDIT hands over to select, which wipes in by file drawer.
 /* global Phaser */
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
@@ -15,7 +15,7 @@ import { drawMemo } from '../memoart.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { blinkOn, titleStep } from '../../scenes/menu.mjs';
-import { FrontScreen, bufferFill, logoZoom, mode7Texture, outStep } from './front.mjs';
+import { FrontScreen, ZOOM_FRAMES, bufferFill, logoZoom, mode7Texture } from './front.mjs';
 
 const PAN = 20 / 60;
 const FADE_FRAMES = 24;
@@ -103,30 +103,40 @@ export class SnesTitleScene extends Phaser.Scene {
       this.baked[i] = bakeLayer(this.sky, this.baked[i].layer);
     }
     if (lights.clunk && this.pinned == null) sfx('relay');
-    composeFrame(this.sky, this.baked, Math.floor(f * PAN), 0, this.rgba);
-    fromRgba(this.rgba, this.main);
-    const zoom = logoZoom(f - INTRO_FRAMES);
-    let frame = f < INTRO_FRAMES ? this.main : mode7Pass(this.logo, mode7Matrix(zoom.scale, zoom.angle), LOGO_CENTRE, this.main, this.out);
-    const fill = bufferFill(frame);
-    if (this.t.demo) {
-      frame = brightnessPass(frame, 5, this.main);
-      const word = 'DEMO';
-      drawString(bufferFill(frame), word, (WIDTH - measure(word)) >> 1, PROMPT_Y, rgb15(31, 26, 10));
-    } else if (this.memo) {
-      drawMemo(frame, this.memo, f);
-    } else if (zoom.done && blinkOn(f - INTRO_FRAMES - 90)) {
-      drawString(fill, PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
-    }
-
+    const frame = paintTitle(this, f);
     if (this.leaving != null) {
-      const step = outStep(this.leaving++);
-      if (step.done) {
-        showFlow(this, next(this.registry.get('flow'), { type: 'start' }));
-        return;
-      }
-      this.view.show(frame, step);
+      // Select opens the file drawer over this last frame.
+      this.registry.set('drawer', frame.slice());
+      showFlow(this, next(this.registry.get('flow'), { type: 'start' }));
       return;
     }
     this.view.show(frame, fadeUp(f));
   }
+}
+
+// The title at frame `f`: the skyline panning, the logo zoom, and the demo note, memo or prompt over it.
+function paintTitle(s, f) {
+  composeFrame(s.sky, s.baked, Math.floor(f * PAN), 0, s.rgba);
+  fromRgba(s.rgba, s.main);
+  const zoom = logoZoom(f - INTRO_FRAMES);
+  let frame = f < INTRO_FRAMES ? s.main : mode7Pass(s.logo, mode7Matrix(zoom.scale, zoom.angle), LOGO_CENTRE, s.main, s.out);
+  if (s.t.demo) {
+    frame = brightnessPass(frame, 5, s.main);
+    const word = 'DEMO';
+    drawString(bufferFill(frame), word, (WIDTH - measure(word)) >> 1, PROMPT_Y, rgb15(31, 26, 10));
+  } else if (s.memo) {
+    drawMemo(frame, s.memo, f);
+  } else if (zoom.done && blinkOn(f - INTRO_FRAMES - 90)) {
+    drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
+  }
+  return frame;
+}
+
+// The settled title with the memo up, for select's `&wipe=<frame>` screenshot of the drawer.
+export function titleStill(memo, f = INTRO_FRAMES + ZOOM_FRAMES + 60) {
+  const sky = afterHours();
+  setFloors(sky.palettes, lightsOut(f, TITLE_BPM).dark);
+  const main = screen();
+  const s = { sky, baked: bakeScene(sky), logo: mode7Texture(logo), main, out: screen(), rgba: new Uint8ClampedArray(main.length * 4), t: { demo: false }, memo };
+  return paintTitle(s, f).slice();
 }

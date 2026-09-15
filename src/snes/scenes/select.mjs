@@ -15,7 +15,10 @@ import { pollPad } from '../../input.mjs';
 import { AUDITORS, SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { SELECT } from '../../story/script.mjs';
 import { selectStep } from '../../scenes/menu.mjs';
-import { FrontScreen, bufferFill, confirmed, inStep, outStep, spotSub } from './front.mjs';
+import { FrontScreen, IN_FRAMES, OUT_FRAMES, bufferFill, confirmed, inStep, outStep, spotSub } from './front.mjs';
+import { WIPE_FRAMES, drawerPass, wipeEdge, wipeStep } from '../drawer.mjs';
+import { SLIDE_FRAMES, openMemo, readSettings } from '../memo.mjs';
+import { titleStill } from './title.mjs';
 
 const HEADING = 'PERSONNEL FILES';
 const PROMPT = 'A: SIGN OUT FILE';
@@ -135,6 +138,15 @@ export class SnesSelectScene extends Phaser.Scene {
     this.sub = screen();
     this.dimSub = screen(DIM);
     this.inkSub = screen();
+    this.drawn = screen();
+    // The title's last frame, left by NEW AUDIT; &wipe=<frame> pins the drawer over a stand-in title.
+    this.wipe = this.registry.get('drawer') ?? null;
+    this.registry.remove('drawer');
+    this.wipeF = 0;
+    if (!this.wipe && params.has('wipe')) {
+      this.wipe = titleStill({ ...openMemo(readSettings(null), false), slide: SLIDE_FRAMES });
+      this.wipeF = Number(params.get('wipe'));
+    }
     this.view = new FrontScreen(this, 'snes-select');
   }
 
@@ -156,12 +168,25 @@ export class SnesSelectScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.pinned == null && this.leaving == null) {
+    if (this.wipe && this.wipeF >= WIPE_FRAMES && this.pinned == null) {
+      this.wipe = null;
+      this.frames = Math.max(this.frames, IN_FRAMES);
+    }
+    if (this.pinned == null) {
       const pad = pollPad(this.game.loop.frame);
-      const step = selectStep(this.choice, pad);
-      if (step.moved) sfx('pencil');
-      this.choice = step.choice;
-      if (step.confirm || confirmed(pad)) this.leaving = 0;
+      const press = confirmed(pad);
+      if (this.wipe) {
+        this.wipeF = wipeStep(this.wipeF, press).frame;
+      } else if (this.leaving != null) {
+        if (press && this.leaving > 0) this.leaving = STAMP_HOLD + OUT_FRAMES;
+      } else if (press && this.frames < IN_FRAMES) {
+        this.frames = IN_FRAMES;
+      } else {
+        const step = selectStep(this.choice, pad);
+        if (step.moved) sfx('pencil');
+        this.choice = step.choice;
+        if (step.confirm || press) this.leaving = 0;
+      }
     }
     const f = this.pinned ?? this.frames++;
     this.spotX += (this.centre(this.choice) - this.spotX) * (this.pinned == null ? 0.3 : 1);
@@ -176,6 +201,10 @@ export class SnesSelectScene extends Phaser.Scene {
       where: (x, y) => x >= other - 3 && x < other + FILES.w + 5 && y >= FILES.tab.y && y < FILES.y + FILES.h + 4,
     }, this.out);
 
+    if (this.wipe) {
+      this.view.show(drawerPass(this.wipe, frame, wipeEdge(this.wipeF), this.drawn));
+      return;
+    }
     if (this.leaving == null) {
       this.view.show(frame, inStep(f));
       return;
