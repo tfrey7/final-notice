@@ -24,6 +24,7 @@
 // pixel whose topmost layer is in `layers` gets the colour added, subtracted, or averaged in. The
 // layers enabled per run stand in for a window: glass on BG2 seen through BG1's openings tints
 // only the view, and a floor darkened toward the horizon is a sub gradient on BG1's floor lines.
+// Layer 0 is the backdrop, so a sky gradient is an add on the backdrop that grows line by line.
 //
 // A tile uses one palette. BG1 and BG2 tiles draw values 1-F as that palette's colours 1-15; BG3
 // tiles only 1-3, its first three. The map wraps like the hardware's, so a layer tiles sideways
@@ -116,7 +117,7 @@ export function mathProblems(runs, height = HEIGHT) {
     if (!MATH_OPS.includes(op)) problems.push(`math run ${i} op is ${op}, not ${MATH_OPS.join('/')}`);
     if (op === 'none') return;
     if (!isRgb15(colour)) problems.push(`math run ${i} colour is not rgb15`);
-    if (!(Array.isArray(layers) && layers.length && layers.every((b) => b in DEPTHS))) problems.push(`math run ${i} layers are not among 1, 2, 3`);
+    if (!(Array.isArray(layers) && layers.length && layers.every((b) => b === 0 || b in DEPTHS))) problems.push(`math run ${i} layers are not among 0, 1, 2, 3`);
   });
   return problems;
 }

@@ -483,6 +483,104 @@ function theEndLayer() {
 const NIGHT = rgb15(2, 2, 7);
 const title = screen(NIGHT, [skyline.far, skyline.near]);
 
+// --- After Hours: the office tower over the skyline -------------------------------------------
+
+// Sixteen floors; every lit window on a floor is that floor's own palette entry, so a floor goes
+// dark by one palette write and no tile changes. Floors 0-11 take entries 4-15 of the first tower
+// palette, 12-15 entries 4-7 of the second; entries 1-3 are the frame in both.
+export const FLOORS = 16;
+export const KEPT_FLOOR = 12;
+export const FLOOR_ORDER = Array.from({ length: FLOORS }, (_, k) => k).filter((k) => k !== KEPT_FLOOR);
+const TOWER = { cols: [11, 21], parapet: 4, floor0: 5 };
+const TOWER_PAL = [4, 5];
+const FRAME = [rgb15(1, 1, 4), rgb15(4, 4, 9), rgb15(8, 8, 14)];
+export const DARK_WINDOW = rgb15(2, 3, 7);
+export const litWindow = (k) => (k % 5 === 3 ? rgb15(22, 28, 25) : rgb15(29, 24, 11));
+export const floorEntry = (k) => (k < 12 ? [TOWER_PAL[0], k + 4] : [TOWER_PAL[1], k - 8]);
+
+// Palette writes for `dark` floors out, top down, skipping the one that stays lit.
+export function setFloors(pals, dark) {
+  const [slot, entry] = floorEntry(KEPT_FLOOR);
+  pals[slot][entry - 1] = litWindow(KEPT_FLOOR);
+  FLOOR_ORDER.forEach((k, i) => {
+    const [slot, entry] = floorEntry(k);
+    pals[slot][entry - 1] = i < dark ? DARK_WINDOW : litWindow(k);
+  });
+  return pals;
+}
+
+function towerLayer() {
+  const cells = grid();
+  const [c0, c1] = TOWER.cols;
+  const w = (c1 - c0) * TILE;
+  for (const slot of [0, 1]) {
+    const floors = Array.from({ length: FLOORS }, (_, k) => k).filter((k) => floorEntry(k)[0] === TOWER_PAL[slot]);
+    for (const k of floors) {
+      const g = canvas(w, TILE);
+      rect(g, 0, 0, w, TILE, 2);
+      rect(g, 0, 0, 1, TILE, 3);
+      rect(g, w - 1, 0, 1, TILE, 1);
+      rect(g, 1, 7, w - 2, 1, 1);
+      for (let x = 3; x + 4 <= w - 2; x += 6) rect(g, x, 2, 4, 4, floorEntry(k)[1]);
+      stamp(cells, g, TOWER_PAL[slot], c0, TOWER.floor0 + k);
+    }
+  }
+  const top = canvas(w, 2 * TILE);
+  rect(top, (w >> 1) - 1, 0, 2, TILE, 1);
+  rect(top, 0, TILE + 2, w, TILE - 2, 1);
+  rect(top, 1, TILE + 3, w - 2, 1, 3);
+  stamp(cells, top, TOWER_PAL[0], c0, TOWER.parapet - 1);
+  const base = canvas(w, (ROWS - TOWER.floor0 - FLOORS) * TILE);
+  // The lobby: a canopy, dark granite pillars with lit edges, and the night lamp over the doors.
+  rect(base, 0, 0, w, base.length, 1);
+  checker(base, 1, 0, w - 2, 2, 2, 1);
+  rect(base, 0, 4, w, 2, 3);
+  rect(base, 0, 6, w, 1, 1);
+  for (let x = 4; x < w - 4; x += 12) { rect(base, x, 7, 4, base.length - 7, 2); rect(base, x, 7, 1, base.length - 7, 3); }
+  rect(base, (w >> 1) - 6, 12, 12, 1, 3);
+  checker(base, (w >> 1) - 5, 13, 10, 10, 2, 1);
+  rect(base, 0, 0, 1, base.length, 2);
+  stamp(cells, base, TOWER_PAL[0], c0, TOWER.floor0 + FLOORS);
+  return toLayer(1, cells, [0, 0]);
+}
+
+// Night at the top to a violet dusk at the street: fixed-colour add on the backdrop, eight lines a step.
+const SKY_STEPS = 7;
+const SKY_LINES = 24;
+const skyGradient = [
+  ...Array.from({ length: SKY_STEPS }, (_, k) => [SKY_LINES, 'add', rgb15(Math.round((8 * k) / SKY_STEPS), Math.round((2 * k) / SKY_STEPS), Math.round((6 * k) / SKY_STEPS)), [0]]),
+  [224 - SKY_LINES * SKY_STEPS, 'none'],
+];
+
+// The city behind the tower has gone home: dark silhouettes with a few dim windows, so the tower is
+// the only bright thing on the screen. 1 building, 2 lit edge, 3 dim warm window, 4 dim cool window, 5 street.
+const CITY = [rgb15(3, 3, 7), rgb15(5, 5, 10), rgb15(10, 8, 5), rgb15(6, 8, 10), rgb15(2, 2, 4)];
+const CITY_BASE = 176;
+
+function citySkyline() {
+  const g = canvas(SKY_COLS * TILE, ROWS * TILE);
+  for (let n = 0, x = 0; x < g[0].length; n++) {
+    const w = 16 + ((n * 7) % 14);
+    const top = CITY_BASE - 30 - ((n * 37) % 60);
+    rect(g, x, top, w, CITY_BASE - top, 1);
+    rect(g, x, top, w, 1, 2);
+    for (let wy = top + 4; wy < CITY_BASE - 3; wy += 6) {
+      for (let wx = x + 3; wx < x + w - 3; wx += 4) if ((wx * 5 + wy * 3 + n) % 7 < 2) rect(g, wx, wy, 2, 2, (wx + wy) % 3 ? 3 : 4);
+    }
+    x += w + ((n * 5) % 3) * 4;
+  }
+  rect(g, 0, CITY_BASE, g[0].length, g.length - CITY_BASE, 5);
+  return g;
+}
+
+const afterHoursPalettes = () => setFloors(palettes.map((p) => [...p]), 0)
+  .map((p, i) => (TOWER_PAL.includes(i) ? [...FRAME, ...p.slice(3)] : i === PAL.far ? pad(CITY) : p));
+
+export const afterHours = () => {
+  const s = screen(NIGHT, [toLayer(2, stamp(grid(SKY_COLS), citySkyline(), PAL.far), [0.5, 0]), towerLayer()]);
+  return { ...s, palettes: afterHoursPalettes(), math: skyGradient };
+};
+
 export const screens = {
   title,
   select: screen(NIGHT, [{ ...skyline.far, scroll: [0, 0] }, toLayer(1, stamp(grid(), selectPicture(), PAL.frame), [0, 0])]),

@@ -4,9 +4,10 @@
 /* global Phaser */
 import { WIDTH } from '../screen.mjs';
 import { rgb15 } from '../color.mjs';
-import { bakeScene, composeFrame } from '../layers.mjs';
-import { screen, fromRgba, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
-import { screens, logo } from '../bg/ui.mjs';
+import { bakeLayer, bakeScene, composeFrame } from '../layers.mjs';
+import { LEVELS, screen, fromRgba, mode7Pass, mode7Matrix, brightnessPass } from '../fx.mjs';
+import { afterHours, logo, setFloors } from '../bg/ui.mjs';
+import { INTRO_FRAMES, TITLE_BPM, lightsOut } from '../lights.mjs';
 import { measure, drawString, setWindowColours } from '../text.mjs';
 import { currentSong, playSong, setMono, sfx } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
@@ -14,9 +15,11 @@ import { drawMemo } from '../memoart.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { blinkOn, titleStep } from '../../scenes/menu.mjs';
-import { FrontScreen, bufferFill, inStep, logoZoom, mode7Texture, outStep } from './front.mjs';
+import { FrontScreen, bufferFill, logoZoom, mode7Texture, outStep } from './front.mjs';
 
 const PAN = 20 / 60;
+const FADE_FRAMES = 24;
+const fadeUp = (f) => ({ mosaic: 1, level: Math.min(LEVELS - 1, Math.floor((Math.max(0, f) * (LEVELS - 1)) / FADE_FRAMES)) });
 const LOGO_CENTRE = [WIDTH >> 1, 76];
 const PROMPT = 'PUSH START';
 const PROMPT_Y = 150;
@@ -53,7 +56,9 @@ export class SnesTitleScene extends Phaser.Scene {
     if (params.has('memo')) {
       this.memo = { ...openMemo(this.settings, hasSave(storage()), params.get('memo') === 'settings' ? 'settings' : 'memo'), slide: SLIDE_FRAMES };
     }
-    this.baked = bakeScene(screens.title);
+    this.sky = afterHours();
+    this.baked = bakeScene(this.sky);
+    this.dark = 0;
     this.logo = mode7Texture(logo);
     this.main = screen();
     this.out = screen();
@@ -89,10 +94,19 @@ export class SnesTitleScene extends Phaser.Scene {
       }
     }
 
-    composeFrame(screens.title, this.baked, Math.floor(f * PAN), 0, this.rgba);
+    // Lights out: one palette write a beat through the piano intro, then the logo zoom.
+    const lights = lightsOut(f, TITLE_BPM);
+    if (lights.dark !== this.dark) {
+      this.dark = lights.dark;
+      setFloors(this.sky.palettes, this.dark);
+      const i = this.baked.findIndex((b) => b.layer.bg === 1);
+      this.baked[i] = bakeLayer(this.sky, this.baked[i].layer);
+    }
+    if (lights.clunk && this.pinned == null) sfx('relay');
+    composeFrame(this.sky, this.baked, Math.floor(f * PAN), 0, this.rgba);
     fromRgba(this.rgba, this.main);
-    const zoom = logoZoom(f);
-    let frame = mode7Pass(this.logo, mode7Matrix(zoom.scale, zoom.angle), LOGO_CENTRE, this.main, this.out);
+    const zoom = logoZoom(f - INTRO_FRAMES);
+    let frame = f < INTRO_FRAMES ? this.main : mode7Pass(this.logo, mode7Matrix(zoom.scale, zoom.angle), LOGO_CENTRE, this.main, this.out);
     const fill = bufferFill(frame);
     if (this.t.demo) {
       frame = brightnessPass(frame, 5, this.main);
@@ -100,7 +114,7 @@ export class SnesTitleScene extends Phaser.Scene {
       drawString(bufferFill(frame), word, (WIDTH - measure(word)) >> 1, PROMPT_Y, rgb15(31, 26, 10));
     } else if (this.memo) {
       drawMemo(frame, this.memo, f);
-    } else if (zoom.done && blinkOn(f - 90)) {
+    } else if (zoom.done && blinkOn(f - INTRO_FRAMES - 90)) {
       drawString(fill, PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y);
     }
 
@@ -113,6 +127,6 @@ export class SnesTitleScene extends Phaser.Scene {
       this.view.show(frame, step);
       return;
     }
-    this.view.show(frame, inStep(f));
+    this.view.show(frame, fadeUp(f));
   }
 }

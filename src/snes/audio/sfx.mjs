@@ -295,6 +295,7 @@ export const SFX = {
   pencil: fx(layer(run(I.pencil, [[60, 5]]))),
   stampOk: fx(layer(run(I.stamp, [[65, 12]])), layer(run(I.click, [[50, 3]]))),
   paperSlide: fx(layer(run(I.slide, [[60, 26]]))),
+  relay: fx(layer(run(I.click, [[36, 3]])), layer(run(I.kick, [[43, 6]]), 1)),
   conveyor: fx(layer(run(I.click, [[40, 3], [0, 3], [40, 3], [0, 3]]).map((s, i) => (i % 2 ? [null, 0, 3] : s))), layer(run(I.bass, [[36, 4], [36, 4], [37, 4]]))),
   vellumLine: line('vellumLine'),
   custodianLine: line('custodianLine'),
