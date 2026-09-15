@@ -43,6 +43,24 @@ test('the office is one locked screen with only the auditor and Vellum', () => {
   assert.equal(world.cameraX, 0);
 });
 
+test('on the 256-px screen his rush, his Associates and the auditor all stay in view', async () => {
+  const { WIDTH } = await import('../src/snes/screen.mjs');
+  const { world, tune, p, v } = office();
+  const halfBody = 16;
+  const inView = (f) => f.x >= halfBody && f.x <= WIDTH - halfBody;
+  Object.assign(p, { x: WIDTH - 40, y: v.y, invuln: 999 });
+  Object.assign(v, { x: WIDTH - 60, state: 'rush', t: 0, facing: 1, vx: 4, landed: true });
+  for (let i = 0; i < 60; i++) {
+    run(world, tune, 1, () => pad([]));
+    assert.ok(v.x <= WIDTH - halfBody, `vellum at ${v.x}`);
+  }
+  p.x = WIDTH + 50;
+  world.bench.push('associate');
+  run(world, tune, 600, (i) => { p.invuln = 999; p.x += 3; return idle; });
+  assert.ok(world.fighters.some((f) => f.kind === 'associate'));
+  for (const f of world.fighters) assert.ok(inView(f), `${f.id} at ${f.x}`);
+});
+
 test('he loops rush, sweep, red tape; with his fangs out the loop is longer and every timing quicker', () => {
   const { world, tune, v } = office();
   assert.deepEqual(attacks(world, tune, v, 4), [...LOOPS[1], LOOPS[1][0]]);

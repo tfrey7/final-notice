@@ -3,6 +3,7 @@
 // one (the bait) or when a thrown Associate breaks his guard. Below half he bares his fangs.
 import { DOWNED, fighter, landHit, player, set, updateCommon } from './moves.mjs';
 import { TAPE, spawnStaff, thinkStaff } from './staff.mjs';
+import { WIDTH } from '../snes/screen.mjs';
 
 // Pairs are [normal, fangs]; times are frames. Each telegraph is held about half a second (L8).
 export const VELLUM = {
@@ -15,7 +16,8 @@ export const VELLUM = {
 
 export const LOOPS = { 1: ['rush', 'sweep', 'tape'], 2: ['rush', 'sweep', 'rush', 'tape'] };
 
-export const ARENA = { left: 16, right: 282, top: 160, bottom: 216 };
+// One screen wide on both consoles (NES and SNES are each 256 px), so nobody walks out of view.
+export const ARENA = { left: 16, right: WIDTH - 16, top: 160, bottom: 216 };
 
 const pick = (v, key) => VELLUM[key][v.fangs ? 1 : 0];
 export const windupFor = (v) => pick(v, 'windup');
@@ -116,7 +118,7 @@ export function thinkVellum(world, v, tune) {
       }
       break;
     case 'rush':
-      v.x += v.vx;
+      v.x = Math.min(world.floor.right - 8, Math.max(world.floor.left + 8, v.x + v.vx));
       if (!v.landed && Math.abs(p.x - v.x) < VELLUM.rushReach && Math.abs(p.y - v.y) <= tune.depthReach) {
         v.landed = hitsPlayer(world, v, p, tune);
       }
