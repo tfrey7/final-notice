@@ -47,9 +47,12 @@ import { SHAPE, turnOwners } from '../../stage1/readout.mjs';
 import { guideStep, liveRoutes, routeLights } from '../../stage1/combo.mjs';
 import { drawReadout } from '../readout.mjs';
 import { drawCombo, drawGuide, drawSparks } from '../hitfx.mjs';
+import { drawPrompt, measurePrompt } from '../prompt.mjs';
 import { readSettings } from '../memo.mjs';
 
-const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
+// Reception's teaching words with the SNES button that does each.
+const TEACH = { PUNCH: '[Y] PUNCH', STEP: '[R] STEP' };
+const RANGES =Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
 const STAGE_START_MS = 2400;
 const BACKGROUNDS = [RECEPTION, CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
@@ -461,7 +464,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (!this.paused && !this.card) {
       drawCombo(this.g, this.fill, w.combo, this.tune, { right: WIDTH - 10, top: 44 });
       this.guide = guideStep(this.guide, this.guideOn ? liveRoutes(p, this.tune) : []);
-      if (this.guide) drawGuide(this.g, this.fill, this.guide, { x: 8, y: 38, device: this.controls?.device });
+      if (this.guide) drawGuide(this.g, this.fill, this.guide, { x: 8, y: 38 });
     }
     const { portrait } = layout;
     this.hudSprites.draw(artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
@@ -470,8 +473,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.g.setAlpha(dim);
 
     const run = w.run;
-    const centred = (text, y, colour) => drawString(this.fill, text, (WIDTH - measure(text)) >> 1, y, colour);
-    if (run?.prompt) centred(run.prompt, 64);
+    const teach = TEACH[run?.prompt] ?? run?.prompt;
+    if (teach) drawPrompt(this.fill, teach, (WIDTH - measurePrompt(teach)) >> 1, 64);
     if (run && !run.locked && run.go > 0 && Math.floor(run.go / 10) % 2) {
       drawString(this.fill, 'GO', WIDTH - 40, 64, rgb15(31, 26, 8));
       this.g.fillStyle(hex(rgb15(31, 26, 8))).fillTriangle(WIDTH - 22, 63, WIDTH - 22, 73, WIDTH - 14, 68);

@@ -9,6 +9,7 @@ import { bakeScene, composeFrame } from '../layers.mjs';
 import { screen, fromRgba, mathPass } from '../fx.mjs';
 import { FILES, SILL, STAMP_FRAMES, approvedStamp, screens } from '../bg/ui.mjs';
 import { measure, drawString, wrapText } from '../text.mjs';
+import { drawPrompt, measurePrompt } from '../prompt.mjs';
 import { loadArt, pixelAt } from '../art.mjs';
 import { currentSong, playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
@@ -21,7 +22,7 @@ import { SLIDE_FRAMES, openMemo, readSettings } from '../memo.mjs';
 import { titleStill } from './title.mjs';
 
 const HEADING = 'PERSONNEL FILES';
-const PROMPT = 'A: SIGN OUT FILE';
+const PROMPT = '[A] SIGN OUT FILE';
 const GRADE = ['GRADE 7', 'SENIOR', 'AUDITOR'];
 const FILE = {
   ward: { tab: 'WARD', temperament: 'BY THE BOOK' },
@@ -128,7 +129,7 @@ export class SnesSelectScene extends Phaser.Scene {
     const fill = bufferFill(this.base);
     heading(fill);
     AUDITORS.forEach((a, i) => fileText(fill, a, FILES.xs[i]));
-    drawString(fill, PROMPT, (WIDTH - measure(PROMPT)) >> 1, 209, rgb15(30, 29, 22), rgb15(1, 3, 2));
+    drawPrompt(fill, PROMPT, (WIDTH - measurePrompt(PROMPT)) >> 1, 209, { colour: rgb15(30, 29, 22), shadow: rgb15(1, 3, 2) });
     this.work = screen();
     this.lit = screen();
     this.out = screen();

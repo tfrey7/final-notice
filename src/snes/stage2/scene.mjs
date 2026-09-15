@@ -9,6 +9,10 @@ import { screen, mathPass, mode7Matrix, mode7Pass } from '../fx.mjs';
 import { artOr, loadArt, SpriteLayer } from '../art.mjs';
 import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
+import { drawPrompt, measurePrompt } from '../prompt.mjs';
+
+// The shared stage's teaching words with the SNES button that does each.
+const TEACH = { CAST: '[Y] CAST', AIM: '[R] AIM' };
 import { drainStep, drawHud, fadeFill, hudLayout, postReceipt } from '../hud.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { SEAL_SONG, stage2Song } from '../audio/cues.mjs';
@@ -305,8 +309,8 @@ export class SnesStage2Scene extends Phaser.Scene {
     }
     sprites.unshift(...hudArt);
     if (run.stage) {
-      promptsFor(run).forEach((text, i) => {
-        if (run.frame % 60 < 45) drawString(fill, text, (WIDTH - measure(text)) >> 1, 60 + i * 14);
+      promptsFor(run).map((text) => TEACH[text] ?? text).forEach((text, i) => {
+        if (run.frame % 60 < 45) drawPrompt(fill, text, (WIDTH - measurePrompt(text)) >> 1, 60 + i * 14);
       });
     }
     if (run.boss && !run.exit && !this.cardOff && !this.entrance) drawCard(fill, titleCard(run.frame));

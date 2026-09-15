@@ -11,6 +11,7 @@ import { climbFlow, climber, inRun } from '../runflow.mjs';
 import { HEALTH } from '../../stage2/player.mjs';
 import { TILE } from '../../stage2/physics.mjs';
 import { mountControls } from '../../controls.mjs';
+import { drawPrompt } from '../prompt.mjs';
 import { playSong } from '../audio/player.mjs';
 
 export const WHITE = rgb15(31, 31, 31);
@@ -104,7 +105,7 @@ export class ClimbScene extends Phaser.Scene {
     const hud = this.hud.clear();
     hud.fillStyle(0x111114).fillRect(4, 4, 4 + HEALTH * 6, 8);
     for (let i = 0; i < HEALTH; i++) hud.fillStyle(i < p.health ? 0xd8d8d8 : 0x3a3a3e).fillRect(6 + i * 6, 6, 4, 4);
-    lines.forEach(([text, colour], i) => drawString(this.fill, text, 4, 16 + 12 * i, colour));
+    lines.forEach(([text, colour], i) => drawPrompt(this.fill, text, 4, 16 + 12 * i, { colour }));
     return hud;
   }
 

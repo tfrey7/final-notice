@@ -82,6 +82,17 @@ export function deviceAfter(prev, { key = null, gamepads = [] } = {}) {
   return prev;
 }
 
+// The device every in-game prompt speaks for: ?controls=gamepad to start, then whatever was touched last.
+let shared = null;
+export function inputDevice(win = globalThis) {
+  if (!shared) {
+    shared = { device: new URLSearchParams(win.location?.search ?? '').get('controls') === 'gamepad' ? 'gamepad' : 'keyboard' };
+    win.addEventListener?.('keydown', (e) => { shared.device = deviceAfter(shared.device, { key: e.code }); }, true);
+  }
+  if (win.navigator?.getGamepads) shared.device = deviceAfter(shared.device, { gamepads: win.navigator.getGamepads() });
+  return shared.device;
+}
+
 // Super Famicom face colours, and a lighter tint of each for its label on the dark card.
 const FACE = { x: ['#2c4cc8', '#8aa4ff'], a: ['#d0302c', '#ff8a80'], b: ['#e0b820', '#ffe070'], y: ['#2c9c48', '#80e090'] };
 const U = 2;

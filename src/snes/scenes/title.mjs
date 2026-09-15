@@ -15,6 +15,7 @@ import { BG3_PALETTE, measure, drawString, setWindowColours } from '../text.mjs'
 import { currentSong, playSong, setMono, sfx, stopSong } from '../audio/player.mjs';
 import { STOCK, SLIDE_FRAMES, hasSave, memoStep, openMemo, readSettings, writeSettings } from '../memo.mjs';
 import { drawMemo } from '../memoart.mjs';
+import { drawPrompt as drawButtons, measurePrompt } from '../prompt.mjs';
 import { PROMPT_AT, fadeLevel, newTitle, promptLevel, titleTick } from '../titlestate.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
@@ -28,7 +29,7 @@ const LOGO_CENTRE = [WIDTH >> 1, 2 + (logo.h >> 1)];
 // The press starts 20 frames before the downbeat of bar 5 so it lands on it.
 const PRESS_AT = INTRO_FRAMES - ZOOM_FRAMES;
 const FLASH = screen(rgb15(9, 8, 5));
-const PROMPT = 'PUSH START';
+const PROMPT = 'PUSH [START]';
 const PROMPT_Y = 208;
 const PAST_DUE = logoReading('PAST DUE');
 
@@ -152,10 +153,11 @@ export class SnesTitleScene extends Phaser.Scene {
   }
 }
 
-// PUSH START in the text layer's own colours at brightness `level`.
+// PUSH START in the text layer's own colours at brightness `level`, Start as the player's own button.
 function drawPrompt(frame, level) {
   const [, shadow, , ink] = BG3_PALETTE;
-  drawString(bufferFill(frame), PROMPT, (WIDTH - measure(PROMPT)) >> 1, PROMPT_Y, brightness(ink, level), brightness(shadow, level));
+  const tone = (v) => brightness(v, level);
+  drawButtons(bufferFill(frame), PROMPT, (WIDTH - measurePrompt(PROMPT)) >> 1, PROMPT_Y, { colour: ink, shadow, tone });
 }
 
 // The title at frame `f`: the painting in the rain, the logo zoom, and the memo or prompt over it.

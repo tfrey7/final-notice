@@ -5,6 +5,7 @@ import { WIDTH, HEIGHT } from './screen.mjs';
 import { rgb15 as c } from './color.mjs';
 import { drawString, measure } from './text.mjs';
 import { LABS, SETTING_ROWS, SOUND_TABS, slideIn } from './memo.mjs';
+import { drawPrompt, measurePrompt } from './prompt.mjs';
 
 const WHITE = c(31, 31, 31);
 const DIM = c(13, 13, 15);
@@ -28,6 +29,8 @@ function painter(buf) {
 const text = (fill, t, x, y, col) => drawString(fill, t, x, y, col, null);
 const centreX = (t) => (WIDTH - measure(t)) >> 1;
 const centred = (fill, t, y, col) => text(fill, t, centreX(t), y, col);
+// Back is the pad's `b` word, which the SNES pad puts on Y (src/input.mjs); stop is its swap, on X.
+const hint = (fill, t, y) => drawPrompt(fill, t, (WIDTH - measurePrompt(t)) >> 1, y, { colour: FAINT, shadow: null });
 const cursor = (fill, x, y, frame) => text(fill, '▶', x - 10 + [0, 1, 2, 1][(frame >> 4) & 3], y, RED);
 
 function arrow(fill, x, y, dir, col) {
@@ -81,7 +84,7 @@ function drawSettingsPage(fill, m, y, frame) {
   const done = m.row === SETTING_ROWS.length;
   centred(fill, 'DONE', dy, done ? WHITE : DIM);
   if (done) cursor(fill, centreX('DONE'), dy, frame);
-  centred(fill, 'B: BACK', dy + ROW + 4, FAINT);
+  hint(fill, '[Y] BACK', dy + ROW + 4);
 }
 
 // The sound test: MUSIC, EFFECTS and VOICES tabs over a numbered list that scrolls nine rows at a time.
@@ -116,7 +119,7 @@ function drawSoundPage(fill, m, y, frame) {
   if (first + LIST_ROWS < cues.length) arrow90(fill, WIDTH - 30, listEnd - 8, 1, DIM);
   const song = SOUND_TABS[0].cues.find(([name]) => name === m.playing);
   centred(fill, `NOW: ${song ? song[1].toUpperCase() : '-'}`, listEnd + 4, DIM);
-  centred(fill, 'X: STOP  B: BACK', listEnd + 4 + ROW, FAINT);
+  hint(fill, '[X] STOP  [Y] BACK', listEnd + 4 + ROW);
 }
 
 // The labs: each grey-box lab with a line on what it tests; choosing one boots it.
@@ -129,5 +132,5 @@ function drawLabsPage(fill, m, y, frame) {
     centred(fill, what, ry + 10, on ? RED : FAINT);
     if (on) cursor(fill, centreX(label), ry, frame);
   });
-  centred(fill, 'B: BACK', y + HEAD + LABS.length * LAB_ROW + 4, FAINT);
+  hint(fill, '[Y] BACK', y + HEAD + LABS.length * LAB_ROW + 4);
 }

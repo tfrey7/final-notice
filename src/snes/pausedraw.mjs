@@ -8,6 +8,8 @@ import { rgb15 as c, channels } from './color.mjs';
 import { drawString, measure } from './text.mjs';
 import { attachment, onAttachments, stampPose } from './pause.mjs';
 import { toRgba } from './fx.mjs';
+import { capWidth, drawCap, drawPrompt } from './prompt.mjs';
+import { inputDevice } from '../controls.mjs';
 
 const INK = c(31, 31, 31);
 const DIM = c(13, 13, 15);
@@ -104,21 +106,17 @@ function drawSlot(s, x, y, key, held) {
   }
 }
 
-// The four combo routes as SNES button caps (Y green, X blue) with each route's name beside them.
-function drawRoutes(s, routes, x, y) {
-  const keyW = (k) => Math.max(10, measure(k) + 4);
+// The four combo routes as button caps for the player's device, with each route's name beside them.
+function drawRoutes(s, routes, x, y, device) {
+  const keyW = (k) => capWidth(k, device);
   const nameX = x + Math.max(...routes.map((r) => r.keys.reduce((n, k) => n + keyW(k) + 2, 0))) + 4;
   routes.forEach((r, i) => {
     const ry = y + i * 13;
     let cx = x;
     r.keys.forEach((k, j) => {
       const bw = keyW(k);
-      const face = !r.on ? c(20, 18, 14) : k === 'X' ? c(5, 9, 25) : k === 'Y' ? c(4, 18, 7) : c(9, 8, 11);
-      const lit = r.on && j < r.lit;
       s.math(cx + 1, ry + 1, bw, 10, c(8, 8, 8), 'sub');
-      s.fill(cx, ry, bw, 10, lit ? mix(face, c(31, 31, 31), 0.4) : face);
-      s.fill(cx, ry, bw, 1, mix(face, c(31, 31, 31), 0.5));
-      drawString(s.fill, k, cx + ((bw - measure(k)) >> 1), ry + 1, c(31, 31, 30), null);
+      drawCap(s.fill, k, cx, ry, { device, lit: r.on && j < r.lit, off: !r.on });
       cx += bw + 2;
     });
     const done = r.on && r.lit > 0 && r.lit === r.keys.length;
@@ -127,7 +125,7 @@ function drawRoutes(s, routes, x, y) {
 }
 
 // menu: the state from ./pause.mjs; `frame` animates the pencil tick.
-export function drawPause(px, menu, frame = 0) {
+export function drawPause(px, menu, frame = 0, device = inputDevice()) {
   const s = painter(px);
   for (let j = 0; j < HEIGHT; j++) {
     const k = Math.round((j / HEIGHT) * 7);
@@ -158,7 +156,7 @@ export function drawPause(px, menu, frame = 0) {
 
   if (menu.routes) {
     s.text('COMBO ROUTES', X + 16, Y + 102, RED);
-    drawRoutes(s, menu.routes, X + 16, Y + 116);
+    drawRoutes(s, menu.routes, X + 16, Y + 116, device);
   } else {
     s.text('ATTACHMENTS', X + 16, Y + 102, RED);
     menu.carried.forEach((key, i) => {
@@ -175,7 +173,8 @@ export function drawPause(px, menu, frame = 0) {
 
   drawStamp(s, 'ON HOLD', X + (menu.routes ? 136 : 118), Y + 122, stampPose(menu.stampT));
   s.fill(X + 8, Y + 172, W - 16, 1, FAINT);
-  s.text('START: RESUME   B: FILE AWAY', X + 10, Y + 176, DIM);
+  // The pad's close is its `b` word, which the SNES pad puts on Y (src/input.mjs).
+  drawPrompt(s.fill, '[START] RESUME   [Y] FILE AWAY', X + 10, Y + 176, { device, colour: DIM, shadow: null });
   return px;
 }
 

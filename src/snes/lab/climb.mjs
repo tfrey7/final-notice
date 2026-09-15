@@ -2,6 +2,7 @@
 // shaft, a grey flood rising behind, and a dial panel for tuning the feel live. Boxes stand in for every sprite.
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString } from '../text.mjs';
+import { drawPrompt } from '../prompt.mjs';
 import { sfx } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
 import { AUDITORS } from '../../flow.mjs';
@@ -102,7 +103,7 @@ export class SnesClimbLabScene extends ClimbScene {
     const p = run.player;
     const gap = Math.max(0, Math.round((c.flood.y - p.y) / TILE));
     this.drawStatus(p, [
-      [`${SPELL[inHand(run)] ?? 'SEAL'}  X:SWAP`, DIM],
+      [`${SPELL[inHand(run)] ?? 'SEAL'}  [X] SWAP`, DIM],
       [`ROW ${rowsClimbed(c)}`, DIM],
       [`FLOOD ${gap}`, gap < 4 ? RED : DIM],
     ]);
@@ -110,7 +111,7 @@ export class SnesClimbLabScene extends ClimbScene {
     drawString(this.fill, this.panel.visible ? 'TAB: CLIMB' : 'TAB: DIALS', WIDTH - 84, 18, DIM);
     if (c.over) {
       this.banner({ caught: 'CAUGHT', escaped: 'ESCAPED', 'worn down': 'WORN DOWN' }[c.over.kind]);
-      drawString(this.fill, `ROW ${rowsClimbed(c)}  JUMP TO RETRY`, WIDTH / 2 - 76, HEIGHT / 2 + 2, DIM);
+      drawPrompt(this.fill, `ROW ${rowsClimbed(c)}  [B] RETRY`, WIDTH / 2 - 76, HEIGHT / 2 + 2, { colour: DIM });
     }
   }
 }
