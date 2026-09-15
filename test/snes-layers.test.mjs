@@ -144,6 +144,23 @@ test('every Claims & Adjustments area is legal and inside its tile budget', asyn
   }
 });
 
+test('Internal Review, Executive Waiting and Vellum\'s office are legal, in budget, and reuse the title skyline', async () => {
+  const { default: claims2, SKY_ROLL } = await import('../src/snes/bg/claims2.mjs');
+  const { default: title, skyline } = await import('../src/snes/bg/ui.mjs');
+  assert.deepEqual(claims2.areas.map((a) => a.name), ['Internal Review', 'Executive Waiting', "Vellum's office"]);
+  for (const area of claims2.areas) {
+    assert.deepEqual(sceneProblems(area), [], area.name);
+    assert.ok(Object.keys(area.tiles).length < 384, `${area.name} has ${Object.keys(area.tiles).length} tiles`);
+  }
+  for (const area of claims2.areas.slice(1)) {
+    const view = area.layers[0];
+    assert.deepEqual([...view.map.slice(-SKY_ROLL), ...view.map.slice(0, -SKY_ROLL)], skyline.near.map, area.name);
+    for (const [ch, name] of Object.entries(skyline.near.legend)) {
+      assert.deepEqual(area.tiles[view.legend[ch]].pixels, title.tiles[name].pixels, `${area.name} ${name}`);
+    }
+  }
+});
+
 test('every background module passes the Mode 1 checks', async () => {
   const dir = new URL('../src/snes/bg/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.mjs'));

@@ -29,12 +29,12 @@ import { floorTable, TILE } from '../layers.mjs';
 
 const COLS = 64;
 const ROWS = 28;
-const FLOOR = 152;
+export const FLOOR = 152;
 
-const pad = (c) => [...c, ...Array(15 - c.length).fill(c[c.length - 1])];
+export const pad = (c) => [...c, ...Array(15 - c.length).fill(c[c.length - 1])];
 const WALL = [rgb15(13, 8, 10), rgb15(17, 11, 12), rgb15(21, 15, 14), rgb15(6, 3, 3), rgb15(10, 5, 4), rgb15(15, 8, 6)];
 
-const palettes = [
+export const palettes = [
   pad([rgb15(1, 1, 6), rgb15(2, 3, 9), rgb15(4, 5, 12), rgb15(26, 26, 30), rgb15(30, 29, 24), rgb15(21, 21, 20), rgb15(1, 1, 4), rgb15(4, 5, 9), rgb15(30, 24, 10), rgb15(21, 13, 6)]),
   pad([rgb15(19, 9, 7), rgb15(24, 13, 10), rgb15(28, 18, 14), rgb15(12, 6, 5), rgb15(30, 23, 19), rgb15(31, 27, 23)]),
   pad([...WALL, rgb15(16, 15, 17), rgb15(23, 22, 24), rgb15(29, 29, 30), rgb15(14, 10, 3), rgb15(24, 18, 6), rgb15(31, 27, 14), rgb15(3, 2, 3), rgb15(9, 5, 7), rgb15(8, 2, 3)]),
@@ -45,13 +45,13 @@ const palettes = [
   pad([...WALL, rgb15(9, 6, 3), rgb15(17, 12, 5), rgb15(26, 20, 10), rgb15(27, 24, 19), rgb15(3, 2, 3), rgb15(9, 5, 7)]),
 ];
 
-const noise = (x, y) => {
+export const noise = (x, y) => {
   let h = (x * 374761393 + y * 668265263) >>> 0;
   h = ((h ^ (h >>> 13)) * 1274126177) >>> 0;
   return (h ^ (h >>> 16)) & 255;
 };
 
-function canvas(cols) {
+export function canvas(cols) {
   const w = cols * TILE;
   const h = ROWS * TILE;
   const v = new Uint8Array(w * h);
@@ -74,7 +74,7 @@ function canvas(cols) {
 }
 
 // Cut a canvas into deduplicated tiles: answers the layer's map and legend and fills `tiles`.
-function cut(c, prefix, tiles) {
+export function cut(c, prefix, tiles) {
   const seen = new Map();
   const legend = {};
   const map = [];
@@ -106,7 +106,7 @@ function cut(c, prefix, tiles) {
 }
 
 // The floor darkens toward the wall in 8-line steps of subtract.
-const floorMath = () => Array.from({ length: 9 }, (_, i) => (8 - i ? [8, 'sub', rgb15(8 - i, 8 - i, 8 - i), [1]] : [8, 'none']));
+export const floorMath = () => Array.from({ length: 9 }, (_, i) => (8 - i ? [8, 'sub', rgb15(8 - i, 8 - i, 8 - i), [1]] : [8, 'none']));
 
 function nightView() {
   const c = canvas(COLS);
@@ -239,7 +239,7 @@ function cart(c, x) {
   c.rect(x + 27, 148, 2, 1, 8);
 }
 
-function stoneFloor(c) {
+export function stoneFloor(c) {
   c.palette(0, FLOOR, c.w, c.h - FLOOR, 1);
   for (let y = FLOOR; y < c.h; y++) {
     const row = Math.floor((y - FLOOR) / 24);
@@ -351,7 +351,7 @@ function cubicles(c) {
   }
 }
 
-function carpet(c) {
+export function carpet(c) {
   c.palette(0, FLOOR, c.w, c.h - FLOOR, 4);
   for (let y = FLOOR; y < c.h; y++) {
     const ly = (y - FLOOR) % 24;
