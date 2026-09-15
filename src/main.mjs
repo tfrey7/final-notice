@@ -12,14 +12,21 @@ import { TitleScene } from './scenes/title.mjs';
 import { SelectScene } from './scenes/select.mjs';
 import { GameOverScene } from './scenes/gameover.mjs';
 import { EndingScene } from './scenes/ending.mjs';
+import { SnesTitleScene } from './snes/scenes/title.mjs';
+import { SnesSelectScene } from './snes/scenes/select.mjs';
+import { SnesGameOverScene } from './snes/scenes/gameover.mjs';
 
-// One scene per screen of the game, keyed by its flow name.
+const params = new URLSearchParams(location.search);
+const profile = platformFor(params);
+const snes = profile.name === 'snes';
+
+// One scene per screen of the game, keyed by its flow name; the SNES build swaps in its own screens.
 const SCENES = {
-  title: new TitleScene(),
-  select: new SelectScene(),
+  title: snes ? new SnesTitleScene() : new TitleScene(),
+  select: snes ? new SnesSelectScene() : new SelectScene(),
   stage1: new Stage1Scene(),
   stage2: new EscapeScene(),
-  gameover: new GameOverScene(),
+  gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: new EndingScene(),
 };
 for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = new CinemaScene(key);
@@ -28,7 +35,6 @@ for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = new CinemaScene(
 // ?fast gives foes and bosses cheap health, ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen,
 // ?who=<auditor> picks who is playing; ?go=vellum and ?go=greatseal are each stage at its boss room's
 // checkpoint, and ?go=stage1&area=<1-5> or ?go=stage2&area=<1-5> starts that stage at the area's checkpoint.
-const params = new URLSearchParams(location.search);
 const BOSSES = { vellum: ['stage1', 'stage1-area5'], greatseal: ['stage2', 'stage2-area5'] };
 const boss = BOSSES[params.get('go')];
 const start = boss
@@ -38,8 +44,7 @@ const area = start.stage && CHECKPOINTS[start.stage]?.[Number(params.get('area')
 if (area) Object.assign(start, next(start, { type: 'checkpoint', id: area }));
 if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
-const profile = platformFor(params);
-const debug = profile.name === 'snes' && debugScene(params);
+const debug = snes && debugScene(params);
 if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];
