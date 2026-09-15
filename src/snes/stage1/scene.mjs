@@ -8,7 +8,7 @@ import { hex, rgb15 } from '../color.mjs';
 import { colorMath, fromRgba, screen, toRgba } from '../fx.mjs';
 import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
-import { drainStep, drawHud, hudGroups, hudLayout } from '../hud.mjs';
+import { drainStep, drawHud, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import CLAIMS from '../bg/claims.mjs';
@@ -107,6 +107,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.menu = null;
     this.fill = (x, y, w, h, c, step = 15) => this.g.fillStyle(hex(c), step / 15).fillRect(x, y, w, h);
     this.groups = hudGroups();
+    this.receipt = null;
     this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; });
@@ -157,6 +158,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
     for (const e of w.events) {
       if (SOUND[e]) sfx(SOUND[e]);
+      if (e === 'heal') this.receipt = postReceipt(this.receipt, time);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
       if (e === 'bossDown') { w.shake = this.tune.shakeFrames; playSong('stageClear'); }
       if (e === 'bossBeaten') { showFlow(this, next(this.registry.get('flow'), { type: 'stageClear' })); return; }
@@ -324,7 +326,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (!this.paused && !this.card) this.drain = drainStep(this.drain, p.hp);
     const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
     const steps = this.groups.see(state, time, Boolean(this.paused || w.run?.prompt));
-    const layout = hudLayout({ ...state, pale: this.drain?.pale ?? p.hp });
+    const layout = hudLayout({ ...state, pale: this.drain?.pale ?? p.hp, receipt: this.receipt, now: time });
     const dim = this.paused ? 0.5 : 1;
     this.g.clear();
     drawHud(this.fill, layout, steps);

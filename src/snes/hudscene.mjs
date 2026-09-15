@@ -21,7 +21,8 @@ export function demoState(ms) {
     meter: t >= 3400 ? 2 : 1,
     carried: ['notice', 'redTape'],
     hand: t >= 5000 ? 1 : 0,
-    boss: t >= 6500 && t < 8000 ? { name: 'Vellum', hp: 12 - Math.floor((t - 6500) / 300), maxHp: 12 } : null,
+    boss: t >= 6500 && t < 9000 ? { name: 'Mr Vellum', hp: 12 - Math.floor((t - 6500) / 300), maxHp: 12 } : null,
+    receipt: t >= 8000 ? { count: 12, ms: 8000 } : t >= 2000 ? { count: 11, ms: 2000 } : null,
   };
 }
 
@@ -48,7 +49,7 @@ export class SnesHudScene extends Phaser.Scene {
   frame(ms) {
     const state = demoState(ms);
     this.drain = drainStep(this.drain, state.hp);
-    return { layout: hudLayout({ ...state, pale: this.drain.pale }), steps: this.groups.see(state, ms) };
+    return { layout: hudLayout({ ...state, pale: this.drain.pale, now: ms % LOOP_MS }), steps: this.groups.see(state, ms) };
   }
 
   hudAt(ms) {

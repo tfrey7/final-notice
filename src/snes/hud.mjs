@@ -22,8 +22,44 @@ export const HUD_COLOURS = {
   meter: rgb15(23, 18, 8),
   stamp: rgb15(19, 4, 4),
   boss: rgb15(15, 5, 16),
+  bossLate: rgb15(11, 2, 6),
+  bossLabel: rgb15(29, 22, 30),
+  brass: rgb15(24, 19, 8),
   empty: rgb15(4, 4, 7),
+  paper: rgb15(27, 25, 19),
+  carbon: rgb15(8, 12, 27),
+  receiptInk: rgb15(6, 5, 4),
+  receiptRed: rgb15(25, 3, 3),
 };
+
+// The pickup receipt: slides in top right, holds, slides out; its carbon copy trails a step behind.
+export const RECEIPT_MS = 2500;
+export const SLIDE_MS = 200;
+export const CARBON_LAG_MS = 50;
+export const RECEIPT = { w: 58, h: 20, carbon: 3 };
+
+// How far in the receipt is, 0 off screen to 1 fully in, `ms` after the pickup.
+export function receiptSlide(ms) {
+  if (ms == null || ms < 0 || ms >= RECEIPT_MS) return 0;
+  return Math.min(1, ms / SLIDE_MS, (RECEIPT_MS - ms) / SLIDE_MS);
+}
+
+export const postReceipt = (receipt, ms) => ({ count: (receipt?.count ?? 0) + 1, ms });
+
+function receiptLayout({ count, ms }, now, y) {
+  const off = RECEIPT.w + 8 + RECEIPT.carbon;
+  const at = (s) => WIDTH - 8 - RECEIPT.w + Math.round((1 - s) * off);
+  const tab = receiptSlide(now - ms);
+  const copy = receiptSlide(now - ms - CARBON_LAG_MS);
+  if (!tab && !copy) return null;
+  return {
+    x: at(tab), y, w: RECEIPT.w, h: RECEIPT.h, count,
+    carbon: { x: at(copy) + RECEIPT.carbon, y: y + RECEIPT.carbon, w: RECEIPT.w, h: RECEIPT.h },
+  };
+}
+
+// Final Fight's colour-change trick: the boss bar darkens to a second colour once half is gone.
+export const bossColour = (hp, maxHp) => (hp * 2 <= maxHp ? HUD_COLOURS.bossLate : HUD_COLOURS.boss);
 
 const clamp5 = (v) => Math.max(0, Math.min(31, v));
 export const shade = (c, d) => rgb15(...channels(c).map((v) => clamp5(v + d)));
@@ -46,7 +82,7 @@ export const fadeFill = (buf) => (x, y, w, h, c, step = 15) => {
   }
 };
 
-export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segments = 4, carried = null, hand = 0, boss = null }) {
+export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segments = 4, carried = null, hand = 0, boss = null, receipt = null, now = 0 }) {
   const px = (w, value, max) => Math.round(((w - 2) * Math.max(0, Math.min(value, max))) / max);
   const bar = (x, y, w, h, value, max) => ({ x, y, w, h, fill: px(w, value, max) });
   const health = bar(36, 20, 66, 8, hp, maxHp);
@@ -59,6 +95,7 @@ export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segmen
     meter: Array.from({ length: segments }, (_, i) => ({ x: 128 + i * 14, y: 20, w: 12, h: 8, full: i < meter })),
     enchant: null,
     boss: null,
+    receipt: receipt && receiptLayout(receipt, now, carried ? 58 : 8),
   };
   if (carried) {
     layout.enchant = carried.slice(0, 2).map((icon, i) => ({ icon, x: WIDTH - 52 + i * 22, y: 8, w: 20, h: 20, held: i === hand }));
@@ -66,8 +103,11 @@ export function hudLayout({ name, hp, maxHp = 8, pale = hp, lives, meter, segmen
   if (boss) {
     const w = 96;
     const x = WIDTH - 8 - w;
-    const label = boss.name.toUpperCase();
-    layout.boss = { name: { text: label, x: WIDTH - 8 - measure(label), y: 36 }, bar: bar(x, 46, w, 6, boss.hp, boss.maxHp) };
+    const label = `OVERDUE: ${boss.name.toUpperCase()}`;
+    layout.boss = {
+      name: { text: label, x: WIDTH - 8 - measure(label), y: 36 },
+      bar: { ...bar(x, 46, w, 6, boss.hp, boss.maxHp), colour: bossColour(boss.hp, boss.maxHp) },
+    };
   }
   return layout;
 }
@@ -78,6 +118,7 @@ export function hudBoxes(layout) {
   const boxes = [layout.portrait, text(layout.name), layout.health, text(layout.lives), text(layout.meterLabel), ...layout.meter];
   if (layout.enchant) boxes.push(...layout.enchant);
   if (layout.boss) boxes.push(text(layout.boss.name), layout.boss.bar);
+  if (layout.receipt) boxes.push({ ...layout.receipt, w: RECEIPT.w + RECEIPT.carbon, h: RECEIPT.h + RECEIPT.carbon });
   return boxes;
 }
 
@@ -180,7 +221,38 @@ export function drawHud(fill, layout, steps = {}) {
   for (const e of layout.enchant ?? []) drawSlot(enchant, e, e.held ? HUD_COLOURS.meter : HUD_COLOURS.empty);
   if (layout.boss) {
     const boss = group('boss');
-    drawString(boss, layout.boss.name.text, layout.boss.name.x, layout.boss.name.y);
-    drawBar(boss, layout.boss.bar, HUD_COLOURS.boss);
+    const { name, bar } = layout.boss;
+    const lettering = (x, y, w, h, c, part) =>
+      boss(x, y, w, h, c === HUD_COLOURS.bossLabel ? blend15(HUD_COLOURS.bossLabel, bar.colour, Math.min(15, (y - name.y) * 2)) : c, part);
+    drawString(lettering, name.text, name.x, name.y, HUD_COLOURS.bossLabel);
+    for (const cx of [bar.x - 2, bar.x + bar.w]) {
+      boss(cx, bar.y - 1, 2, bar.h + 2, shade(HUD_COLOURS.brass, -8));
+      boss(cx, bar.y, 2, bar.h, HUD_COLOURS.brass);
+      boss(cx, bar.y, 1, 1, shade(HUD_COLOURS.brass, 6));
+    }
+    drawBar(boss, bar, bar.colour);
   }
+  if (layout.receipt) drawReceipt(group('receipt'), layout.receipt);
+}
+
+// The receipt: a see-through carbon copy behind, a drop shadow, then grained paper, a bevel, RCPT and the count in red.
+function drawReceipt(fill, r) {
+  const { paper } = HUD_COLOURS;
+  const c = r.carbon;
+  fill(c.x, c.y, c.w, c.h, HUD_COLOURS.carbon, 'track');
+  fill(c.x + 2, c.y + c.h - 4, c.w - 4, 1, shade(HUD_COLOURS.carbon, 6), 'track');
+  fill(r.x + 2, r.y + r.h, r.w, 1, HUD_COLOURS.edge, 'track');
+  fill(r.x + r.w, r.y + 2, 1, r.h - 1, HUD_COLOURS.edge, 'track');
+  fill(r.x, r.y, r.w, r.h, shade(paper, -14));
+  fill(r.x + 1, r.y + 1, r.w - 2, r.h - 2, paper);
+  fill(r.x + 1, r.y + 1, r.w - 2, 1, shade(paper, 4));
+  fill(r.x + 1, r.y + 1, 1, r.h - 2, shade(paper, 2));
+  fill(r.x + 1, r.y + r.h - 2, r.w - 2, 1, shade(paper, -6));
+  fill(r.x + r.w - 2, r.y + 1, 1, r.h - 2, shade(paper, -4));
+  for (let y = r.y + 3; y < r.y + r.h - 3; y += 2) {
+    for (let x = r.x + 3 + ((y * 3) % 4); x < r.x + r.w - 3; x += 4) fill(x, y, 1, 1, shade(paper, -3));
+  }
+  const count = String(r.count);
+  drawString(fill, 'RCPT', r.x + 4, r.y + 6, HUD_COLOURS.receiptInk, shade(paper, -7));
+  drawString(fill, count, r.x + r.w - 5 - measure(count), r.y + 6, HUD_COLOURS.receiptRed, shade(paper, -9));
 }

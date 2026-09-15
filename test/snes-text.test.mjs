@@ -91,7 +91,7 @@ test('bars fill in proportion and clamp', () => {
   assert.deepEqual(hudLayout(play).meter.map((m) => m.full), [true, true, false, false]);
   const boss = hudLayout(play).boss;
   assert.equal(boss.bar.fill, Math.round((94 * 7) / 12));
-  assert.equal(boss.name.x + measure('VELLUM'), WIDTH - 8);
+  assert.equal(boss.name.x + measure('OVERDUE: VELLUM'), WIDTH - 8);
 });
 
 test('the enchantments and boss bar appear only when there are some', () => {

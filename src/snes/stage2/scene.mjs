@@ -9,7 +9,7 @@ import { screen, mathPass, mode7Matrix, mode7Pass } from '../fx.mjs';
 import { artOr, loadArt, SpriteLayer } from '../art.mjs';
 import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
-import { drainStep, drawHud, fadeFill, hudGroups, hudLayout } from '../hud.mjs';
+import { drainStep, drawHud, fadeFill, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { FrontScreen, bufferFill } from '../scenes/front.mjs';
 import { pollPad } from '../../input.mjs';
@@ -186,6 +186,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     let flow = this.registry.get('flow');
     for (const e of run.events) {
       if (SOUNDS[e.type]) sfx(SOUNDS[e.type]);
+      if (e.type === 'pickup') this.receipt = postReceipt(this.receipt, run.frame * MS);
       if (e.type === 'bossDown') playSong(this.song = 'stageClear');
       if (e.type === 'stageClear') { showFlow(this, next(flow, e)); return; }
       if (e.type === 'checkpoint') this.registry.set('flow', flow = next(flow, e));
@@ -289,7 +290,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     this.groups ??= hudGroups();
     if (!run.paused) this.drain = drainStep(this.drain, hud.hp);
     const steps = this.groups.see(hud, run.frame * MS, Boolean(run.paused));
-    const layout = hudLayout({ ...hud, pale: this.drain?.pale ?? hud.hp });
+    const layout = hudLayout({ ...hud, pale: this.drain?.pale ?? hud.hp, receipt: this.receipt, now: run.frame * MS });
     drawHud(fadeFill(buf), layout, steps);
     const hudArt = [];
     const alphas = [];
