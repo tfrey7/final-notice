@@ -29,9 +29,8 @@ export const PROFILES = {
     colour: hex,
     bakeArt: snesArt,
     crtLook: 'snes',
-    // In the same cost units as the NES: a SlowROM 65816 moving 56-64 px fighters slows once three foes
-    // and a few props share the floor, as Final Fight did; a tuning estimate, unverified.
-    slowdownBudget: 20000,
+    // No emulated slowdown (Tim, 09-15): a crowded floor runs at the same speed as an empty one.
+    slowdownBudget: Infinity,
   },
 };
 

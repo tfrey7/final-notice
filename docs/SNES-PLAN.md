@@ -40,7 +40,7 @@ Held to the real machine, checked by `src/snes/limits.mjs` in tests, drawn by Ph
 | Effects | Colour math (add, subtract, half) between the main and sub screen for glass, glows and shadows; master brightness 0-15 for fades; mosaic 1-16 px for transitions; windows to mask; Mode 7 (one 256-colour affine layer, scale and rotate) for set pieces only. |
 | Sound | SPC700 + S-DSP: 8 voices of BRR sample playback (9 bytes per 16 4-bit samples, about 3.6:1 against 16-bit PCM), 32 kHz output, 4-point Gaussian interpolation (the soft, warm top end), per-voice ADSR or GAIN, pitch modulation from the previous voice, one shared noise source, an echo with an 8-tap FIR filter and a delay of 16-240 ms; 64 KiB of sound RAM shared by driver, songs, samples and the echo buffer (2,048 bytes per 16 ms of delay, so a 240 ms echo takes 30 KB), so samples are short loops. A sound effect takes a voice (voice 8, then 7) from the music and gives it back. |
 | Pad | D-pad, B, A, Y, X, L, R, Select, Start. |
-| Slowdown | Heavy scenes run at 30 fps for a moment, as SNES brawlers did; `src/nes/slowdown.mjs` logic is shared, its threshold per profile. |
+| Slowdown | None: a crowded scene runs at full speed (Tim, 09-15). The SNES `slowdownBudget` is Infinity; the NES keeps its slowdown. |
 
 Out of scope, as for the NES: a real ROM (a later epic could feed the same data to a ca65/WLA build).
 
