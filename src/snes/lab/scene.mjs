@@ -8,7 +8,9 @@ import { hex, rgb15 } from '../color.mjs';
 import { sfx } from '../audio/player.mjs';
 import { pollPad } from '../../input.mjs';
 import { AUDITORS } from '../../flow.mjs';
-import { DOWNED, shakeOffset } from '../../stage1/moves.mjs';
+import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
+import { readLook, turnOwners } from '../../stage1/readout.mjs';
+import { drawReadout } from '../readout.mjs';
 import { PIPS, newFloor, stepFloor, tuneFor } from '../../stage1/player.mjs';
 import { KINDS, spawnStaff, thinkStaff } from '../../stage1/staff.mjs';
 import { STAGE1 } from '../../stage1/tuning.mjs';
@@ -34,8 +36,11 @@ const REPEAT = { delay: 14, every: 3 };
 const SOUND = { punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step', redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', injunction: 'injunction', parry: 'stamp' };
 const GREY = { wall: 0x34343a, trim: 0x44444c, floor: 0x5a5a62, line: 0x66666e, shadow: 0x222226 };
 const BODY = { player: 0xdcdcdc, associate: 0x9c9c9c, manager: 0xb4ab8c, counsel: 0xa88c8c, supervisor: 0x8894a8 };
-const LETTER = { associate: 'A', manager: 'M', counsel: 'C', supervisor: 'S' };
+// The body shifts toward the look's colour, so kind still reads under the state.
+const LOOK_BODY = { open: 0xe8d870, hurt: 0xc87070, down: 0x74747c };
 const LYING = [...DOWNED, 'knockdown'];
+// ?pose=sheet&n=<0-4>: the picture sheet, every state held still across five frames.
+const SHEETS = ['IDLE / WALK', 'WIND-UP', 'ATTACK', 'GUARD / OPEN', 'HURT / DOWN / GETUP'];
 const WHITE = rgb15(31, 31, 31);
 
 export class SnesLabScene extends Phaser.Scene {
@@ -67,7 +72,12 @@ export class SnesLabScene extends Phaser.Scene {
       onReset: () => { this.dials.forEach((d) => { d.value = d.start; }); this.panel.flash('Dials reset.'); },
     });
     this.tabbed = false;
-    const onKey = (e) => { if (e.code === 'Tab') { e.preventDefault(); this.tabbed = true; } };
+    // H overlays hit and hurt boxes, the attack-turn owners and each fighter's state tag; ?boxes starts it on.
+    this.boxes = params.has('boxes');
+    const onKey = (e) => {
+      if (e.code === 'Tab') { e.preventDefault(); this.tabbed = true; }
+      if (e.code === 'KeyH') this.boxes = !this.boxes;
+    };
     window.addEventListener('keydown', onKey);
     // ?dials opens the panel on the first frame, for a screenshot.
     if (params.has('dials')) this.panel.toggle(true);
@@ -75,6 +85,7 @@ export class SnesLabScene extends Phaser.Scene {
     // or `&hold=<frames>` that many frames later.
     this.poseHold = Number(params.get('hold') ?? 0);
     if (params.get('pose') === 'parry') this.poseParry();
+    if (params.get('pose') === 'sheet') this.poseSheet(Number(params.get('n') ?? 0));
     this.events.once('shutdown', () => {
       window.removeEventListener('keydown', onKey);
       this.panel.remove();
@@ -90,6 +101,30 @@ export class SnesLabScene extends Phaser.Scene {
     Object.assign(a, { x: p.x + 24, y: p.y, facing: -1, state: 'windup', t: this.tune.kinds.associate.windup - 2, cooldown: 0 });
     rest.forEach((f, i) => Object.assign(f, { x: FLOOR.right - 8 - i * 30, cooldown: 999 }));
     this.posed = true;
+  }
+
+  poseSheet(n) {
+    const w = this.world;
+    const tune = this.tune;
+    const p = Object.assign(w.fighters.find((f) => f.team === 'player'), { x: 44, y: 192, facing: 1 });
+    const foe = (kind, x, fields) => Object.assign(fighter(`${kind}${x}`, 'foe', x, 192, tune), {
+      kind, hp: KINDS[kind].hp, maxHp: KINDS[kind].hp, facing: -1, cooldown: 999, guardDown: 0, guardBreakFrames: KINDS[kind].guard ?? 0,
+    }, fields);
+    const sheets = [
+      () => [foe('associate', 120, {}), foe('manager', 190, { state: 'walk', facing: 1 }), foe('counsel', 256, {})],
+      () => { p.parry = 6; return [foe('associate', 120, { state: 'windup', t: 2 }), foe('supervisor', 220, { state: 'windup', t: 33 })]; },
+      () => { Object.assign(p, { state: 'punch', combo: 1, t: tune.punchStartup + 1 }); return [foe('manager', 150, {}), foe('associate', 240, { state: 'punch', t: 1 })]; },
+      () => [foe('supervisor', 120, { state: 'guard' }), foe('associate', 220, { state: 'hurt', stagger: tune.parryStagger, t: 10 })],
+      () => {
+        Object.assign(p, { weapon: { kind: 'stapler', uses: 3 } });
+        w.cooldown.left = w.cooldown.frames / 2;
+        return [foe('manager', 104, { state: 'hurt', t: 4 }), foe('counsel', 170, { state: 'down', t: 5 }), foe('associate', 236, { state: 'getup', t: 5 })];
+      },
+    ];
+    w.fighters = [p, ...sheets[n % sheets.length]()];
+    w.bench = [];
+    this.sheet = SHEETS[n % SHEETS.length];
+    this.held = true;
   }
 
   dial(key) {
@@ -177,6 +212,7 @@ export class SnesLabScene extends Phaser.Scene {
     for (let y = FLOOR.top + 11; y < HEIGHT; y += 11) g.fillStyle(GREY.line).fillRect(-8, y, WIDTH + 16, 1);
     for (let x = 0; x <= WIDTH; x += 32) g.fillStyle(GREY.trim).fillRect(x, 40, 1, FLOOR.top - 52);
 
+    this.turns = turnOwners(w);
     const things = [...w.fighters.map((f) => ({ y: f.y, f })), ...w.props.filter((o) => o.state !== 'gone').map((o) => ({ y: o.y, o })),
       ...(w.tapes ?? []).map((t) => ({ y: t.y, t })), ...w.smash.map((s) => ({ y: s.y, s })), ...w.weapons.map((wp) => ({ y: wp.y, wp }))]
       .sort((a, b) => a.y - b.y);
@@ -221,39 +257,21 @@ export class SnesLabScene extends Phaser.Scene {
     const g = this.g;
     const x = Math.round(f.x);
     g.fillStyle(GREY.shadow).fillRect(x - 12, f.y - 2, 24, 4);
-    if (f.invuln > 0 && f.invuln % 4 < 2 && f.team === 'foe') return;
     const lying = LYING.includes(f.state) && f.state !== 'getup';
     const bw = lying ? 48 : f.team === 'player' ? 22 : 24;
     const bh = lying ? 14 : f.kind === 'supervisor' ? 62 : 56;
     const top = Math.round(f.y - bh - f.z);
-    const flash = f.state === 'windup' && f.t % 8 < 4;
-    const colour = flash ? 0xffffff : f.team === 'player' ? BODY.player : BODY[f.kind] ?? BODY.associate;
-    const alpha = f.team === 'player' && f.invuln > 0 && f.invuln % 4 < 2 ? 0.4 : 1;
+    const look = readLook(f);
+    const flash = look === 'windup' && f.t % 8 < 4;
+    const colour = flash ? 0xffffff : LOOK_BODY[look] ?? (f.team === 'player' ? BODY.player : BODY[f.kind] ?? BODY.associate);
+    const alpha = f.invuln > 0 && f.invuln % 4 < 2 ? 0.35 : 1;
     g.fillStyle(colour, alpha).fillRect(x - bw / 2, top, bw, bh);
-    // Red while hurt, yellow while reeling from a parry, blue while the auditor's parry window is open.
-    const edge = f.stagger > 0 ? 0xf0d040 : f.parry > 0 ? 0x60b0ff : f.state === 'hurt' || f.state === 'held' ? 0xe04040 : 0x18181c;
-    g.lineStyle(f.stagger > 0 || f.parry > 0 ? 2 : 1, edge).strokeRect(x - bw / 2, top, bw, bh);
-    if (!lying) {
-      // A face notch shows which way the box looks.
-      g.fillStyle(0x18181c).fillRect(f.facing > 0 ? x + bw / 2 - 6 : x - bw / 2 + 2, top + 8, 4, 4);
-      if (f.state === 'guard') g.fillStyle(0x6070a0).fillRect(x + f.facing * (bw / 2 + 1) - (f.facing < 0 ? 4 : 0), top + 10, 4, 28);
-      this.drawReach(f, x, top);
-    }
-    if (f.kind) drawString(this.fill, LETTER[f.kind], x - 3, top - 12, WHITE);
-    if (f.marked > 0) g.fillStyle(0xc02838).fillRect(x + 6, top - 12, 10, 7);
+    drawReadout(g, this.fill, f, { x, top, w: bw, h: bh, feet: f.y, lying }, {
+      tune: this.tune, frame: this.game.loop.frame, cooldown: this.world.cooldown, boxes: this.boxes, turn: this.turns.includes(f),
+    });
+    if (f.marked > 0) g.fillStyle(0xc02838).fillRect(x + 6, top - 22, 10, 7);
     if (f.weapon) this.drawWeapon(f.weapon.kind, x + f.facing * (bw / 2 + 4), top + 34);
     if (f.state === 'spray') g.fillStyle(0xe8f0f8, 0.5).fillRect(f.facing > 0 ? x + bw / 2 : x - bw / 2 - this.world.weaponTune.extinguisherReach, top + 16, this.world.weaponTune.extinguisherReach, 14);
-  }
-
-  // A swing's reach as an outline on its row: the player's punch or kick, a foe's wind-up and punch.
-  drawReach(f, x, top) {
-    const tune = this.tune;
-    const k = f.kind && KINDS[f.kind];
-    const swinging = f.team === 'player' ? f.state === 'punch' || (f.state === 'jump' && f.kicked) : ['windup', 'punch'].includes(f.state);
-    if (!swinging || (k && k.keep)) return;
-    const reach = k ? k.reach : tune.punchReach;
-    const x0 = f.facing > 0 ? x : x - reach;
-    this.g.lineStyle(1, f.team === 'player' ? 0x80e080 : 0xe0a040, 0.8).strokeRect(x0, top + 16, reach, tune.depthReach * 2);
   }
 
   drawHud() {
@@ -265,6 +283,8 @@ export class SnesLabScene extends Phaser.Scene {
     for (let i = 0; i < SEGMENTS; i++) g.fillStyle(i < w.meter ? 0xd8b050 : 0x3a3a3e).fillRect(8 + i * 10, 20, 8, 4);
     drawString(this.fill, 'BRAWL LAB', WIDTH - 72, 8, WHITE);
     drawString(this.fill, this.panel.visible ? 'TAB: FIGHT' : 'TAB: DIALS', WIDTH - 72, 20, rgb15(20, 20, 22));
+    drawString(this.fill, this.boxes ? 'H: NO BOXES' : 'H: BOXES', WIDTH - 72, 32, rgb15(20, 20, 22));
+    if (this.sheet) drawString(this.fill, this.sheet, 8, 44, rgb15(31, 28, 10));
     const foes = w.fighters.filter((f) => f.team === 'foe' && f.state !== 'ko').length + w.bench.length;
     drawString(this.fill, `FOES ${foes}`, 8, 30, rgb15(20, 20, 22));
   }

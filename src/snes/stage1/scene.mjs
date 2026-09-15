@@ -34,6 +34,8 @@ import { DIM_TINT, PauseOverlay, drawPause } from '../pausedraw.mjs';
 import { CARD, OFFICE, bossHitStop, cardFrame, fangFlash } from './boss.mjs';
 import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../../stage1/weapons.mjs';
+import { turnOwners } from '../../stage1/readout.mjs';
+import { drawReadout } from '../readout.mjs';
 
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
@@ -114,6 +116,12 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.pixels = this.tex.context.createImageData(WIDTH, HEIGHT);
     this.add.image(0, 0, 'snes-stage1-bg').setOrigin(0);
     this.layer = new SpriteLayer(this, 10);
+    this.marks = this.add.graphics().setDepth(12);
+    this.markFill = (x, y, w, h, c) => this.marks.fillStyle(hex(c)).fillRect(x, y, w, h);
+    // ?boxes: H toggles the debug overlay (hit and hurt boxes, turn owners, state tags), starting on.
+    this.boxes = params.has('boxes');
+    const onKey = (e) => { if (e.code === 'KeyH') this.boxes = !this.boxes; };
+    if (this.boxes) window.addEventListener('keydown', onKey);
     this.finImages = [];
     this.g = this.add.graphics().setDepth(20).setScrollFactor(0);
     this.hudSprites = new SpriteLayer(this, 21);
@@ -124,7 +132,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.receipt = null;
     this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
-    this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; });
+    this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; window.removeEventListener('keydown', onKey); });
     this.ready = true;
   }
 
@@ -330,8 +338,27 @@ export class SnesStage1Scene extends Phaser.Scene {
       return f.team === 'player' ? this.playerSprites(f, at(f.x), ms) : this.foeSprites(f, at(f.x), ms);
     });
     this.layer.draw(sprites);
+    this.drawMarks(cam + shake.x);
     this.drawFinisher();
     this.drawHud(time);
+  }
+
+  // Each fighter's readout over its stand-in sprite, sized to the sprite's own box.
+  drawMarks(off) {
+    const g = this.marks.clear();
+    const w = this.world;
+    if (this.card || this.entrance || this.paused) return;
+    const turns = turnOwners(w);
+    for (const f of w.fighters) {
+      if (f === this.fin?.foe || Math.abs(f.x - off - WIDTH / 2) > WIDTH / 2 + 32) continue;
+      const vellumBox = f.kind === 'vellum';
+      const lying = (vellumBox ? ['down', 'slumped', 'knockdown'] : ['down', 'ko']).includes(f.state);
+      const bw = lying ? (vellumBox ? 60 : 56) : vellumBox ? 36 : 32;
+      const bh = lying ? (vellumBox ? 28 : 24) : vellumBox ? 66 : f.team === 'player' ? BODY_H + 2 : BODY_H;
+      drawReadout(g, this.markFill, f, { x: Math.round(f.x - off), top: Math.round(f.y - bh - f.z), w: bw, h: bh, feet: f.y, lying }, {
+        tune: this.tune, dx: -off, frame: this.game.loop.frame, cooldown: w.cooldown, boxes: this.boxes, turn: turns.includes(f),
+      });
+    }
   }
 
   // The finisher's growing frames as scaled images over the sprite layer, like the drawn frames of
