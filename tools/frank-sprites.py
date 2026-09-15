@@ -13,6 +13,12 @@ part id, normal and depth. spritesmith's rule-based pixel artist supplies the cr
    neighbours. No image model and no hand-placed pixels: the same buffers always give the same bytes.
 
     py -3.10 tools/frank-sprites.py [--poses idle] [--compare <sheet.png> --compare-out <png>]
+
+The cel option (item 2290) keeps all of that but takes the light from Blender instead of the normals:
+tools/blender/frank_cel_buffers.py renders flat toon bands and Line Art, the bands pick each pixel's
+ramp step and the lines become inner lines. It never touches the default sprites.
+
+    py -3.10 tools/frank-sprites.py --buffers <cel render dir> --cel --poses idle contact --out <dir>
 """
 
 import argparse
@@ -46,6 +52,9 @@ LIGHT = np.array([-0.55, 0.65, -0.52]) / np.linalg.norm([-0.55, 0.65, -0.52])
 SHADE_LO, SHADE_HI = 0.35, 0.85
 MIN_CLUSTER = 3
 N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
+# a cel band (shadow, mid, lit) as a ramp step, by ramp length; a four-step ramp keeps step 0 for lines
+BAND_STEPS = {1: (0, 0, 0), 2: (0, 1, 1), 3: (0, 1, 2), 4: (1, 2, 3)}
+LINE_COVER = 0.3   # share of a native pixel's 8x8 block the Line Art must cover to ink it
 
 
 def load_artist(path):
@@ -74,6 +83,26 @@ def shade_steps(mat, normal):
     for m, ramp in RAMPS.items():
         sel = mat == m
         step[sel] = (value[sel] * len(ramp)).astype(int)
+    return step
+
+
+def load_cel(buffers_dir, name, mat):
+    """The cel band per native pixel (-1 where Blender left none) and the Line Art mask."""
+    cel = np.asarray(Image.open(os.path.join(buffers_dir, "%s-cel.png" % name)).convert("RGBA")).astype(float)
+    band = np.where(cel[..., 3] > 127, np.rint(cel[..., 0] / 255 * 2), -1).astype(int)
+    art = np.asarray(Image.open(os.path.join(buffers_dir, "%s-lineart.png" % name)).convert("RGBA"))[..., 3]
+    h, w = mat.shape
+    zoom = art.shape[0] // h
+    cover = art[:h * zoom, :w * zoom].reshape(h, zoom, w, zoom).mean(axis=(1, 3)) / 255
+    return {"band": band, "lines": (cover > LINE_COVER) & (mat > 0)}
+
+
+def cel_steps(mat, band, fallback):
+    step = fallback.copy()
+    for m, ramp in RAMPS.items():
+        lut = np.array(BAND_STEPS[len(ramp)])
+        sel = (mat == m) & (band >= 0)
+        step[sel] = lut[band[sel]]
     return step
 
 
@@ -124,7 +153,7 @@ def merge_small_clusters(colour, fill, mat, index_mat):
     return colour
 
 
-def paint(pa, buffers):
+def paint(pa, buffers, cel=None):
     mat, part, depth = buffers["mat"], buffers["part"], buffers["depth"]
     colours, index = pa.palette(RAMPS)
     colours[1] = INK
@@ -133,6 +162,9 @@ def paint(pa, buffers):
     edges = pa.edge_buffer(mat, part, depth)
     edge = edges == 1
     line = (edges == 2) | (seam_lines(mat) & ~edge)
+    if cel:
+        step = cel_steps(mat, cel["band"], step)
+        line |= cel["lines"] & ~edge
     light2d = np.array([-LIGHT[1], LIGHT[0]])
     colour = np.zeros(mat.shape, int)
     h, w = mat.shape
@@ -200,21 +232,45 @@ def compare(sheet_path, sprites, before, path):
     return path
 
 
+def cel_sheet(sheet_path, rows, path):
+    """Astra's sheet on the left, each labelled strip at 4x stacked on the right."""
+    sheet = Image.open(sheet_path).convert("RGB")
+    strips = [(label, strip(sprites, zoom=4, gap=12)) for label, sprites in rows]
+    height = sum(s.height + 22 for _, s in strips) + 10
+    sheet = sheet.resize((sheet.width * height // sheet.height, height), Image.LANCZOS)
+    width = sheet.width + max(s.width for _, s in strips) + 30
+    bg, ink = (44, 46, 56), (236, 236, 236)
+    out = Image.new("RGB", (width, height + 20), bg)
+    draw = ImageDraw.Draw(out)
+    out.paste(sheet, (10, 10))
+    y = 10
+    for label, s in strips:
+        draw.text((sheet.width + 20, y), label, fill=ink)
+        out.paste(s, (sheet.width + 20, y + 14), s)
+        y += s.height + 22
+    out.save(path)
+    return path
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--spritesmith", default=SPRITESMITH)
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--poses", nargs="*", default=NAMES)
+    ap.add_argument("--buffers", help="a pose buffer directory other than spritesmith's Frank")
+    ap.add_argument("--cel", action="store_true", help="shade from frank_cel_buffers.py's bands and Line Art")
     ap.add_argument("--compare", help="Astra's Frank sheet, read in place")
     ap.add_argument("--compare-out", help="where the comparison goes, outside the repo")
     args = ap.parse_args(argv)
     pa = load_artist(args.spritesmith)
-    buffers_dir = os.path.join(args.spritesmith, "characters", "frank-mercer", "poses")
+    buffers_dir = args.buffers or os.path.join(args.spritesmith, "characters", "frank-mercer", "poses")
+    if (args.buffers or args.cel) and args.out == OUT:
+        ap.error("--buffers and --cel write elsewhere: pass --out")
     os.makedirs(args.out, exist_ok=True)
     sprites, before = [], []
     for name in [n for n in NAMES if n in args.poses]:
         buffers = pa.load({k: os.path.join(buffers_dir, "%s-%s.png" % (name, k)) for k in ("ids", "normal", "depth")})
-        rgba = paint(pa, buffers)
+        rgba = paint(pa, buffers, load_cel(buffers_dir, name, buffers["mat"]) if args.cel else None)
         path = os.path.join(args.out, "%s.png" % name)
         Image.fromarray(rgba, "RGBA").save(path, optimize=False)
         with open(path, "rb") as fh:
@@ -224,7 +280,9 @@ def main(argv=None):
         print("%s: %d colours, %d px tall, feet on row %d, sha256 %s" % (name, colours, ys.max() - ys.min() + 1,
                                                                         ys.max(), digest[:16]))
         sprites.append((name, Image.fromarray(rgba, "RGBA")))
-        before.append((name, Image.open(os.path.join(buffers_dir, "%s-sprite.png" % name)).convert("RGBA")))
+        first_pass = os.path.join(buffers_dir, "%s-sprite.png" % name)
+        if os.path.exists(first_pass):
+            before.append((name, Image.open(first_pass).convert("RGBA")))
     all_rgba = np.concatenate([np.asarray(s).reshape(-1, 4) for _, s in sprites])
     print("set: %d colours" % len(np.unique(all_rgba[all_rgba[:, 3] > 0], axis=0)))
     if len(sprites) == len(NAMES):
