@@ -19,7 +19,7 @@ import { SnesCinemaScene } from './snes/scenes/cinema.mjs';
 import { SnesEndingScene } from './snes/scenes/ending.mjs';
 import { SnesOpeningScene } from './snes/scenes/opening.mjs';
 import { opensWithOpening } from './snes/opening.mjs';
-import { SnesStage1Scene, SnesStage3Scene } from './snes/stage1/scene.mjs';
+import { SnesStage1Scene, SnesStage3Scene, SnesStage5Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 import { SnesLabScene } from './snes/lab/scene.mjs';
 import { SnesClimbLabScene } from './snes/lab/climb.mjs';
@@ -36,8 +36,9 @@ const SCENES = {
   select: snes ? new SnesSelectScene() : new SelectScene(),
   stage1: snes ? new SnesStage1Scene() : new Stage1Scene(),
   stage2: snes ? new SnesStage2Scene() : new EscapeScene(),
-  // Stage 3 exists only as the SNES grey box, so the NES build plays that too.
+  // Stages 3 and 5 exist only as SNES grey boxes, so the NES build plays those too.
   stage3: new SnesStage3Scene(),
+  stage5: new SnesStage5Scene(),
   gameover: snes ? new SnesGameOverScene() : new GameOverScene(),
   ending: snes ? new SnesEndingScene() : new EndingScene(),
 };
@@ -46,7 +47,7 @@ for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = snes ? new SnesC
 // ?snes runs the SNES profile (?snes&hw and the other rows of src/snes/debug.mjs are its test screens),
 // ?fast gives foes and bosses cheap health, ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen,
 // ?who=<auditor> picks who is playing; ?go=vellum and ?go=greatseal are each stage at its boss room's
-// checkpoint, and ?go=stage1&area=<1-5>, ?go=stage2&area=<1-5> or ?go=stage3&area=<1-4> starts that stage at the area's checkpoint.
+// checkpoint, and ?go=stage1&area=<1-5>, ?go=stage2&area=<1-5> ?go=stage3&area=<1-4> or ?go=stage5&area=<1-4> starts that stage at the area's checkpoint.
 const BOSSES = { vellum: ['stage1', 'stage1-area5'], greatseal: ['stage2', 'stage2-area5'] };
 const boss = BOSSES[params.get('go')];
 const start = boss

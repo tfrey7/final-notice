@@ -31,6 +31,7 @@ import { enterOffice, poseOffice, vellum } from '../../stage1/vellum.mjs';
 import { finisherFrame, finisherTarget, livingFoes, scaledTune } from './finisher.mjs';
 import { SNES_STAGE1 } from './waves.mjs';
 import { SNES_STAGE3 } from '../stage3/waves.mjs';
+import { SNES_STAGE5, armChapel, stepRitual } from '../stage5/chapel.mjs';
 import { thingPriority, withPriority } from './priority.mjs';
 import { BRAWL_WEIGHT, weighShared, weighed } from '../weight.mjs';
 import { closePause, holdings, openPause, stepPause } from '../pause.mjs';
@@ -52,6 +53,8 @@ const OFFICE_BG = CLAIMS2.areas[2];
 const STAGE1_DEF = { number: 1, table: SNES_STAGE1, checkpoints: CHECKPOINTS.stage1, backgrounds: BACKGROUNDS, weapons: true };
 // Stage 3's grey box borrows Stage 1's rooms until the Backrooms art lands; its break room is one screen.
 const STAGE3_DEF = { number: 3, table: SNES_STAGE3, checkpoints: CHECKPOINTS.stage3, backgrounds: [RECEPTION, CLAIMS2.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]] };
+// Stage 5's grey box borrows rooms too; its altar-desks are furniture (`arm`) and its ritual runs after the areas (`step`).
+const STAGE5_DEF = { number: 5, table: SNES_STAGE5, checkpoints: CHECKPOINTS.stage5, backgrounds: [CLAIMS2.areas[0], CLAIMS2.areas[1], CLAIMS.areas[1], CLAIMS2.areas[2]], arm: armChapel, step: stepRitual };
 const MENU_SOUNDS = { move: 'pencil', swap: 'stampOk', close: 'paperSlide', thud: 'stamp' };
 const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
 const MEMO = { paper: rgb15(29, 28, 23), rule: rgb15(18, 16, 12), ink: rgb15(3, 3, 6), stamp: rgb15(26, 3, 3) };
@@ -65,7 +68,10 @@ const FOE_PALETTES = {
 };
 const PROP_PALETTE = [rgb15(2, 2, 4), rgb15(16, 10, 4), rgb15(28, 24, 14)];
 // Grey boxes for the office weapons and the furniture that drops them, until their art lands.
-const FURNITURE = { desk: { w: 54, h: 32, palette: PROP_PALETTE }, cabinet: { w: 30, h: 54, palette: [rgb15(2, 2, 4), rgb15(13, 14, 16), rgb15(22, 23, 25)] } };
+const FURNITURE = { desk: { w: 54, h: 32, palette: PROP_PALETTE }, cabinet: { w: 30, h: 54, palette: [rgb15(2, 2, 4), rgb15(13, 14, 16), rgb15(22, 23, 25)] },
+  altar: { w: 44, h: 28, palette: [rgb15(2, 2, 4), rgb15(18, 3, 6), rgb15(31, 26, 8)] } };
+// A foe anointed by a standing altar glows in the ritual's crimson and gold.
+const ANOINTED = [rgb15(2, 2, 4), rgb15(26, 4, 6), rgb15(31, 26, 8)];
 const WEAPON_BOX = {
   stapler: { w: 14, h: 8, palette: [WHITE, rgb15(6, 6, 7), rgb15(14, 14, 16)] },
   binder: { w: 12, h: 16, palette: [WHITE, rgb15(6, 12, 22), rgb15(12, 18, 28)] },
@@ -118,7 +124,8 @@ export class SnesStage1Scene extends Phaser.Scene {
       this.entrance = this.card && !params.has('card') ? { t: Number(params.get('entrance') ?? 0), still: params.has('entrance') } : null;
     } else {
       this.world = newStage(newFloor(this.who, this.tune), this.tune, areaFor(state.checkpoint, this.def.checkpoints, this.def.table.areas.length), this.def.table);
-      if (this.def.weapons) armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
+      if (this.def.arm) this.def.arm(this.world);
+      else if (this.def.weapons) armWorld(this.world, stageSmash(this.world.stage.starts), scaledWeapons(defaultWeapons(), STAGE1.scale));
     }
     this.world.cooldown = freeInjunction();
 
@@ -206,7 +213,10 @@ export class SnesStage1Scene extends Phaser.Scene {
     }
     const target = !this.office && finisherTarget(w, before);
     if (target) this.startFinisher(target);
-    if (!this.office) stepAreas(w, this.tune);
+    if (!this.office) {
+      stepAreas(w, this.tune);
+      this.def.step?.(w, this.tune);
+    }
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
     const sound = !target && brawlSound(w.events);
     if (sound) sfx(sound);
@@ -287,8 +297,8 @@ export class SnesStage1Scene extends Phaser.Scene {
     const h = lying ? 24 : BODY_H;
     const w = lying ? 56 : 32;
     const flash = (f.state === 'windup' && f.t % 8 < 2) || f.hitFlash > 0;
-    const palette = flash ? [WHITE, WHITE, WHITE] : FOE_PALETTES[f.kind] ?? FOE_PALETTES.associate;
-    const name = `foe:${f.kind}:${lying ? 'down' : 'up'}${flash ? ':flash' : ''}`;
+    const palette = flash ? [WHITE, WHITE, WHITE] : f.anointed ? ANOINTED : FOE_PALETTES[f.kind] ?? FOE_PALETTES.associate;
+    const name = `foe:${f.kind}:${lying ? 'down' : 'up'}${flash ? ':flash' : f.anointed ? ':anointed' : ''}`;
     return artOr(this, name, { w, h, palette }).frame('stand', ms, Math.round(sx - w / 2), Math.round(f.y - h - f.z));
   }
 
@@ -448,6 +458,7 @@ export class SnesStage1Scene extends Phaser.Scene {
       drawString(this.fill, 'GO', WIDTH - 40, 64, rgb15(31, 26, 8));
       this.g.fillStyle(hex(rgb15(31, 26, 8))).fillTriangle(WIDTH - 22, 63, WIDTH - 22, 73, WIDTH - 14, 68);
     }
+    if (w.ritual && Math.floor(w.ritualT / 20) % 2 === 0) centred('BREAK THE ALTARS', 80, rgb15(31, 26, 8));
     if (p.state === 'bound') drawString(this.fill, 'MASH!', Math.round(p.x - w.cameraX) - 16, p.y - 80);
     if (this.card && !this.entrance) this.drawCard(cardFrame(this.card.t));
     if (this.clear) this.drawClear(clearLines(this.registry.get('stage1Frames') ?? 0, flow.lives, this.def.number));
@@ -504,5 +515,12 @@ export class SnesStage1Scene extends Phaser.Scene {
 export class SnesStage3Scene extends SnesStage1Scene {
   constructor() {
     super('stage3', STAGE3_DEF);
+  }
+}
+
+// Stage 5, the executive chapel: the brawl among pews and altar-desks, whose ritual anoints the staff.
+export class SnesStage5Scene extends SnesStage1Scene {
+  constructor() {
+    super('stage5', STAGE5_DEF);
   }
 }

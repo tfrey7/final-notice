@@ -1,9 +1,9 @@
 // The game's order of screens, the chosen auditor, lives, continues and checkpoints.
 // Every event returns a new state, and the scenes only ever show `state.screen`.
 
-export const ORDER = ['title', 'select', 'scene1', 'stage1', 'scene2', 'stage2', 'stage3', 'scene3', 'ending'];
+export const ORDER = ['title', 'select', 'scene1', 'stage1', 'scene2', 'stage2', 'stage3', 'stage5', 'scene3', 'ending'];
 export const SCREENS = [...ORDER, 'gameover'];
-export const STAGES = ['stage1', 'stage2', 'stage3'];
+export const STAGES = ['stage1', 'stage2', 'stage3', 'stage5'];
 export const AUDITORS = ['ward', 'mercer'];
 
 export const LIVES = 3;
@@ -14,6 +14,7 @@ export const CHECKPOINTS = {
   stage1: ['stage1-area1', 'stage1-area2', 'stage1-area3', 'stage1-area4', 'stage1-area5'],
   stage2: ['stage2-area1', 'stage2-area2', 'stage2-area3', 'stage2-area4', 'stage2-area5'],
   stage3: ['stage3-area1', 'stage3-area2', 'stage3-area3', 'stage3-area4'],
+  stage5: ['stage5-area1', 'stage5-area2', 'stage5-area3', 'stage5-area4'],
 };
 
 export const SONGS = {
@@ -24,6 +25,7 @@ export const SONGS = {
   scene2: 'scene',
   stage2: 'stage2',
   stage3: 'stage1',
+  stage5: 'stage2',
   scene3: 'scene',
   ending: 'ending',
   gameover: 'gameOver',

@@ -77,7 +77,7 @@ function playthrough(who, brain = bot, cap = 60 * 60 * 12) {
           break;
         }
       }
-      if (e === 'stageExit') { flow = next(flow, { type: 'stageClear' }); log.cleared = flow.screen === 'scene3'; }
+      if (e === 'stageExit') { flow = next(flow, { type: 'stageClear' }); log.cleared = flow.screen === 'stage5'; }
     }
   }
   const p = player(world);
