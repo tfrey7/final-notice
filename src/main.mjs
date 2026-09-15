@@ -22,6 +22,7 @@ import { opensWithOpening } from './snes/opening.mjs';
 import { SnesStage1Scene } from './snes/stage1/scene.mjs';
 import { SnesStage2Scene } from './snes/stage2/scene.mjs';
 import { SnesLabScene } from './snes/lab/scene.mjs';
+import { SnesClimbLabScene } from './snes/lab/climb.mjs';
 
 const params = new URLSearchParams(location.search);
 const profile = platformFor(params);
@@ -58,6 +59,8 @@ if (snes) scene = opensWithOpening(params, session()) ? [new SnesOpeningScene(),
 const debug = snes && debugScene(params);
 // ?snes&go=lab is the brawl lab: Stage 1's fighting in a grey-box room with live dials.
 if (snes && params.get('go') === 'lab') scene = [new SnesLabScene()];
+// ?snes&go=climblab is the climb lab: Stage 2's running and casting up a grey-box shaft ahead of a flood.
+else if (snes && params.get('go') === 'climblab') scene = [new SnesClimbLabScene()];
 else if (debug) scene = [debug];
 else if (params.has('nes')) scene = [NesTestScene];
 else if (params.has('art')) scene = [ArtScene];

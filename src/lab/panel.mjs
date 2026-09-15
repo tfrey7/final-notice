@@ -18,7 +18,7 @@ const CSS = `
 .lab-flash{color:#8d8;min-height:1.2em}
 `;
 
-export function mountLabPanel({ dials, counts, kinds, onRespawn, onCopy, onReset }, doc = document) {
+export function mountLabPanel({ dials, counts = {}, kinds = [], onRespawn, onCopy, onReset, respawnLabel = 'Respawn wave' }, doc = document) {
   const style = Object.assign(doc.createElement('style'), { textContent: CSS });
   const root = Object.assign(doc.createElement('div'), { className: 'lab-panel' });
   root.hidden = true;
@@ -46,7 +46,7 @@ export function mountLabPanel({ dials, counts, kinds, onRespawn, onCopy, onReset
     addRow(el, () => {}, action);
   };
 
-  section('Enemies');
+  if (kinds.length) section('Enemies');
   for (const kind of kinds) {
     const el = row();
     const n = Object.assign(doc.createElement('span'), { className: 'n' });
@@ -58,7 +58,7 @@ export function mountLabPanel({ dials, counts, kinds, onRespawn, onCopy, onReset
       n.textContent = counts[kind];
     });
   }
-  button('Respawn wave', onRespawn);
+  button(respawnLabel, onRespawn);
   button('Copy settings', () => {
     const text = onCopy();
     area.value = text;
