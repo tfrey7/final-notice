@@ -33,15 +33,12 @@ const DIM = rgb15(10, 10, 8);
 const STAMP_INK = [rgb15(1, 6, 6), rgb15(2, 11, 11), rgb15(3, 16, 16), rgb15(4, 22, 22)];
 const STAMP_HOLD = 20;
 
-// A column-wise colour ramp for lettering: fill() calls in `c === GRADIENT` take the row's colour.
-const GRADIENT = -1;
-const graded = (fill, top, colours) => (x, y, w, h, c) => fill(x, y, w, h, c === GRADIENT ? colours[Math.min(colours.length - 1, Math.max(0, y - top))] : c);
 const ramp = (a, b, n) => {
   const [ca, cb] = [channels(a), channels(b)];
   return Array.from({ length: n }, (_, i) => rgb15(...ca.map((v, k) => Math.round(v + ((cb[k] - v) * i) / (n - 1)))));
 };
 
-// The heading on a dark plate with a gradient fill, bevelled edges and gradient, drop-shadowed letters.
+// The heading on a dark plate with a gradient fill, bevelled edges and brass, drop-shadowed letters.
 function heading(fill) {
   const w = measure(HEADING) + 28;
   const x = (WIDTH - w) >> 1;
@@ -49,7 +46,7 @@ function heading(fill) {
   ramp(rgb15(3, 3, 8), rgb15(1, 1, 3), 18).forEach((c, i) => fill(x + 1, y + i, w - 2, 1, c));
   fill(x, y + 1, 1, 16, rgb15(1, 1, 2)); fill(x + w - 1, y + 1, 1, 16, rgb15(1, 1, 2));
   fill(x + 1, y, w - 2, 1, rgb15(12, 12, 18)); fill(x + 1, y + 17, w - 2, 1, rgb15(0, 0, 1));
-  drawString(graded(fill, y + 5, ramp(rgb15(31, 31, 27), rgb15(26, 20, 9), 8)), HEADING, x + 14, y + 5, GRADIENT, rgb15(0, 0, 0));
+  drawString(fill, HEADING, x + 14, y + 5, rgb15(28, 24, 14), rgb15(0, 0, 0));
 }
 
 // The fixed writing on one file: its tab, grade, temperament and the auditor's line on the rules.
