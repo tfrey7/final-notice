@@ -9,7 +9,7 @@ import { screen, mathPass, mode7Matrix, mode7Pass } from '../fx.mjs';
 import { artOr, loadArt, SpriteLayer } from '../art.mjs';
 import { bakeArea, composeArea } from '../bgart.mjs';
 import { drawString, measure } from '../text.mjs';
-import { hudLayout, drawHud } from '../hud.mjs';
+import { drainStep, drawHud, fadeFill, hudGroups, hudLayout } from '../hud.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import { FrontScreen, bufferFill } from '../scenes/front.mjs';
 import { pollPad } from '../../input.mjs';
@@ -285,15 +285,23 @@ export class SnesStage2Scene extends Phaser.Scene {
       fill(edge, WAX_TOP, 3, HEIGHT - WAX_TOP, run.frame % 16 < 8 ? C.flash : C.waxLit);
     }
 
-    const layout = hudLayout(hudState(run, flow));
-    drawHud(fill, layout);
-    sprites.unshift(...artOr(this, `hud-portrait-${p.auditor}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 13, 21), rgb15(31, 31, 31)] })
-      .frame(undefined, 0, layout.portrait.x + 2, layout.portrait.y + 2));
+    const hud = hudState(run, flow);
+    this.groups ??= hudGroups();
+    if (!run.paused) this.drain = drainStep(this.drain, hud.hp);
+    const steps = this.groups.see(hud, run.frame * MS, Boolean(run.paused));
+    const layout = hudLayout({ ...hud, pale: this.drain?.pale ?? hud.hp });
+    drawHud(fadeFill(buf), layout, steps);
+    const hudArt = [];
+    const alphas = [];
+    const onHud = (entries, step) => { if (step) for (const e of entries) hudArt.push(e), alphas.push(step / 15); };
+    onHud(artOr(this, `hud-portrait-${p.auditor}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 13, 21), rgb15(31, 31, 31)] })
+      .frame(undefined, 0, layout.portrait.x + 2, layout.portrait.y + 2), steps.health);
     for (const e of layout.enchant ?? []) {
       if (!e.icon) continue;
-      sprites.unshift(...artOr(this, `hud-${e.icon}`, { w: 16, h: 16, palette: [rgb15(1, 1, 1), e.icon === 'notice' ? rgb15(28, 3, 3) : rgb15(15, 15, 15), rgb15(31, 31, 31)] })
-        .frame(undefined, 0, e.x + 2, e.y + 2));
+      onHud(artOr(this, `hud-${e.icon}`, { w: 16, h: 16, palette: [rgb15(1, 1, 1), e.icon === 'notice' ? rgb15(28, 3, 3) : rgb15(15, 15, 15), rgb15(31, 31, 31)] })
+        .frame(undefined, 0, e.x + 2, e.y + 2), steps.enchant);
     }
+    sprites.unshift(...hudArt);
     if (run.stage) {
       promptsFor(run).forEach((text, i) => {
         if (run.frame % 60 < 45) drawString(fill, text, (WIDTH - measure(text)) >> 1, 60 + i * 14);
@@ -305,7 +313,7 @@ export class SnesStage2Scene extends Phaser.Scene {
     this.layer.draw(sprites);
     const paused = run.paused && this.menu;
     if (paused) drawPause(buf, this.menu, this.game.loop.frame);
-    this.layer.pool.forEach((img) => img.setTint(paused ? DIM_TINT : 0xffffff));
+    this.layer.pool.forEach((img, i) => img.setTint(paused ? DIM_TINT : 0xffffff).setAlpha(alphas[i] ?? 1));
     this.view.show(buf);
     if (paused) this.overlay.show(buf);
     else this.overlay.hide();

@@ -8,7 +8,7 @@ import { hex, rgb15 } from '../color.mjs';
 import { colorMath, fromRgba, screen, toRgba } from '../fx.mjs';
 import { bakeScene, composeFrame } from '../layers.mjs';
 import { loadArt, artOr, SpriteLayer } from '../art.mjs';
-import { drawHud, hudBrightness, hudLayout, hudWatch } from '../hud.mjs';
+import { drainStep, drawHud, hudGroups, hudLayout } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import CLAIMS from '../bg/claims.mjs';
@@ -105,8 +105,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.hudSprites = new SpriteLayer(this, 21);
     this.overlay = new PauseOverlay(this);
     this.menu = null;
-    this.fill = (x, y, w, h, c) => this.g.fillStyle(hex(c)).fillRect(x, y, w, h);
-    this.watch = hudWatch();
+    this.fill = (x, y, w, h, c, step = 15) => this.g.fillStyle(hex(c), step / 15).fillRect(x, y, w, h);
+    this.groups = hudGroups();
+    this.drain = null;
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; });
     this.ready = true;
@@ -320,16 +321,18 @@ export class SnesStage1Scene extends Phaser.Scene {
     const p = w.fighters.find((f) => f.team === 'player');
     const v = this.office && vellum(w);
     const boss = v && !this.card && !this.entrance ? { name: 'Vellum', hp: v.hp, maxHp: v.maxHp } : null;
+    if (!this.paused && !this.card) this.drain = drainStep(this.drain, p.hp);
     const state = { name: this.who, hp: p.hp, maxHp: PIPS, lives: flow.lives, meter: w.meter, boss };
-    const layout = hudLayout(state);
-    const alpha = this.paused ? 0.5 : w.run?.prompt || boss ? 1 : hudBrightness(this.watch.see(state, time)) / 15;
+    const steps = this.groups.see(state, time, Boolean(this.paused || w.run?.prompt));
+    const layout = hudLayout({ ...state, pale: this.drain?.pale ?? p.hp });
+    const dim = this.paused ? 0.5 : 1;
     this.g.clear();
-    drawHud(this.fill, layout);
+    drawHud(this.fill, layout, steps);
     const { portrait } = layout;
-    this.hudSprites.draw(artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
-      .frame('stand', 0, portrait.x + 2, portrait.y + 2));
-    this.hudSprites.pool.forEach((img) => img.setAlpha(alpha).setScrollFactor(0));
-    this.g.setAlpha(alpha);
+    this.hudSprites.draw(steps.health ? artOr(this, `hud-portrait-${this.who}`, { w: 20, h: 20, palette: [rgb15(1, 1, 1), rgb15(11, 11, 13), WHITE] })
+      .frame('stand', 0, portrait.x + 2, portrait.y + 2) : []);
+    this.hudSprites.pool.forEach((img) => img.setAlpha(dim * steps.health / 15).setScrollFactor(0));
+    this.g.setAlpha(dim);
 
     const run = w.run;
     const centred = (text, y, colour) => drawString(this.fill, text, (WIDTH - measure(text)) >> 1, y, colour);

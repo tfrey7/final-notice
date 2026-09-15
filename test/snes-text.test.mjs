@@ -1,12 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isRgb15, channels } from '../src/snes/color.mjs';
-import { WIDTH } from '../src/snes/screen.mjs';
+import { isRgb15, channels, rgb15 } from '../src/snes/color.mjs';
+import { WIDTH, HEIGHT } from '../src/snes/screen.mjs';
 import { SCENES, SCENE_ORDER, AUDITORS, beatsFor } from '../src/story/script.mjs';
 import {
   FONT_H, BOX, BG3_PALETTE, glyph, measure, wrapText, typed, pageLength, windowGradient, drawTextBox,
 } from '../src/snes/text.mjs';
-import { hudLayout, hudBoxes, inScreen, overlaps, hudBrightness, hudWatch, HOLD_MS, FADE_MS, drawHud } from '../src/snes/hud.mjs';
+import {
+  hudLayout, hudBoxes, inScreen, overlaps, fadeStep, hudGroups, drainStep, blend15, fadeFill,
+  HOLD_MS, FADE_MS, PALE_FRAMES, DRAIN_PER_FRAME, HUD_COLOURS, drawHud,
+} from '../src/snes/hud.mjs';
 
 const inner = BOX.w - 2 * BOX.pad;
 
@@ -98,20 +101,87 @@ test('the enchantments and boss bar appear only when there are some', () => {
   assert.deepEqual(hudLayout(play).enchant.map((e) => e.held), [false, true]);
 });
 
-test('the HUD holds while things change and fades out when idle', () => {
-  assert.equal(hudBrightness(0), 15);
-  assert.equal(hudBrightness(HOLD_MS), 15);
-  const mid = hudBrightness(HOLD_MS + FADE_MS / 2);
+test('a group holds 2.5 s, then steps its colours to clear', () => {
+  assert.equal(fadeStep(0), 15);
+  assert.equal(fadeStep(HOLD_MS), 15);
+  const mid = fadeStep(HOLD_MS + FADE_MS / 2);
   assert.ok(mid > 0 && mid < 15);
-  assert.equal(hudBrightness(HOLD_MS + FADE_MS), 0);
-  const watch = hudWatch();
-  assert.equal(watch.see({ hp: 5 }, 1000), 0);
-  assert.equal(watch.see({ hp: 5 }, 4000), 3000);
-  assert.equal(watch.see({ hp: 4 }, 4100), 0);
+  assert.equal(fadeStep(HOLD_MS + FADE_MS), 0);
 });
 
-test('drawHud draws only inside the screen', () => {
+test('each HUD group lights on its own trigger and fades on its own clock', () => {
+  const groups = hudGroups();
+  const base = { hp: 8, lives: 3, meter: 1, carried: ['notice', 'redTape'], hand: 0, boss: null };
+  assert.deepEqual(groups.see(base, 0), { health: 15, meter: 15, enchant: 15, boss: 15 });
+  const quiet = groups.see(base, 4000);
+  assert.deepEqual(quiet, { health: 0, meter: 0, enchant: 0, boss: 0 });
+  const hit = groups.see({ ...base, hp: 6 }, 5000);
+  assert.deepEqual(hit, { health: 15, meter: 0, enchant: 0, boss: 0 });
+  assert.equal(groups.see({ ...base, hp: 6, meter: 2 }, 6000).meter, 15);
+  assert.equal(groups.see({ ...base, hp: 6, meter: 1 }, 9000).meter, 0, 'spending the meter does not light it');
+  const swap = groups.see({ ...base, hp: 6, hand: 1 }, 9100);
+  assert.deepEqual([swap.enchant, swap.health], [15, 0]);
+  const boss = { ...base, hp: 6, hand: 1, boss: { name: 'Vellum', hp: 9, maxHp: 12 } };
+  assert.equal(groups.see(boss, 20000).boss, 15);
+  assert.equal(groups.see(boss, 60000).boss, 15, 'the boss group stays up while the boss is');
+  assert.equal(groups.see({ ...boss, boss: null }, 60000 + HOLD_MS + FADE_MS).boss, 0);
+  assert.deepEqual(groups.see({ ...boss, boss: null }, 90000, true), { health: 15, meter: 15, enchant: 15, boss: 15 });
+});
+
+test('a hit leaves the lost slice pale for 20 frames, then it drains', () => {
+  let d = drainStep(null, 8);
+  d = drainStep(d, 5);
+  assert.equal(d.pale, 8);
+  for (let f = 0; f < PALE_FRAMES; f++) d = drainStep(d, 5);
+  assert.equal(d.pale, 8);
+  d = drainStep(d, 5);
+  assert.equal(d.pale, 8 - DRAIN_PER_FRAME);
+  let frames = 1;
+  while (d.pale > 5) { d = drainStep(d, 5); frames++; }
+  assert.equal(frames, 3 / DRAIN_PER_FRAME);
+  assert.equal(drainStep(drainStep(d, 3), 8).pale, 8, 'a heal past the pale slice replaces it');
+  const layout = hudLayout({ ...play, hp: 4, pale: 6 });
+  assert.equal(layout.health.fill, 32);
+  assert.equal(layout.health.pale, 48);
+});
+
+test('a hit during the pale hold keeps the oldest value and restarts the hold', () => {
+  let d = drainStep(drainStep(null, 8), 6);
+  for (let f = 0; f < 10; f++) d = drainStep(d, 6);
+  d = drainStep(d, 4);
+  assert.deepEqual(d, { hp: 4, pale: 8, hold: PALE_FRAMES });
+});
+
+test('fading steps a colour toward what is under it and step 0 draws nothing', () => {
+  const red = rgb15(31, 0, 0);
+  const blue = rgb15(0, 0, 31);
+  assert.equal(blend15(blue, red, 15), red);
+  assert.equal(blend15(blue, red, 0), blue);
+  const buf = new Uint16Array(WIDTH * HEIGHT).fill(blue);
+  const fill = fadeFill(buf);
+  fill(0, 0, 2, 1, red, 0);
+  assert.equal(buf[0], blue);
+  fill(0, 0, 2, 1, red, 8);
+  assert.ok(buf[0] !== blue && buf[0] !== red);
+  fill(0, 0, 2, 1, red);
+  assert.equal(buf[1], red);
+});
+
+test('drawHud draws only inside the screen, and a faded-out group not at all', () => {
   const rects = [];
-  drawHud((x, y, w, h) => rects.push({ x, y, w, h }), hudLayout(play));
-  assert.ok(rects.every(inScreen));
+  drawHud((x, y, w, h, c, step) => rects.push({ x, y, w, h, step }), hudLayout(play));
+  assert.ok(rects.length && rects.every(inScreen));
+  const lit = [];
+  drawHud((x, y, w, h, c, step) => lit.push({ x, y, step }), hudLayout(play), { health: 0, meter: 0, enchant: 0, boss: 9 });
+  assert.ok(lit.length && lit.every((r) => r.y >= 36 && r.step <= 9));
+});
+
+test('a full Notice segment is a gold box with a red stamp, an empty one has none', () => {
+  const colours = (meter) => {
+    const out = new Set();
+    drawHud((x, y, w, h, c) => out.add(c), hudLayout({ ...play, meter }), { health: 0, enchant: 0, boss: 0 });
+    return out;
+  };
+  assert.ok(!colours(0).has(HUD_COLOURS.stamp));
+  assert.ok(colours(1).has(HUD_COLOURS.stamp) && colours(1).has(HUD_COLOURS.meter));
 });
