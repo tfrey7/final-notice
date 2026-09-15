@@ -1,13 +1,15 @@
 // Stage 1: the chosen auditor on one long scrolling test floor, with the HUD strip on top.
 /* global Phaser */
-import { SAFE } from '../nes/screen.mjs';
+import { SAFE, WIDTH } from '../nes/screen.mjs';
 import { nes } from '../nes/palette.mjs';
 import { loadArt, artOr, SpriteLayer } from '../nes/art.mjs';
 import { playSong, sfx } from '../audio/player.mjs';
 import { pollPad } from '../input.mjs';
 import { SONGS, jumpTo, next } from '../flow.mjs';
 import { TUNING, shakeOffset } from './moves.mjs';
-import { FLOOR_W, HITS_PER_SEGMENT, PIPS, animFor, newFloor, stepFloor, tuneFor } from './player.mjs';
+import { FLOOR_W, HITS_PER_SEGMENT, PIPS, SCREEN_W, animFor, newFloor, stepFloor, tuneFor } from './player.mjs';
+import { AREAS, STAGE, areaFor, newStage, stepAreas } from './areas.mjs';
+import { remark } from '../scenes/cinema.mjs';
 import { ringShape } from '../injunction.mjs';
 import { registerTuning, mountTunePanel } from '../tune.mjs';
 import { drawText, showFlow } from '../scenes/placeholder.mjs';
@@ -21,9 +23,56 @@ const MS = 1000 / 60;
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
   redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction',
-  fangs: 'alarm', bossDown: 'stageClear',
+  fangs: 'alarm', bossDown: 'stageClear', heal: 'heal',
 };
 export const OFFICE = 'stage1-area5';
+const STAGE_START_MS = 2400;
+
+function room(g, x0, w, wallTop, top, bottom, [wall, rail, floor, line]) {
+  g.fillStyle(nes(wall)).fillRect(x0, wallTop, w, top - 40 - wallTop);
+  g.fillStyle(nes(rail)).fillRect(x0, top - 40, w, 8);
+  g.fillStyle(nes(floor)).fillRect(x0, top - 32, w, bottom - top + 40);
+  g.fillStyle(nes(line));
+  for (let y = top - 16; y < bottom + 8; y += 16) g.fillRect(x0, y, w, 1);
+}
+
+// Each Stage 1 area's scenery in flat colours, until bg-claims draws it (docs/NES-PLAN.md section 6).
+const SCENERY = {
+  reception(g, x0, w, wall, top, bottom) {
+    room(g, x0, w, wall, top, bottom, [0x17, 0x28, 0x27, 0x37]);
+    for (let x = x0 + 24; x < x0 + w; x += 72) g.fillStyle(nes(0x0f)).fillRect(x, wall + 12, 36, 52).fillStyle(nes(0x01)).fillRect(x + 2, wall + 14, 32, 48);
+    g.fillStyle(nes(0x07)).fillRect(x0 + 120, top - 64, 88, 32).fillStyle(nes(0x28)).fillRect(x0 + 120, top - 64, 88, 3);
+    g.fillStyle(nes(0x00)).fillRect(x0 + 420, top - 52, 24, 20).fillStyle(nes(0x2c)).fillRect(x0 + 424, top - 58, 6, 6);
+  },
+  serviceFloor(g, x0, w, wall, top, bottom) {
+    room(g, x0, w, wall, top, bottom, [0x1a, 0x28, 0x06, 0x16]);
+    for (let x = x0 + 8; x < x0 + w; x += 96) {
+      g.fillStyle(nes(0x2a)).fillRect(x, wall + 8, 80, 40);
+      g.fillStyle(nes(0x00)).fillRect(x, top - 72, 80, 32).fillStyle(nes(0x10)).fillRect(x + 38, top - 72, 4, 32);
+      g.fillStyle(nes(0x28)).fillRect(x + 16, top - 82, 8, 6).fillRect(x + 19, top - 76, 2, 4);
+    }
+  },
+  internalReview(g, x0, w, wall, top, bottom) {
+    room(g, x0, w, wall, top, bottom, [0x0c, 0x28, 0x07, 0x17]);
+    for (let x = x0 + 16; x < x0 + w; x += 128) {
+      g.fillStyle(nes(0x21)).fillRect(x, wall + 8, 72, 72).fillStyle(nes(0x31)).fillRect(x + 4, wall + 12, 8, 64);
+      g.fillStyle(nes(0x0f)).fillRect(x + 35, wall + 8, 2, 72);
+      g.fillStyle(nes(0x18)).fillRect(x + 88, wall + 16, 28, top - 56 - wall).fillStyle(nes(0x28)).fillRect(x + 90, wall + 18, 11, top - 60 - wall).fillRect(x + 103, wall + 18, 11, top - 60 - wall);
+    }
+  },
+  waiting(g, x0, w, wall, top, bottom) {
+    room(g, x0, w, wall, top, bottom, [0x05, 0x28, 0x06, 0x16]);
+    g.fillStyle(nes(0x01)).fillRect(x0 + 16, wall + 8, 120, 64);
+    for (const [bx, bh] of [[20, 40], [40, 52], [66, 30], [88, 58], [112, 44]]) {
+      g.fillStyle(nes(0x0f)).fillRect(x0 + bx, wall + 72 - bh, 18, bh).fillStyle(nes(0x28)).fillRect(x0 + bx + 4, wall + 80 - bh, 2, 2).fillRect(x0 + bx + 11, wall + 88 - bh, 2, 2);
+    }
+    for (let i = 0; i < 3; i++) g.fillStyle(nes(0x16)).fillRect(x0 + 150 + i * 22, top - 58, 18, 26).fillStyle(nes(0x06)).fillRect(x0 + 150 + i * 22, top - 44, 18, 4);
+    g.fillStyle(nes(0x27)).fillRect(x0 + 72, top - 76, 10, 10).fillStyle(nes(0x02)).fillRect(x0 + 68, top - 66, 18, 16);
+    g.fillStyle(nes(0x07)).fillRect(x0 + 52, top - 56, 52, 24).fillStyle(nes(0x28)).fillRect(x0 + 52, top - 56, 52, 3);
+    // Vellum's brass door at the end of the floor.
+    g.fillStyle(nes(0x18)).fillRect(x0 + w - 36, wall + 16, 30, top - 56 - wall).fillStyle(nes(0x28)).fillRect(x0 + w - 33, wall + 19, 24, top - 62 - wall);
+  },
+};
 const FOE = { idle: 'idle', walk: 'walk', windup: 'punch', punch: 'punch', hurt: 'hurt', held: 'hurt', knockdown: 'hurt', down: 'hurt', getup: 'hurt', ko: 'hurt' };
 
 export class Stage1Scene extends Phaser.Scene {
@@ -38,7 +87,11 @@ export class Stage1Scene extends Phaser.Scene {
     this.ready = false;
     // The boss room's checkpoint is Vellum's locked office.
     this.office = state.checkpoint === OFFICE;
-    playSong(this.office ? 'boss' : SONGS.stage1);
+    if (this.office) playSong('boss');
+    else {
+      playSong('stageStart');
+      this.time.delayedCall(STAGE_START_MS, () => playSong(SONGS.stage1));
+    }
     this.cameras.main.setBackgroundColor(nes(0x0f));
     const params = new URLSearchParams(location.search);
     this.freezeAt = params.has('freeze') ? Number(params.get('freeze')) : null;
@@ -58,14 +111,19 @@ export class Stage1Scene extends Phaser.Scene {
       enterOffice(this.world, this.tune);
       poseOffice(this.world, params.get('pose'));
     }
+    // Without ?foes the floor is the real stage, from the flow's checkpoint.
+    this.areas = !this.office && !params.get('foes');
+    if (this.areas) newStage(this.world, this.tune, areaFor(state.checkpoint));
     const optional = (name) => loadArt(name).catch(() => null);
-    await Promise.all([loadArt('ward'), loadArt('cast'), ...(this.office ? [optional('vellum'), optional('bg-claims')] : [])]);
+    await Promise.all([loadArt('ward'), loadArt('cast'), optional('staff2'), optional('spells'), optional('bg-claims'), ...(this.office ? [optional('vellum')] : [])]);
     this.body = this.who === 'ward' ? artOr(this, 'ward') : artOr(this, 'cast');
     this.cast = artOr(this, 'cast');
     this.dummyArt = artOr(this, 'dummy', { w: 16, h: 32, palette: [0x0f, 0x07, 0x27] });
     this.props = artOr(this, 'spells', { w: 16, h: 16, palette: [0x0f, 0x00, 0x2d] });
+    this.aid = artOr(this, 'spells', { w: 16, h: 12, palette: [0x0f, 0x30, 0x16] });
 
     if (this.office) this.drawOffice(this.add.graphics());
+    else if (this.areas) this.drawAreas(this.add.graphics());
     else this.drawFloor(this.add.graphics());
     this.hud = this.add.graphics().setDepth(20).setScrollFactor(0);
     this.layout = hudLayout({ name: this.who, hp: PIPS, lives: state.lives, meter: 0 });
@@ -77,7 +135,21 @@ export class Stage1Scene extends Phaser.Scene {
     this.layer = new SpriteLayer(this);
     if (params.has('tune') && !this.panel) this.panel = mountTunePanel();
     this.events.once('shutdown', () => { this.panel?.remove(); this.panel = null; });
+    if (this.office) remark(this, 'vellumOffice');
     this.ready = true;
+  }
+
+  // Every area's background from bg-claims when it has one, else that area's flat scenery.
+  drawAreas(g) {
+    const { top, bottom } = this.world.floor;
+    const wallTop = SAFE + HUD_HEIGHT;
+    AREAS.forEach((a, i) => {
+      const x0 = STAGE.starts[i];
+      let key = null;
+      try { key = artOr(this, 'bg-claims').background(a.id); } catch { key = null; }
+      if (key) this.add.image(x0, wallTop, key).setOrigin(0);
+      else SCENERY[a.id](g, x0, a.screens * SCREEN_W, wallTop, top, bottom);
+    });
   }
 
   // One scrolling layer: the back wall with midnight windows, a brass rail, and the carpet band.
@@ -130,12 +202,20 @@ export class Stage1Scene extends Phaser.Scene {
     if (this.freezeAt !== null && loopFrame >= this.freezeAt) return;
 
     stepFloor(this.world, pad, this.tune);
+    if (this.areas) stepAreas(this.world, this.tune);
     for (const e of this.world.events) {
       if (SOUND[e]) sfx(SOUND[e]);
       if (e === 'bossDown') playSong('stageClear');
       if (e === 'bossBeaten') { showFlow(this, next(flow, { type: 'stageClear' })); return; }
+      if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
+      if (e.startsWith('remark:')) remark(this, e.slice(7));
+      if (e === 'toOffice') {
+        this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: OFFICE }));
+        this.scene.restart();
+        return;
+      }
       if (e === 'lifeLost') {
-        const after = next(flow, { type: 'lifeLost' });
+        const after = next(this.registry.get('flow'), { type: 'lifeLost' });
         if (after.screen !== 'stage1') { showFlow(this, after); return; }
         this.registry.set('flow', after);
       }
@@ -151,9 +231,11 @@ export class Stage1Scene extends Phaser.Scene {
       ...w.fighters.map((f) => ({ y: f.y, f })),
       ...w.props.filter((o) => o.state !== 'gone').map((o) => ({ y: o.y + (o.state === 'held' ? 1 : 0), o })),
       ...(w.tapes ?? []).map((tape) => ({ y: tape.y + 1, tape })),
+      ...(w.firstAid ?? []).filter((b) => !b.taken).map((box) => ({ y: box.y - 1, box })),
     ].sort((a, b) => a.y - b.y);
-    const sprites = things.flatMap(({ f, o, tape }) => {
+    const sprites = things.flatMap(({ f, o, tape, box }) => {
       if (o) return this.props.frame(o.kind, 0, o.x - 8, o.y - 16 - o.z);
+      if (box) return this.aid.frame('firstAid', 0, box.x - 8, box.y - 12);
       if (tape) return tapeSprites(this, tape);
       const ms = f.t * MS;
       if (f.kind) return foeSprites(this, this.cast, f, ms);
@@ -177,6 +259,12 @@ export class Stage1Scene extends Phaser.Scene {
     const boss = this.office && vellum(w);
     if (boss) drawBossBar(g, bossBarLayout({ name: 'vellum', hp: boss.hp, maxHp: boss.maxHp }), drawText);
     if (p.state === 'bound') drawText(g, 'MASH!', Math.round(p.x - w.cameraX) - 20, p.y - 56, nes(0x30));
+    const run = this.areas && w.run;
+    if (run?.prompt) drawText(g, run.prompt, Math.round(WIDTH / 2 - run.prompt.length * 4), SAFE + 64, nes(0x30));
+    if (run && !run.locked && run.go > 0 && Math.floor(run.go / 10) % 2) {
+      drawText(g, 'GO', WIDTH - 44, SAFE + 64, nes(0x28));
+      g.fillStyle(nes(0x28)).fillTriangle(WIDTH - 24, SAFE + 63, WIDTH - 24, SAFE + 73, WIDTH - 16, SAFE + 68);
+    }
     if (this.freezeAt !== null) {
       const foes = w.fighters.filter((f) => f.team === 'foe')
         .map((f) => `${f.dummy ? 'DUM' : (f.kind ?? 'foe').slice(0, 3).toUpperCase()} ${f.state.slice(0, 4).toUpperCase()} ${f.hp}`);

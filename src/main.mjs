@@ -20,11 +20,12 @@ SCENES.stage2 = new EscapeScene();
 for (const key of ['scene1', 'scene2', 'scene3']) SCENES[key] = new CinemaScene(key);
 
 // ?nes is the hardware test screen, ?art=<name> plays an art module, ?go=<screen> starts on any screen,
-// ?who=<auditor> picks who is playing; ?go=vellum is Stage 1 at the boss room's checkpoint.
+// ?who=<auditor> picks who is playing; ?go=vellum is Stage 1 at the boss room's checkpoint, and
+// ?go=stage1&area=<1-5> starts Stage 1 at that area's checkpoint.
 const params = new URLSearchParams(location.search);
 const start = params.get('go') === 'vellum'
   ? next(jumpTo('stage1'), { type: 'checkpoint', id: 'stage1-area5' })
-  : jumpTo(params.get('go') ?? 'title');
+  : next(jumpTo(params.get('go') ?? 'title'), { type: 'checkpoint', id: `stage1-area${params.get('area')}` });
 if (AUDITORS.includes(params.get('who'))) start.auditor = params.get('who');
 let scene = [SCENES[start.screen], ...SCREENS.filter((k) => k !== start.screen).map((k) => SCENES[k])];
 if (params.has('nes')) scene = [NesTestScene];
