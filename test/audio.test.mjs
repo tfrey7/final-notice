@@ -101,10 +101,36 @@ test('the demo is 8 bars with something on all four channels', () => {
   for (const ch of CHANNELS) assert.ok(song.channels[ch].some(Boolean), ch);
 });
 
-test('every effect names a channel and has frames', () => {
-  for (const name of ['punch', 'jump', 'blip']) {
-    assert.ok(CHANNELS.includes(SFX[name].channel), name);
-    assert.ok(SFX[name].frames.length > 0, name);
+const PLAN_SFX = ['punch', 'hit', 'knockdown', 'jump', 'land', 'grab', 'throw', 'step', 'injunction', 'cast',
+  'carbonCopy', 'redTape', 'margin', 'waxBreak', 'pickup', 'heal', 'blip', 'menu', 'pause', 'alarm', 'stamp', 'conveyor'];
+
+test('every effect the plan names exists, is short and plays on a 2A03 channel', () => {
+  assert.equal(PLAN_SFX.length, 22);
+  for (const name of PLAN_SFX) {
+    const def = SFX[name];
+    assert.ok(def, name);
+    assert.ok(CHANNELS.includes(def.channel) && def.channel !== 'pulse1', `${name} keeps off the lead`);
+    assert.ok(def.frames.length > 0 && def.frames.length <= 60, `${name} is under a second`);
+    for (const [pitch, vol] of def.frames) {
+      assert.ok(Number.isFinite(pitch) && vol >= 0 && vol <= 15, name);
+      if (def.channel === 'noise') assert.ok(pitch >= 0 && pitch <= 15, name);
+    }
+  }
+  assert.ok(Math.max(...SFX.blip.frames.map(([, v]) => v)) <= 6, 'the text blip is quiet');
+  assert.ok(SFX.blip.frames.length <= 4, 'the text blip fits between letters');
+  const signature = (d) => JSON.stringify(d.frames);
+  const casts = ['cast', 'carbonCopy', 'redTape', 'margin'].map((n) => signature(SFX[n]));
+  assert.equal(new Set(casts).size, 4, 'each enchantment sounds different');
+});
+
+test('the six jingles load by name, play once and last 1 to 4 seconds', async () => {
+  for (const name of ['stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup']) {
+    const { default: def } = await import(`../src/audio/songs/${name}.mjs`);
+    const song = compileSong(def);
+    assert.equal(song.loop, null, name);
+    const seconds = (song.length * song.tempo) / 60;
+    assert.ok(seconds >= 1 && seconds <= 4, `${name} lasts ${seconds} s`);
+    assert.ok(song.channels.pulse1.some(Boolean), name);
   }
 });
 
