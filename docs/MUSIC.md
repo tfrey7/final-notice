@@ -97,7 +97,55 @@ smooth-jazz and muzak sources they name.
 The scene version keeps the thin 12.5% lead and no drums, and lays the VRC6 chord bed and a saw pad
 under it.
 
+## The SNES bank: real recorded samples
+
+Tim (08:05-08:19 EDT 2026-09-15) on the synthesised SNES bank: "still sounds too nes like", "sounds
+straight like a built-in windows 95 .wav". Real 1993-95 soundtracks (Chrono Trigger, Final Fantasy VI,
+Donkey Kong Country, Super Metroid) were sample CDs squeezed into 64 KB, so the bank is now the same:
+one recorded sample an instrument, cut by `tools/snes-bank.mjs` from a SoundFont.
+
+- **Resampled so the loop fits.** The loop is a whole number of pitch periods and a whole number of
+  16-sample BRR blocks at once: the tool picks the storage rate that makes both true (12-22 kHz, as the
+  games did; the S-DSP plays everything out at 32 kHz), crossfades the loop's end into the audio just
+  before it, then BRR-encodes. Drums and the orchestra hit are one-shots with a faded tail.
+- **A little treble lift** before encoding, since the S-DSP's Gaussian interpolation dulls the top.
+- **43.6 KB for sixteen instruments**, inside the 64 KB of sound RAM.
+- The synthesised bank stays on the sound test as "(v1)": the instruments, the bank walk `bank (v1)`,
+  and the first arrangements `title (v1)` and `stage1 (v1)`. The jingles and effects moved to the new
+  bank in place.
+
+Rebuild with `node tools/snes-bank.mjs <path to FluidR3_GM.sf2>` (the SoundFont is not in the repo;
+it is at https://github.com/pianobooster/fluid-soundfont/releases/download/v3.1/FluidR3_GM.sf2).
+
+| Instrument | Key | Source preset / sample | Stored at |
+| --- | --- | --- | --- |
+| Rhodes electric piano | `epiano` | Rhodes EP / Rhodes C5(L) | 15959 Hz |
+| warm pad | `pad` | Warm Pad / Alien Strings(L) | 11989 Hz |
+| string section | `strings` | Strings / Strings C#5L | 13991 Hz |
+| choir | `choir` | Ahh Choir / Ahh Choir C5(L) | 14014 Hz |
+| tubular bell | `bell` | Tubular Bells / Tubular Bells C7(L) | 21896 Hz |
+| slap bass | `slap` | Slap Bass / Slap Bass D3 | 16027 Hz |
+| synth bass | `synbass` | Synth Bass 1 / saw-110(L) | 12027 Hz |
+| alto sax | `sax` | Alto Sax / Alto G5(L) | 15954 Hz |
+| brass section | `brass` | Brass Section / Brass Section C5 | 15939 Hz |
+| square lead | `sqlead` | Square Lead / Square Wave A3 | 16246 Hz |
+| punch kick | `gkick` | Power kit / Power Bass Drum 2(L) | 16000 Hz |
+| punch snare | `gsnare` | Power kit / Power Snare 1(L) | 16000 Hz |
+| closed hat | `chat` | Standard kit / Hi-Hat Closed(L) | 22000 Hz |
+| open hat | `ohat` | Standard kit / Hi-Hat Half-Open(L) | 16000 Hz |
+| clap | `clap` | Standard kit / Clap(L) | 16000 Hz |
+| orchestra hit | `orch` | Orchestra Hit / Orch Hit G#6(L) | 16000 Hz |
+
+**Licence, every sample:** FluidR3_GM, MIT licence, Copyright (c) 2000-2002, 2008 Frank Wen
+(the licence text is the `COPYING` file at https://github.com/pianobooster/fluid-soundfont). The
+generated `src/snes/audio/recorded-brr.mjs` carries the notice in its header.
+
 ## Lessons
+
+- **A recorded sample's loop must be a whole number of periods AND a whole number of BRR blocks.**
+  Pick the loop's period count first, round its length to 16 samples, then choose the storage rate
+  that makes those equal (rate = length x f0 / periods) and resample to it; the root pitch follows as
+  f0 x 32000 / rate. A crossfade into the pre-loop audio then hides the timbre seam.
 
 - **Build a long song from a form table, not long strings.** One entry a bar (part, chord, lead,
   key shift) and a function per channel keeps 70 bars of eight channels short to write and easy to

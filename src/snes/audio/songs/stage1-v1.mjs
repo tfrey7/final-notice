@@ -9,7 +9,7 @@
 
 import { FORM, LOOP_BAR, SCALE } from '../../../audio/songs/stage1.mjs';
 import * as kit from '../../../audio/songs/kit.mjs';
-import { INSTRUMENTS } from '../recorded.mjs';
+import { INSTRUMENTS } from '../bank.mjs';
 
 const { REST, chord, fold, nameOf, pitchClasses, play, thirdBelow, transpose } = kit;
 

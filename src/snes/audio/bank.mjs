@@ -269,17 +269,17 @@ export const sampleBytes = (sample) => sample.brr.blocks.length * BRR_BLOCK_BYTE
 export const bankBytes = () => Object.values(SAMPLES).reduce((sum, s) => sum + sampleBytes(s), 0);
 
 // A song that plays each named instrument's demo in turn, two seconds apiece.
-export function demoSong(keys = Object.keys(INSTRUMENTS)) {
+export function demoSong(keys = Object.keys(INSTRUMENTS), table = INSTRUMENTS) {
   const voices = [[], [], []];
   for (const key of keys) {
-    const { demo } = INSTRUMENTS[key];
+    const { demo } = table[key];
     voices.forEach((rows, v) => rows.push(demo[v] ? row(demo[v], key) : Array(DEMO_ROWS).fill('.').join(' ')));
   }
   const song = {
     tempo: 6,
     loop: null,
     echo: { mvol: 100, evol: 30, efb: 48, edl: 5, fir: [12, 33, 43, 43, 19, -2, -13, -7] },
-    instruments: Object.fromEntries(keys.map((k) => [k, INSTRUMENTS[k]])),
+    instruments: Object.fromEntries(keys.map((k) => [k, table[k]])),
   };
   voices.forEach((rows, v) => {
     song[`v${v + 1}`] = { rows: rows.join(' | ') };

@@ -60,7 +60,7 @@
       document.title += ' (SNES)';
     }
 
-    const CUES = snes ? ['title', 'stage1', 'test', 'bank','stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'] : ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
+    const CUES = snes ? ['title', 'title-v1', 'stage1', 'stage1-v1', 'test', 'bank', 'bank-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup'] : ['demo', 'title', 'title-v2', 'title-v1', 'scene', 'scene-v1', 'stage1', 'stage1-v1', 'stage2', 'stage2-v1',
       'boss', 'boss-v1', 'ending', 'ending-v1', 'stageStart', 'stageClear', 'lifeLost', 'gameOver', 'continue', 'pickup',
       'stageStart-v1', 'stageClear-v1', 'lifeLost-v1', 'gameOver-v1', 'continue-v1', 'pickup-v1'];
     const label = (name) => name.replace(/-(v\d)$/, ' ($1)');
@@ -84,10 +84,11 @@
     for (const name of Object.keys(SFX)) add(effectsEl, name, () => sfx(name));
     for (const name of Object.keys(SFX_V1)) add(effectsEl, `${name}-v1`, () => sfx(`${name}-v1`));
     if (snes) {
-      const { INSTRUMENTS, playInstrument } = await import('./src/snes/audio/player.mjs');
+      const { INSTRUMENTS, INSTRUMENTS_V1, playInstrument } = await import('./src/snes/audio/player.mjs');
       document.getElementById('bank').hidden = false;
       const instEl = document.getElementById('instruments');
       for (const [key, { label, group }] of Object.entries(INSTRUMENTS)) add(instEl, `${group}: ${label}`, () => playInstrument(key));
+      for (const [key, { label, group }] of Object.entries(INSTRUMENTS_V1)) add(instEl, `${group}: ${label}-v1`, () => playInstrument(key, true));
     }
 
     const meters = document.getElementById('meters');

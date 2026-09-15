@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import title, { LEADS, BAR_ROWS } from '../src/snes/audio/songs/title.mjs';
 import { FORM, LOOP_BAR } from '../src/audio/songs/title.mjs';
-import { compileSong, renderSong, VOICE_NAMES } from '../src/snes/audio/player.mjs';
-import { SAMPLES, sampleBytes } from '../src/snes/audio/bank.mjs';
+import { compileSong, renderSong, VOICE_NAMES, SAMPLES } from '../src/snes/audio/player.mjs';
+import { sampleBytes } from '../src/snes/audio/bank.mjs';
 import { DSP_HZ } from '../src/snes/audio/spc.mjs';
 
 const song = compileSong(title);

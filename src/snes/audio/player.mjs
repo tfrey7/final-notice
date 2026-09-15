@@ -22,10 +22,11 @@
 
 import { noteToMidi, midiToHz } from '../../audio/apu.mjs';
 import { DSP_HZ, VOICES, createDsp, makeSample } from './spc.mjs';
-import { SAMPLES as BANK, INSTRUMENTS, demoSong } from './bank.mjs';
+import { SAMPLES as BANK, INSTRUMENTS as INSTRUMENTS_V1, demoSong } from './bank.mjs';
+import { SAMPLES as RECORDED, INSTRUMENTS } from './recorded.mjs';
 import { SFX, FX_SAMPLES } from './sfx.mjs';
 
-export { INSTRUMENTS, SFX };
+export { INSTRUMENTS, INSTRUMENTS_V1, SFX };
 
 export const VOICE_NAMES = Array.from({ length: VOICES }, (_, i) => `v${i + 1}`);
 const FRAME_HZ = 60;
@@ -47,6 +48,7 @@ export const SAMPLES = (() => {
   });
   return {
     ...BANK,
+    ...RECORDED,
     ...FX_SAMPLES,
     saw: { ...makeSample(saw, 0), rootHz: DSP_HZ / 64 },
     square: { ...makeSample(square, 0), rootHz: DSP_HZ / 32 },
@@ -315,9 +317,11 @@ export async function playSong(name) {
   songName = name;
 }
 
-export function playInstrument(key) {
-  if (!seq || !INSTRUMENTS[key]) return;
-  seq.play(compileSong(demoSong([key])));
+// v1 plays the synthesised first bank's instrument of that name.
+export function playInstrument(key, v1 = false) {
+  const table = v1 ? INSTRUMENTS_V1 : INSTRUMENTS;
+  if (!seq || !table[key]) return;
+  seq.play(compileSong(demoSong([key], table)));
   songName = null;
 }
 
