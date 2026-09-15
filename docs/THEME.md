@@ -71,6 +71,29 @@ Same melody, slowed and sparse, for the story scenes: bars 1-16 only, 24 frames 
 BPM, 51 s), pulse 1 at 12.5% duty with a slow swell, a whole-bar triangle root for each chord, no
 drums, and from bar 9 a faint pulse 2 echo of the melody a quarter note behind.
 
+## SNES arrangement
+
+The SNES cues port the NES songs, not rewrite them: `src/snes/audio/songs/title.mjs` imports the NES
+title's `FORM` (sections, chords, lead lines, key shifts) and re-voices it, so the melody stays note
+for note. The style every SNES music card copies:
+
+| Voice | Title | Rule |
+| --- | --- | --- |
+| v1 | alto sax lead; DX piano in the intro and the bridge | the melody, one voice, never doubled; a softer instrument where the NES used a thinner tone |
+| v2 | DX piano off-beat stabs on the chord's top colour tone; a sax a third below in the return | the counter-part that changes in the return |
+| v3-v4 | warm pad on the third and seventh, panned hard left and right, restruck each bar | the extended chord in two guide tones; the pad's detune is the chorus |
+| v5 | slap bass on the NES bass pattern | the NES bass line, re-instrumented |
+| v6 | gated kick four on the floor, claps into the turns | kick and clap share a voice, as the DPCM did |
+| v7 | gated snare on 2 and 4; fills pitched down the snare like toms | the snare stays dry, so the gate cuts dead |
+| v8 | closed and open hats | quiet, panned right with the bank |
+
+- **Echo on the lead, piano, pads and clap only**; bass and drums dry. The echo buffer shares sound RAM
+  with the samples, so `edl` is small (4, 64 ms) and the song's samples plus `edl * 2048` bytes must fit
+  64 KB (the test checks it).
+- **Headroom**: master volume about 84, so the whole song peaks under 0.85.
+- **A loop is checked by RMS**: render the song offline in node, and the loop bar's RMS on the second
+  pass must match the first within 10%.
+
 ## Rules for the next arrangement
 
 - Keep the key relationship: transpose the whole thing if the cue needs it, never reharmonise the hook.
