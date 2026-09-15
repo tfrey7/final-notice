@@ -283,6 +283,8 @@ export function unlock() {
     gain.gain.value = 0;
     const block = 128 / ctx.sampleRate;
     gain.gain.setValueAtTime(MASTER, Math.ceil((ctx.currentTime + 0.02) / block) * block);
+    master = gain;
+    setMono(mono);
     node.connect(gain).connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
@@ -295,6 +297,17 @@ export function unlock() {
 }
 
 export const unlocked = () => !!ctx;
+
+// Mono folds the two channels into one at the master gain; the destination plays it on both speakers.
+let master = null;
+let mono = false;
+export function setMono(on) {
+  mono = !!on;
+  if (!master) return;
+  master.channelCountMode = 'explicit';
+  master.channelInterpretation = 'speakers';
+  master.channelCount = mono ? 1 : 2;
+}
 
 if (typeof window !== 'undefined') {
   const gesture = () => {
