@@ -1,21 +1,12 @@
-# HUDs and menus on the SNES, and what Final Notice takes
+# SNES HUD and menus
 
-Tim, 08:14 EDT 2026-09-15: *"i want some dedicated research into HUD and Menu design for SNES: what
-makes a good HUD? what games had the best HUDs and menus? how unique menus can make a game stand
-out, etc"*. This answers those three questions, reviews the HUD we have (`src/snes/hud.mjs`) and the
-title and select screens (`src/snes/scenes/`), and ends with a plan and cards.
+*Generated from the knowledge base; edit through `kb_update`, not here.*
 
-**How to read the marks.** *(verified: link)* means the linked page was read and says it.
-*(search summary: link)* means a search engine's summary of that page said it; the page itself was
-not opened. *(from memory, unverified)* means nobody checked. Several fan wikis (Fandom, the Game UI
-Database) refuse automatic reading, so games whose menus are famous mostly from play carry more of
-the last mark than we would like. Screenshots are referenced by where to find them and are not
-committed: the [Game UI Database][gui-db] holds captures of most games below, and the
-[Spriters Resource][tsr] holds the menu tiles themselves.
-
-## 1. What makes a good HUD
+## What makes a good HUD
 
 ### Readable at a glance
+
+*`kb_get snes-hud-menus-readable-at-a-glance` · version 1*
 
 - **A HUD is read in peripheral vision, between decisions.** A number the player has to stop and
   read costs a moment of play. Bars and pips beat digits for anything the player judges by
@@ -29,6 +20,8 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
 
 ### Placement and screen real estate
 
+*`kb_get snes-hud-menus-placement-and-screen-real-estate` · version 1*
+
 - **The SNES screen is small: 256x224, and a CRT hides some of the edge.** Nintendo's own guidance
   kept vital text inside a safe area of roughly 8 px either side and more top and bottom
   *(from memory, unverified)*. Our HUD's 8 px inset matches that.
@@ -41,6 +34,8 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
   one that simply shrinks *(search summary: [The Cutting Room Floor][ff-tcrf])*.
 
 ### What to show, what to hide, and when
+
+*`kb_get snes-hud-menus-what-to-show-what-to-hide-and-when` · version 1*
 
 - **Show what changes a decision now.** Super Metroid's HUD is one line: energy, the reserve tanks,
   missile, super missile and power bomb counts, grapple and X-ray, and a minimap; the weapon you
@@ -59,6 +54,8 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
 
 ### Feedback and animation
 
+*`kb_get snes-hud-menus-feedback-and-animation` · version 1*
+
 - **Animate the change, not the idle.** A bar that drains over a few frames shows how much was
   lost; a pip that flashes before it empties warns. An idle HUD that bobs or pulses competes with
   play *(from memory, unverified)*.
@@ -75,6 +72,8 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
 
 ### Colour and contrast on busy backgrounds
 
+*`kb_get snes-hud-menus-colour-and-contrast-on-busy-backgrounds` · version 1*
+
 - **A dark edge around light marks.** One pixel of near-black under every glyph and bar is what
   keeps a white number legible over a sky, a lit floor and a dark corridor alike
   *(from memory, unverified)*. Our BG3 font already draws its shadow in colour 1.
@@ -82,6 +81,8 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
   long as nothing else on screen uses those hues for UI.
 
 ### How the hardware shaped all of this
+
+*`kb_get snes-hud-menus-how-the-hardware-shaped-all-of-this` · version 1*
 
 - **Mode 1 is the HUD mode.** BG1 and BG2 carry 16-colour tiles and BG3 carries **4 colours** (2
   bits a pixel); setting the **BG3 priority bit** in `BGMODE` ($2105, bit 3) lifts BG3 above every
@@ -105,7 +106,9 @@ committed: the [Game UI Database][gui-db] holds captures of most games below, an
   a HUD made of sprites (portrait, icons) eats from the same budget as the enemies on that line, so
   period HUDs are tiles wherever they can be.
 
-## 2. The SNES games with the best HUDs and menus
+## The SNES games with the best HUDs and menus
+
+*`kb_get snes-hud-menus-the-snes-games-with-the-best-huds-and-menus` · version 1*
 
 Where to see each: search the game on the [Game UI Database][gui-db] (captures of HUD, pause and
 menus) or [MobyGames][moby] screenshots.
@@ -135,7 +138,9 @@ menus) or [MobyGames][moby] screenshots.
   *(from memory, unverified)*.
 - **Donkey Kong Country** (1994): as DKC2 above.
 
-## 3. How distinctive menus make a game stand out
+## How distinctive menus make a game stand out
+
+*`kb_get snes-hud-menus-how-distinctive-menus-make-a-game-stand-out` · version 1*
 
 - **Diegetic: the menu is a thing in the world.** Dead Space puts health on the suit's spine and
   the inventory in a hologram in front of Isaac, and the game never leaves its world
@@ -162,7 +167,9 @@ menus) or [MobyGames][moby] screenshots.
   must still read in four colours at 256 px. The Chrono Trigger PC port is the cautionary tale
   of redrawing a menu players already loved *([PC Gamer][ct-pcg])*.
 
-## 4. Our current screens against the findings
+## Our current screens against the findings
+
+*`kb_get snes-hud-menus-our-current-screens-against-the-findings` · version 1*
 
 - **HUD (`src/snes/hud.mjs`)**: right on the big calls. BG3, four colours, an 8 px inset, no strip,
   hide-until-needed after 2.5 s idle, bars for health, segments for the Notice meter, a boss bar
@@ -176,7 +183,9 @@ menus) or [MobyGames][moby] screenshots.
   exactly the SNES-honest effects section 1 describes. It is a character select, not a personnel
   file: the obvious place for the theme.
 
-## 5. Recommendation for Final Notice
+## Recommendation for Final Notice
+
+*`kb_get snes-hud-menus-recommendation-for-final-notice` · version 1*
 
 **The rule: the office's paperwork is the interface.** Every menu is a document an auditor would
 hold (a form, a ledger page, a personnel file, a receipt), drawn in four ink colours on paper, with
@@ -203,6 +212,8 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
 
 ### HUD in play
 
+*`kb_get snes-hud-menus-hud-in-play` · version 1*
+
 ![HUD mockup](shots/item-1975/mockup-0.png)
 
 - **Keep what we have**: BG3, corner layout, hide until needed.
@@ -217,6 +228,8 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
   at half, Final Fight's colour-change trick, instead of a separate phase marker.
 
 ### Pause and inventory
+
+*`kb_get snes-hud-menus-pause-and-inventory` · version 1*
 
 ![Pause mockup](shots/item-1975/mockup-1.png)
 
@@ -234,6 +247,8 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
 
 ### Select
 
+*`kb_get snes-hud-menus-select` · version 1*
+
 ![Select mockup](shots/item-1975/mockup-2.png)
 
 - **Select is two personnel files** on a green desk blotter; the chosen file is lit, the other
@@ -244,6 +259,8 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
 
 ### Title flow
 
+*`kb_get snes-hud-menus-title-flow` · version 1*
+
 - Keep the Mode 7 logo zoom and PUSH START. After Start, **a short menu on a memo slip**: NEW
   AUDIT, CONTINUE (if a save exists), SETTINGS. Settings borrows FF6: window colour ("paper stock":
   manila, carbon blue, pink copy), text speed, and stereo or mono.
@@ -252,53 +269,8 @@ spends the tools only the SNES has (section 1, *How the hardware shaped all of t
 
 ### What not to do
 
+*`kb_get snes-hud-menus-what-not-to-do` · version 1*
+
 - No ring menu: two auditors and a short item list do not need one, and a ring hides a list.
 - No animated idle HUD, no always-on strip, no stamp on every cursor move.
 - No diegetic-only HUD (health on the character's back): the sprites are too small to read it.
-
-### The build, as cards under epic 1898
-
-| Card | What | Waits on |
-| --- | --- | --- |
-| 1999 | HUD groups fade on their own by palette; the lost slice of the bar shows, then drains; stamp-box Notice meter | 1931 |
-| 2003 | Pickup receipt tab; OVERDUE boss label and half-health colour change | 1999 |
-| 2000 | Pause as Form 13-B: ledger items, attachments A and B, ON HOLD stamp once | — |
-| 2004 | Hold-music pause theme; pencil tick, stamp and paper-slide menu sounds | 2000 |
-| 2001 | Select as two personnel files, APPROVED stamp on confirm | — |
-| 2002 | Title memo menu: NEW AUDIT, CONTINUE, SETTINGS with paper stock | — |
-| 2005 | File-drawer wipe from memo to select; every transition skippable | 2001, 2002 |
-
-## Sources
-
-[gui-db]: https://www.gameuidatabase.com/
-[gui-dkc]: https://www.gameuidatabase.com/gameData.php?id=1799
-[tsr]: https://www.spriters-resource.com/snes/
-[moby]: https://www.mobygames.com/
-[sunstrike]: https://sunstrikestudios.com/en/blog/HUD_design_in_games/
-[ff-tcrf]: https://tcrf.net/Final_Fight_(SNES)
-[eb-roll]: https://earthbound.fandom.com/wiki/Rolling_Meter
-[eb-flav]: https://forum.starmen.net/forum/Community/PKHack/Modifying-Earthbound-s-Window-Flavours
-[eb-wtf]: https://withaterriblefate.com/2021/07/07/why-earthbounds-flavor-text-tastes-so-good/
-[smrpg-wiki]: https://www.mariowiki.com/Action_Command
-[smrpg-nin]: https://www.nintendo.com/us/whatsnew/heres-all-you-need-to-know-about-battling-in-super-mario-rpg/
-[smrpg-gr]: https://gamerant.com/super-mario-rpg-remake-action-commands-gauge-triple-action/
-[sfa-gauge]: https://streetfighter.fandom.com/wiki/Super_Combo_Gauge
-[sfa2-wiki]: https://streetfighter.fandom.com/wiki/Street_Fighter_Alpha_2
-[sd-ppu]: https://snes.nesdev.org/wiki/PPU_registers
-[sd-cm]: https://snes.nesdev.org/wiki/Color_math
-[sd-sprites]: https://snes.nesdev.org/wiki/Sprites
-[classics]: SNES-CLASSICS.md
-[som-bhs]: https://berkeleyhistoricalsociety.org/secret-of-mana-s-co-op-magic/
-[som-wp]: https://en.wikipedia.org/wiki/Secret_of_Mana
-[tvt-ring]: https://tvtropes.org/pmwiki/pmwiki.php/Main/RingMenu
-[ct-sw]: https://strategywiki.org/wiki/Chrono_Trigger/Gameplay
-[ct-faq]: https://gamefaqs.gamespot.com/snes/562913-chrono-trigger/answers/354553-whats-the-difference-between-wait-and-active-battle-modes
-[ct-pcg]: https://www.pcgamer.com/chrono-trigger-patch-bring-back-old-school-battle-ui-and-character-design/
-[mt-map]: https://metroid.fandom.com/wiki/Map
-[ff6-config]: https://finalfantasy.fandom.com/wiki/Config
-[z-sub]: https://zelda.fandom.com/wiki/Subscreen
-[dkc-balloon]: https://donkeykong.fandom.com/wiki/Extra_Life_Balloon
-[ds-iabdi]: https://www.iabdi.com/designblog/2022/3/18/h04cs7ub04vkmyfcs3t2krmfey5mc3
-[ds-medium]: https://medium.com/@jaiwanthshan/designing-effective-diegetic-ui-lessons-learned-from-dead-spaces-success-and-the-callisto-dbf803639dd6
-[wayline]: https://www.wayline.io/blog/diegetic-interfaces-game-design
-[flywheel]: https://www.flywheelstrategic.com/thinking/post/flywheel-blog/2022/09/07/what-we-can-learn-from-diegetic-ui-in-gaming

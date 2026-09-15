@@ -13,6 +13,12 @@ GitHub Pages at https://tfrey7.github.io/final-notice/. Everything else is still
 `GAME-DESIGN.md` is authoritative; `STORYBOARD.md`, `ART-DIRECTION.md` and two concept paintings in
 `art/` sit beside it. Never copy the design into this repo unless Tim says so.
 
+**The plan, design and story docs in `docs/` are generated** from the fleet's knowledge base, which
+is their source of truth: `BATTLEPLAN.md`, `GAMEPLAY-DESIGN.md`, `STORY.md`, the `SNES-*` and
+`NES-ART-BIBLE` bibles and `docs/research/`. Never hand-edit one. Change it with `kb_update`, then
+re-export with `py -3.10 scripts/kb_export.py --project final-notice --repo <worktree>` from the
+fleet console and commit the result.
+
 **Tim's rulings (2026-09-13, 17:08):**
 
 - The escape stage uses different, smaller sprites at Contra III scale, not the design's large ones.

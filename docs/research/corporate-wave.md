@@ -1,11 +1,10 @@
-# Corporate wave, from its own community
+# Corporate wave
 
-Tim (2026-09-15) asked for the aesthetic pinned down from the source: the top 20 all-time posts on
-[r/CorporateWave](https://www.reddit.com/r/CorporateWave/top/?t=all). This page says what those posts
-are, what makes them work, and what the SNES version takes from them. Nothing from the posts is in
-the repo; each is linked.
+*Generated from the knowledge base; edit through `kb_update`, not here.*
 
 ## How the list was read
+
+*`kb_get corporate-wave-how-the-list-was-read` · version 1*
 
 Reddit refuses scripted reading (403 on www, old and the `.json` listing), so the posts came from the
 [Arctic Shift](https://arctic-shift.photon-reddit.com) archive of the subreddit and were ranked by their
@@ -16,6 +15,8 @@ description on [Bandcamp](https://bonchic.bandcamp.com/album/corporate-dreams) a
 
 ## The one finding that shapes everything else
 
+*`kb_get corporate-wave-the-one-finding-that-shapes-everything-else` · version 1*
+
 **All 20 are short vertical video edits, and 14 of them are by one artist, Bon Chic**, who coined the
 genre (albums *Corporate Dreams* I-V, 2025-26). There is no album-cover grid, no meme template, no
 collage. Each post is one place or one person, held for a slow pan or a small loop, a small boxed
@@ -24,6 +25,8 @@ cinematic, glossy, night-lit, straight-faced. Irony shows only in the titles ("I
 "Hostile takeover", "Fulfilling the annual tax requirement").
 
 ## The 20 posts
+
+*`kb_get corporate-wave-the-20-posts` · version 1*
 
 | # | Post | What it shows | What makes it work | Track |
 | --- | --- | --- | --- | --- |
@@ -52,6 +55,8 @@ cinematic, glossy, night-lit, straight-faced. Irony shows only in the titles ("I
 
 ### Palettes
 
+*`kb_get corporate-wave-palettes` · version 1*
+
 Measured across the twenty thumbnails, three families cover almost everything:
 
 - **Night glass (12 of 20).** Ink navy to electric blue to cyan: `#070945`, `#1b67c1`, `#4084c8`,
@@ -66,6 +71,8 @@ darkest values lean violet or navy.
 
 ### Places and props
 
+*`kb_get corporate-wave-places-and-props` · version 1*
+
 Glass towers at night, atriums with lit glass ceilings, marble lobbies, conversation pits, indoor
 pools, glass brick, palms and plants indoors, leather club chairs, globe lamps, limousines, yachts and
 tropical offices. **No cubicles, no fluorescent tubes, no computers**: this is the executive floor, not
@@ -73,19 +80,27 @@ the typing pool.
 
 ### People
 
+*`kb_get corporate-wave-people` · version 1*
+
 Seen from a distance or alone: one exec in sunglasses, a suit in a colour (olive, tan, lilac, red), hair
 set, posture relaxed or dancing. Nobody is working. The joke, when there is one, is the calm.
 
 ### Type
+
+*`kb_get corporate-wave-type` · version 1*
 
 Almost none in the frame. A small boxed wordmark in wide-tracked capitals, top corner, muted. Titles
 are plain sentences or a company name with a year in brackets: "Petroleum Leisure Group (1992)".
 
 ### Motion
 
+*`kb_get corporate-wave-motion` · version 1*
+
 A slow push-in or pan over one still place, or a short loop of one gesture. No cuts on the beat.
 
 ### Sound
+
+*`kb_get corporate-wave-sound` · version 1*
 
 Every track named is Bon Chic's. His own description: late-80s and 90s office ambience, "beige leather
 chairs, flickering fluorescent lights, plastic plants, fax machines and the hum of air conditioning",
@@ -97,11 +112,15 @@ ear in this run.**
 
 ## Rules for Final Notice
 
+*`kb_get corporate-wave-rules-for-final-notice` · version 1*
+
 The game is one night in a late-1980s office run by corporate vampires, drawn to the late-1995 SNES bar:
 grounded, never cartoony. Corporate wave fits it almost perfectly, since its world is already a night
 building with nobody working.
 
 ### Title screen
+
+*`kb_get corporate-wave-title-screen` · version 1*
 
 - **A night tower, not a logo on black.** The corporation's glass HQ against an ink-violet sky, lit
   windows in amber, one red beacon on the crown (posts 1, 5, 11). A slow upward scroll up the tower is the SNES
@@ -112,6 +131,8 @@ building with nobody working.
 
 ### HUD and menus
 
+*`kb_get corporate-wave-hud-and-menus` · version 1*
+
 - **Night-glass panels**: navy `(0,1,8)` to blue `(3,12,24)` gradients (rgb15), a one-pixel cyan
   `(0,25,31)` or ice `(16,23,26)` edge, amber `(28,16,13)` for the value that matters. Colour math at
   half for the panel keeps the scene behind it readable.
@@ -119,6 +140,8 @@ building with nobody working.
 - **Menus read like executive stationery**: left-aligned, thin caps headings, generous margins.
 
 ### Background motifs
+
+*`kb_get corporate-wave-background-motifs` · version 1*
 
 - **Blue from above, warmth below** in every interior: a lit ceiling or skylight in the upper band, walnut,
   leather and copper in the lower. HDMA gradients for the ceiling glow and window light.
@@ -129,6 +152,8 @@ building with nobody working.
 - **Characters stay small against big rooms** (posts 11, 14, 17): scale sells the corporation.
 
 ### Instruments for the real-samples bank (item 1973)
+
+*`kb_get corporate-wave-instruments-for-the-real-samples-bank` · version 1*
 
 Keep: `epiano` (Rhodes), `pad`, `strings`, `sax`, `brass`, `bell`, `gkick`, `gsnare`, `chat`.
 
@@ -143,6 +168,8 @@ Add, in order of what the genre leans on:
 
 ### What to avoid
 
+*`kb_get corporate-wave-what-to-avoid` · version 1*
+
 - **Cartoon and meme looks**: no sunglasses-on-everyone gag art, no big heads, no exaggerated grins.
   The posts are photographic; the game is grounded pixel art.
 - **Vaporwave clichés the community does not use**: pink-and-teal grids, marble busts, Japanese text,
@@ -150,24 +177,3 @@ Add, in order of what the genre leans on:
 - **Cubicle and fluorescent office art** as the default; that is the wrong floor.
 - **Harsh, busy sound**: the orchestra hit, the square lead and slap bass as leads, fast hats, distortion.
 - **Saturation everywhere**: one saturated accent per scene; the rest is lit, not painted.
-
-## Changes to make
-
-To `docs/SNES-ART-BIBLE.md`:
-
-1. Add a **scene palette** section: cool light on warm matter, the night-glass, warm-material and
-   stone ramps above in rgb15, blacks leaning navy, one red accent per scene.
-2. Add a **prop list** for interiors (glass brick, marble with reflection, palms, leather, globe lamps,
-   atrium) and strike cubicles and fluorescent tubes as defaults.
-3. Add **small figures in big rooms** for establishing shots, and a reflection band on marble floors.
-4. Add the **avoid list** above, so bible checks catch vaporwave clichés as well as cartoon looks.
-
-To the sound direction (`docs/MUSIC.md`, the SNES bank section):
-
-1. Add fretless bass, FM electric piano, vibraphone, muted jazz guitar, shaker and a soft brass pad to the
-   bank, within the 64 KB budget (drop the square lead from calm cues first).
-2. Calm cues (title, office scenes, menus) sit at 85-100 BPM with shaker and soft gated snare; the
-   fights keep their own tempos from the track table.
-3. Demote the orchestra hit to one Injunction sting and slap bass to the funk brawl only.
-4. Before the next arrangement pass, a run listens to three Bon Chic tracks named above and checks
-   these traits by ear; this page did not.

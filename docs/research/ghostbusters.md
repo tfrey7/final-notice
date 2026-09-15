@@ -1,19 +1,12 @@
-# Ghostbusters, as a reference
+# Ghostbusters
 
-Tim (2026-09-15, 10:33) on the title art: "a corporate tower with an old timey pyramid at the top...kinda
-like ghostbusters meets corporate wave meets illuminati". At 10:34: "let's add some ghostbusters art
-research, and sound research, and include some ghostbusters games, so we can use as reference".
+*Generated from the knowledge base; edit through `kb_update`, not here.*
 
-This page studies the two films' look and sound and the Ghostbusters games, and turns them into rules for
-the SNES version. Nothing copyrighted is in the repo: every picture and clip is linked, and the private
-copies the judges read stay in their gitignored reference folders (see *The judges' reference sets*).
-**No melody is taken from anything here, only technique.** The bar stays grounded late-1995 SNES: the
-films are comedies, but the comedy came from playing the supernatural straight, and that is the part we
-take.
-
-## 1. Art: the films
+## Art: the films
 
 ### The one idea: realism first, so the impossible lands
+
+*`kb_get ghostbusters-the-one-idea-realism-first-so-the-impossible` · version 1*
 
 Ivan Reitman's stated approach was that setting it "entirely on Earth would make the extraordinary
 elements funnier", and that "focusing on realism from the beginning would make the Marshmallow Man more
@@ -25,6 +18,8 @@ This is our descent in one sentence. `SNES-DESCENT.md` already says "nothing is 
 through"; Ghostbusters is the proof that the slow version is also the scarier and the funnier one.
 
 ### Spook Central: an ordinary building with a temple on its head
+
+*`kb_get ghostbusters-spook-central-an-ordinary-building-with-a` · version 1*
 
 - **The real building.** 55 Central Park West is a 1929-30 art-deco apartment block, "the first fully Art
   Deco structure on the street", whose brick "changes shade from deep purple to yellow-white" as it
@@ -49,6 +44,8 @@ illuminati read comes from the silhouette (a stepped pyramid over a tower), neve
 
 ### Silhouettes and motifs
 
+*`kb_get ghostbusters-silhouettes-and-motifs` · version 1*
+
 | Motif | In the films | Our use |
 | --- | --- | --- |
 | Stepped setbacks | the deco tower and the ziggurat altar share one profile | the tower crown and Boss 2's Great Seal dais use the same step count |
@@ -65,6 +62,8 @@ which is exactly the corporation behind the Seal.
 
 ### Palette
 
+*`kb_get ghostbusters-palette` · version 1*
+
 Only the building's brick gradient is sourced (above); the other anchors are proposals from memory of the
 films, unverified against frames in this run. Treat them as starting values, snapped to 15-bit:
 
@@ -78,6 +77,8 @@ films, unverified against frames in this run. Treat them as starting values, sna
   saturated green-pink that the films use sparingly. We use neither colour as scenery; see below.
 
 ### Effects: proton streams and slime
+
+*`kb_get ghostbusters-effects-proton-streams-and-slime` · version 1*
 
 The streams were **hand-animated**, frame by frame, from a flashbulb at the wand's tip that gave the
 animators an origin point; one second of an animated ghost could take up to three weeks; the Terror Dogs
@@ -95,9 +96,11 @@ For the SNES that means:
 - **No slime.** Ooze is the most cartoon thing in the films and every game leaned on it; our wax is its
   grounded replacement and already exists in the descent bible.
 
-## 2. Sound: the films
+## Sound: the films
 
 ### Elmer Bernstein's score
+
+*`kb_get ghostbusters-elmer-bernstein-s-score` · version 1*
 
 Bernstein wrote for the Hollywood Studio Symphony (about 70 players), a small rock ensemble, a few Yamaha
 DX7 additions, and the **ondes Martenot**, played by Cynthia Millar, flown from England because so few
@@ -127,6 +130,8 @@ theme on ondes and solo cello, and big straight action music at the end
 
 ### Ray Parker Jr.'s theme
 
+*`kb_get ghostbusters-ray-parker-jr-s-theme` · version 1*
+
 Written and recorded in about two days with Parker on almost everything: one rhythm guitar, one lead
 guitar, a horn-patch synth, one bass, one drum part and a few synth overdubs, **nothing doubled**; a
 Korg Poly-61 for the main synth, a Roland Jupiter-6 on the bass, a LinnDrum; the demo was 1:15 and the
@@ -148,13 +153,17 @@ the edit was Huey Lewis's "I Want a New Drug" for tempo, which later led to a se
 
 ### Office normality and dread in the sound design
 
+*`kb_get ghostbusters-office-normality-and-dread-in-the-sound-design` · version 1*
+
 The films' dread lives in ordinary sounds pushed slightly wrong: the library's hush, the hum of Dana's
 kitchen before the refrigerator opens, a doorbell and a phone. (From memory of the films,
 unverified against a sound-design source.) Our descent already turns the vending machine's hum into the
 Seal's drone at 100; this confirms it: **the ambient bed is office noise, and dread is that noise detuned
 and slowed**, not a new horror pad laid on top.
 
-## 3. The games
+## The games
+
+*`kb_get ghostbusters-the-games` · version 1*
 
 | Game | Look | Sound | Structure | What to take or avoid |
 | --- | --- | --- | --- | --- |
@@ -169,9 +178,11 @@ and slowed**, not a new horror pad laid on top.
 
 Where a row says "-", no source for that column was found in this run.
 
-## 4. Rules for Final Notice
+## Rules for Final Notice
 
 ### Art
+
+*`kb_get ghostbusters-art` · version 1*
 
 1. **Earn the temple.** The first stages are a real office at night and nothing more. The first
    unmistakably occult architecture appears no earlier than descent 30, and the full stepped altar only at
@@ -190,6 +201,8 @@ Where a row says "-", no source for that column was found in this run.
 
 ### Sound
 
+*`kb_get ghostbusters-sound` · version 1*
+
 1. **One uncanny voice.** A single ondes-style sine lead with glides and deepening vibrato, entering at
    descent thresholds, over an otherwise straight arrangement.
 2. **Straight scoring.** Gothic cues are real horror writing (low strings, organ, choir pad); no comedy
@@ -202,6 +215,8 @@ Where a row says "-", no source for that column was found in this run.
    climbs; no generic horror drone.
 
 ## The judges' reference sets
+
+*`kb_get ghostbusters-the-judges-reference-sets` · version 1*
 
 Private copies, never committed, registered as this card asked:
 
@@ -217,32 +232,3 @@ Private copies, never committed, registered as this card asked:
   Hole cues held as `candidate`, because labelled good they fell below the rejected NES and v1 SNES clips
   and broke the judge's separation (pairwise accuracy 0.967, line dropped to 50). With them held the
   judge recalibrates separated, pairwise accuracy 1.0, pass line 75.4, the same as before this card.
-
-## Changes to make
-
-To `docs/SNES-ART-BIBLE.md` (and `SNES-BACKGROUNDS.md` for the scenery lines):
-
-1. Add the **effects** rule: energy as a white core with a 1 pixel jittering coloured wrap and a source
-   flash; large creatures and set pieces on 2-4 held poses.
-2. Add **no big heads, no slime, no cartoon-show ghosts** to the avoid list, naming the Ghostbusters games
-   as the counter-example.
-3. Add **rim-light dark objects with the sky colour** for night readability.
-
-To `docs/SNES-DESCENT.md` (item 2056):
-
-1. Add **earn the temple**: no occult architecture before 30, the full stepped altar only at the Seal.
-2. Add the **stepped profile** to *Props that recur and warp*: reception desk (0), archive stacks (50),
-   Seal dais (90), and the twin guardian statues (0, then 85+).
-3. Add the **stone ramp**: purple-brown at depth to cream at the crown, tied to the descent number.
-4. Add **glimpse before the meeting** for Boss 1 and the Seal.
-5. Add the founder's portrait whose eyes drift, and the flooded archive level at 60-75.
-
-To the music direction (`docs/MUSIC.md`, the SNES bank, and the descent's *Music across the arc*):
-
-1. Add an **ondes-style sine lead** sample (glide and vibrato depth driven by the descent number) and a
-   **solo cello** to the bank.
-2. The eerie voice **enters at thresholds** (lifts, stairwells, doors) only.
-3. Arrange **one part per job**, no doubling, and give **every stage its own tune**.
-4. Build the horror bed from **office ambience slowed and detuned**, not a stock drone.
-5. Before the next arrangement pass, a run listens to the Bernstein score and the Genesis cues named above
-   and checks these traits by ear; this page read them from sources.

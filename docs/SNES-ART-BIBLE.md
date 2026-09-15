@@ -1,10 +1,10 @@
 # SNES art bible
 
-The rules the SNES sprites follow, written from the Ward bake-off (item 1905): Spritesmith's Final
-Notice model paints each pose, and each frame is cleaned by hand to the machine. Limits are
-`docs/SNES-PLAN.md` section 2; this page is how the art meets them.
+*Generated from the knowledge base; edit through `kb_update`, not here.*
 
 ## Size and hardware
+
+*`kb_get snes-art-bible-size-and-hardware` · version 1*
 
 - Stage 1 characters stand **56-64 px** tall (Ward's idle is 61 with his outline) and cover with
   at most **10** 32x32 and 16x16 OAM entries a frame. Ward needs 5-9.
@@ -13,6 +13,8 @@ Notice model paints each pose, and each frame is cleaned by hand to the machine.
   `origin` is the centre of the feet on the bottom row.
 
 ## Palette: one per character, 15 colours, chosen by hand
+
+*`kb_get snes-art-bible-palette-one-per-character-15-colours-chosen-by` · version 1*
 
 Letting a clustering pick the colours failed: it spent five slots on near-blacks and left the face
 mud. Ward's slots, in this order, are the template for every character:
@@ -30,6 +32,8 @@ mud. Ward's slots, in this order, are the template for every character:
 A foe changes these slots, never their order, so palette swaps line up.
 
 ## Cleaning a model pose
+
+*`kb_get snes-art-bible-cleaning-a-model-pose` · version 1*
 
 1. **Key the painting**: flood the white background from the corners; the floor shadow goes with
    it, and whatever of it survives in the bottom three rows is dropped.
@@ -51,6 +55,8 @@ A foe changes these slots, never their order, so palette swaps line up.
 
 ## Polish pass (item 1972)
 
+*`kb_get snes-art-bible-polish-pass` · version 1*
+
 - **Map folds by region, never by nearest colour.** The cleaner put Ward's hair browns in the suit's
   darkest folds, which is what turned him to mud on the burgundy carpet. Outside the head, hair
   indices become suit darks, and the bottom rows become shoe black.
@@ -69,6 +75,8 @@ A foe changes these slots, never their order, so palette swaps line up.
 
 ## Grounded redo (item 1974)
 
+*`kb_get snes-art-bible-grounded-redo` · version 1*
+
 Tim on 1972: "way too ugly and cartoony". The redo keeps the painting and drops the cartoon.
 
 - **Natural proportions come from the painting.** Shrink the whole figure by one scale from idle and
@@ -86,6 +94,8 @@ Tim on 1972: "way too ugly and cartoony". The redo keeps the painting and drops 
   uppercut and hit fail its shape overlap by their pose alone, as 1905's do.
 
 ## What the model does not give
+
+*`kb_get snes-art-bible-what-the-model-does-not-give` · version 1*
 
 - **Walk cycles.** Its four walk paintings are near the same stride; a real cycle needs contact,
   passing and recoil poses asked for one at a time, or drawn by hand from one of them.

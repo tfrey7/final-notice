@@ -1,17 +1,12 @@
-# Final Notice on the Super Nintendo — the cutscenes
+# SNES cutscenes
 
-Tim, 08:15 EDT 2026-09-15: *"we also need dedicates SNES cutscene research and designs"*. Part 1 is
-what the best SNES games did between play, with a source for every claim; anything we could not
-confirm is marked *unverified* and is our reading, not a quote. Part 2 is Final Notice's scenes as
-frame-by-frame boards at 256x224. Part 3 is the cards that build them under epic **1898**.
+*Generated from the knowledge base; edit through `kb_update`, not here.*
 
-The words stay those of `src/story/script.mjs`. What this adds is staging: camera, acting, effects,
-cues and timing. HUD and menu design is card 1975's and title-screen research is card 1978's; the
-title logo zoom is only named here where the opening hands over to it.
-
-## Part 1 — how the SNES told stories between play
+## how the SNES told stories between play
 
 ### In-engine acting: the game's own sprites on the game's own maps
+
+*`kb_get snes-cutscenes-in-engine-acting-the-game-s-own-sprites-on-the` · version 1*
 
 **Final Fantasy VI (Square, 1994), the opera.** The best-known SNES scene is not a cutscene you watch:
 the player walks Celes around Draco's sprite "as the music swells", picks the right lyric from memory
@@ -39,6 +34,8 @@ flashbacks and the photographer's snapshots are *from memory, unverified* here.
 
 ### Wordless and near-wordless openings
 
+*`kb_get snes-cutscenes-wordless-and-near-wordless-openings` · version 1*
+
 **Super Metroid (Nintendo R&D1/Intelligent Systems, 1994).** Backstory is a few white-on-black
 screens read in "a flat, monotone voice"; Samus's log is typed with keyboard sounds; the music "seems
 to rise and fall" with the narration, then stops dead for "CERES STATION IS UNDER ATTACK!!" and the
@@ -65,6 +62,8 @@ building to strings and choir [13]. Mode 7 maps and graphical effects were prais
 
 ### Full-screen illustrated scenes
 
+*`kb_get snes-cutscenes-full-screen-illustrated-scenes` · version 1*
+
 **Flashback (Delphine, 1992; SNES 1993).** Hand-drawn backdrops and rotoscoped play animation, from
 filming a man and drawing over the frames — "more than 1,000 [sprites] for the main character
 himself" (Paul Cuisset); the cutscenes themselves were built frame by frame from flat polygons
@@ -88,6 +87,8 @@ already does, and no special chip.
 
 ### Brawler story beats
 
+*`kb_get snes-cutscenes-brawler-story-beats` · version 1*
+
 **Final Fight (Capcom, SNES 1991).** A short opening: Haggar takes a call from Mad Gear, who have
 kidnapped Jessica to make him let them run the city; then straight to the streets [22][23].
 
@@ -108,6 +109,8 @@ and a ransom note from Kaptain K. Rool left in his broken chair, read as text [2
 
 ### The effects, and what late-1995 hardware allowed
 
+*`kb_get snes-cutscenes-the-effects-and-what-late-1995-hardware-allowed` · version 1*
+
 - **Colour math** adds, subtracts or half-blends the main screen with the sub screen or one fixed
   colour (COLDATA); a colour window limits where it applies; sprites in palettes 0-3 never blend and
   sprites cannot blend with each other. Its uses are shadows, ghost fade-outs, translucent text boxes
@@ -125,6 +128,8 @@ and a ransom note from Kaptain K. Rool left in his broken chair, read as text [2
 
 ### What held true across all of them
 
+*`kb_get snes-cutscenes-what-held-true-across-all-of-them` · version 1*
+
 | Lesson | Where it came from | Final Notice rule |
 | --- | --- | --- |
 | Stage with the play sprites and rooms | FF6, Chrono Trigger, EarthBound | scenes after a boss play in that boss's room, sprites acting, before any portrait |
@@ -135,7 +140,9 @@ and a ransom note from Kaptain K. Rool left in his broken chair, read as text [2
 | Dark, grounded palettes read as serious | Batman Returns, Castlevania IV, Flashback | no bright sky, no cartoon takes; acting is small: a turn, a pause, a hand |
 | Mode 7 is an event, not a style | Castlevania IV, Batman Returns | three uses in the whole game, no more |
 
-## Part 2 — Final Notice's scenes, board by board
+## Final Notice's scenes, board by board
+
+*`kb_get snes-cutscenes-final-notice-s-scenes-board-by-board` · version 1*
 
 Every board is drawn at 256x224 by `docs/boards/cutscenes.html`, which paints with the game's own
 SNES code: the cinema's backdrops and portraits (`src/snes/cinema.mjs`), the BG3 text box
@@ -146,6 +153,8 @@ worktree and open `/docs/boards/cutscenes.html` to read each board's camera, sou
 the contact sheets below are those pages shot.
 
 ### The rules every scene follows
+
+*`kb_get snes-cutscenes-the-rules-every-scene-follows` · version 1*
 
 - **Start skips, always.** A, B or Y turns a page. A scene seen once is skipped by Start without
   confirmation; there is no second button.
@@ -167,6 +176,8 @@ the contact sheets below are those pages shot.
 
 ### Opening (wordless, before the title)
 
+*`kb_get snes-cutscenes-opening` · version 1*
+
 ![Opening boards O1-O8](shots/item-1976/opening.png)
 
 Night skyline, a clock tick, a tilt up a tower to its one lit floor; the bill printing
@@ -176,9 +187,13 @@ It shows who the auditors are (they come up from below) without a word of dialog
 
 ### Scene 1: the assignment
 
+*`kb_get snes-cutscenes-scene-1-the-assignment` · version 1 · **superseded by** `kb_get final-notice-story`*
+
 ![Scene 1 boards S1-1 to S1-6](shots/item-1976/scene1.png)
 
 ### Boss introductions
+
+*`kb_get snes-cutscenes-boss-introductions` · version 1*
 
 ![Boss boards B1-B3](shots/item-1976/bosses.png)
 
@@ -188,64 +203,18 @@ desk, the Custodian's shorter slip, and the press lowering by Mode 7 before its 
 
 ### Scene 2: the incident
 
+*`kb_get snes-cutscenes-scene-2-the-incident` · version 1 · **superseded by** `kb_get final-notice-story`*
+
 ![Scene 2 boards S2-1 to S2-7](shots/item-1976/scene2.png)
 
 ### Scene 3: original documents
+
+*`kb_get snes-cutscenes-scene-3-original-documents` · version 1 · **superseded by** `kb_get final-notice-story`*
 
 ![Scene 3 boards S3-1 to S3-6](shots/item-1976/scene3.png)
 
 ### Ending
 
+*`kb_get snes-cutscenes-ending` · version 1*
+
 ![Ending boards E1-E5](shots/item-1976/ending.png)
-
-## Part 3 — the cards that build it
-
-Filed under epic 1898, each at most 30 minutes, each ending in a shot or strip Tim can see. They
-reuse the cinema player (card 1927), text boxes (1911), effects (1909) and layers (1908), and take
-the real portraits and backdrops from card 1937 whenever it lands (stand-ins until then).
-
-| Card | What it builds | Waits on |
-| --- | --- | --- |
-| 2009 opening, part 1 | O1-O4: fade in, tower tilt with parallax, mosaic into the office, the bill feeding with the count | — |
-| 2013 opening, part 2 | O5-O8: APPROVED Mode 7 stamp with the music cut, lift indicator, doors window, hand-off to the title; Start skips | 2009 |
-| 2010 cinema staging | acting pages (play sprites in a room, no box), per-page silence and cue changes; Scene 1 staged as S1-1 to S1-6 | — |
-| 2014 Scene 2 staged | S2-1 from play with the HUD fading, button insert, spin kept, ledger glow, radio page, mosaic to Stage 2 | 2010 |
-| 2015 Scene 3 staged | S3-1 silence, the ledger page scroll, the speaker's colour-subtract dim, phone, hard cut | 2010 |
-| 2011 boss entrances | B1 pan and stand before Vellum's card; B2 Custodian slip; B3 press lowered by Mode 7 before the Great Seal card | — |
-| 2012 SNES ending | E1-E5: file, EVIDENCE Mode 7 stamp and flash, mosaic, credits with the tower's lights out floor by floor, THE END | — |
-
-## Sources
-
-Read in full for this doc: 1, 3, 7, 11, 14, 16, 25, 27, 28. The rest were read as search excerpts
-and are cited for the sentence they carried, no more.
-
-1. Nintendo Life, "The Pitch-Perfect Storytelling Of Final Fantasy VI's Opera": https://www.nintendolife.com/features/the-pitch-perfect-storytelling-of-final-fantasy-virs-opera-and-how-the-pixel-remaster-missed-a-note
-2. Final Fantasy Wiki, Opera House: https://finalfantasy.fandom.com/wiki/Opera_House
-3. Wikipedia, Chrono Trigger: https://en.wikipedia.org/wiki/Chrono_Trigger
-4. Chrono Wiki, Full Motion Video: https://www.chronowiki.org/wiki/Full_Motion_Video
-5. GameFAQs Q&A, "Do the anime cutscenes replace in-game story scenes?": https://gamefaqs.gamespot.com/ds/950181-chrono-trigger/answers/14723-do-the-anime-cutscenes-replace-in-game-story-scenes
-6. The Cutting Room Floor, EarthBound: https://tcrf.net/EarthBound
-7. Kotaku, "The Opening Sequence To Super Metroid Is A Masterpiece": https://kotaku.com/the-opening-sequence-to-super-metroid-is-a-masterpiece-1672800828
-8. Gameranx, "Super Metroid: How to Tell a Great Story Without Words": https://gameranx.com/features/id/2724/article/super-metroid-how-to-tell-a-great-story-without-words/
-9. Hey Poor Player, "Super Metroid – Telling a Story Without a Plot": https://www.heypoorplayer.com/2016/10/09/supermetroidtellingastorywithoutaplot/
-10. Tropedia, Super Castlevania IV: https://tropedia.fandom.com/wiki/Super_Castlevania_IV
-11. Wikipedia, Super Castlevania IV: https://en.wikipedia.org/wiki/Super_Castlevania_IV
-12. GameFAQs, Terranigma trivia and quotes: https://gamefaqs.gamespot.com/snes/588784-terranigma/trivia
-13. Steemit, "The Quintet Quintet: Soundtrack Review: Terranigma": https://steemit.com/review/@terry93d/the-quintet-quintet-or-soundtrack-review-terranigma
-14. Wikipedia, Terranigma: https://en.wikipedia.org/wiki/Terranigma
-15. Curious Arcade, "Facts About Flashback (1992)": https://curiousarcade.medium.com/facts-about-flashback-1992-the-godfather-of-cinematic-platforming-852c8d04a4bd
-16. Wikipedia, Flashback (1992 video game): https://en.wikipedia.org/wiki/Flashback_(1992_video_game)
-17. NeoGAF, "How was the intro song to Tales of Phantasia for SFC made?": https://www.neogaf.com/threads/how-was-the-intro-song-to-tales-of-phantasia-for-sfc-made.662437/
-18. Wikipedia, Tales of Phantasia: https://en.wikipedia.org/wiki/Tales_of_Phantasia
-19. gufranco/snes-street-fighter-alpha-2-nochip (GitHub): https://github.com/gufranco/snes-street-fighter-alpha-2-nochip
-20. SNES Central, S-DD1: https://snescentral.com/chips.php?chiptype=S-DD1
-21. GameFAQs review, Street Fighter Alpha 2 (SNES): https://gamefaqs.gamespot.com/snes/588699-street-fighter-alpha-2/reviews/170642
-22. GameFAQs review, Final Fight (SNES): https://gamefaqs.gamespot.com/snes/588332-final-fight/reviews/168172
-23. Street Fighter Wiki, Final Fight: https://streetfighter.fandom.com/wiki/Final_Fight
-24. Wikipedia, Batman Returns (SNES video game): https://en.wikipedia.org/wiki/Batman_Returns_(SNES_video_game)
-25. Hardcore Gaming 101, Batman Returns (SNES): http://www.hardcoregaming101.net/batman-returns-snes/
-26. GameFAQs, Batman Returns (SNES) cheats: https://gamefaqs.gamespot.com/snes/563517-batman-returns/cheats
-27. Super Mario Wiki, Donkey Kong Country 2: Diddy's Kong Quest: https://www.mariowiki.com/Donkey_Kong_Country_2:_Diddy's_Kong_Quest
-28. SNESdev Wiki, Color math: https://snes.nesdev.org/wiki/Color_math
-29. nesdoug, "HDMA Examples": https://nesdoug.com/2020/06/14/hdma-examples/
-30. pvsneslib wiki, Graphic Visual Effects: https://github.com/alekmaul/pvsneslib/wiki/Graphic-Visual-Effects

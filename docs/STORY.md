@@ -1,5 +1,9 @@
 # Final Notice: the story
 
+*Generated from the knowledge base; edit through `kb_update`, not here.*
+
+*`kb_get final-notice-story` · version 1*
+
 Agreed live in the room by Tim and Jarvis, 2026-09-15, 12:53-12:59 EDT. This is the story the game
 tells; where another doc or the script disagrees, this one wins. Anything marked *(proposed)* fills a
 small gap the conversation left open and waits for Tim's word.
