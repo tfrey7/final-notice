@@ -1,7 +1,8 @@
 // Stage 2 as an escape climb under ?snes&go=archive: the auditor climbs the Archive's grey shelving ahead
 // of a rising paper flood, past Associates and falling paper, through the checkpoint to the Records
-// Custodian at the top. Boxes stand in for every sprite. ?bot lets the climb bot play; ?frames=<n> plays
-// that many frames first (with the bot under ?bot), for a screenshot.
+// Custodian's arena at the top, where the boss fight clears the stage. Boxes stand in for every sprite.
+// ?bot lets the climb bot play; ?boss starts at the arena; Tab (or ?dials) opens his tuning dials;
+// ?frames=<n> plays that many frames first (with the bot under ?bot), for a screenshot.
 /* global Phaser */
 import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString } from '../text.mjs';
@@ -10,9 +11,11 @@ import { createPad, pollPad, updatePad, PADS } from '../../input.mjs';
 import { AUDITORS } from '../../flow.mjs';
 import { HEALTH } from '../../stage2/player.mjs';
 import { TILE } from '../../stage2/physics.mjs';
-import { ARCHIVE, CHECKPOINT_LEDGE, DROP, LEDGES, createArchive, ledgesClimbed, stepArchive } from '../../stage2/climb.mjs';
+import { ARCHIVE, ARENA, ARENA_LEDGE, CHECKPOINT_LEDGE, DROP, createArchive, ledgesClimbed, startAtSummit, stepArchive } from '../../stage2/climb.mjs';
+import { CUSTODIAN, bossBar, cartBox, createCustodian, custodianDials, custodianTable, sweepBox } from '../../stage2/summit.mjs';
+import { mountLabPanel } from '../../lab/panel.mjs';
 import { botButtons, createBot } from '../../stage2/climbbot.mjs';
-import { mountControls } from '../../controls.mjs';
+import { isShortcut, mountControls } from '../../controls.mjs';
 import { playSong } from '../audio/player.mjs';
 import { ARCHIVE_CLIMB_SONG } from '../audio/cues.mjs';
 
@@ -31,18 +34,37 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     const params = new URLSearchParams(location.search);
     this.who = AUDITORS.includes(params.get('who')) ? params.get('who') : 'ward';
     this.autoplay = params.has('bot');
+    this.atBoss = params.has('boss');
+    this.dials = custodianDials();
+    this.boss = custodianTable(this.dials);
+    this.repeat = { dir: 0, t: 0 };
     this.restart();
     this.g = this.add.graphics();
     this.hud = this.add.graphics().setScrollFactor(0);
     this.fill = (x, y, w, h, c) => this.hud.fillStyle(hex(c)).fillRect(x, y, w, h);
     this.controls = mountControls('stage2');
-    this.events.once('shutdown', () => this.controls.remove());
+    this.panel = mountLabPanel({
+      dials: this.dials,
+      respawnLabel: 'Restart at the Custodian',
+      onRespawn: () => { this.atBoss = true; this.restart(); },
+      onCopy: () => ['Custodian settings', ...this.dials.map((d) => `${d.key}: ${d.value}`)].join('\n'),
+      onReset: () => { this.dials.forEach((d) => { d.value = d.start; }); this.panel.flash('Dials reset.'); },
+    });
+    const onKey = (e) => { if (isShortcut(e.code, 'dials')) { e.preventDefault(); this.tabbed = true; } };
+    window.addEventListener('keydown', onKey);
+    if (params.has('dials')) this.panel.toggle(true);
+    this.events.once('shutdown', () => {
+      window.removeEventListener('keydown', onKey);
+      this.panel.remove();
+      this.controls.remove();
+    });
     const idle = pollPad(-1);
     for (let i = 0; i < Number(params.get('frames') ?? 0); i++) stepArchive(this.s, this.autoplay ? this.botPad() : idle);
   }
 
   restart() {
-    this.s = createArchive(this.who);
+    this.s = createArchive(this.who, this.boss);
+    if (this.atBoss) startAtSummit(this.s);
     this.bot = createBot();
     this.pad = createPad(PADS.snes);
     playSong(this.song = ARCHIVE_CLIMB_SONG);
@@ -54,6 +76,18 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     if (song !== this.song) playSong(this.song = song);
   }
 
+  // While the dial panel is open the climb holds still and the pad works the panel.
+  drivePanel(pad) {
+    if (pad.pressed.has('up')) this.panel.move(-1);
+    if (pad.pressed.has('down')) this.panel.move(1);
+    const dir = (pad.held.has('right') ? 1 : 0) - (pad.held.has('left') ? 1 : 0);
+    const r = this.repeat;
+    if (dir !== r.dir) Object.assign(r, { dir, t: 0 });
+    if (dir && (r.t === 0 || (r.t >= 14 && (r.t - 14) % 3 === 0))) this.panel.turn(dir);
+    if (dir) r.t++;
+    if (pad.pressed.has('a') || pad.pressed.has('b')) this.panel.press();
+  }
+
   botPad() {
     this.pad = updatePad(this.pad, botButtons(this.bot, this.s));
     return this.pad;
@@ -62,7 +96,11 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
   update() {
     const pad = pollPad(this.game.loop.frame);
     const { s } = this;
-    if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
+    if (this.tabbed) this.panel.toggle();
+    this.tabbed = false;
+    Object.assign(this.boss, custodianTable(this.dials));
+    if (this.panel.visible) this.drivePanel(pad);
+    else if (s.over && s.over.t > 45 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepArchive(s, this.autoplay ? this.botPad() : pad);
     this.cue();
     this.draw();
@@ -93,9 +131,7 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     g.fillStyle(0x505058).fillRect(flagX, cp.row * TILE - 28, 2, 28);
     g.fillStyle(s.checkpoint ? 0x80e080 : 0x707078).fillRect(flagX + 2, cp.row * TILE - 28, 10, 7);
 
-    const { custodian } = s;
-    g.fillStyle(s.over?.kind === 'clear' ? 0xffffff : 0x8a7aa0).fillRect(custodian.x - 7, custodian.y - 36, 14, 36);
-    g.fillStyle(0x18181c).fillRect(custodian.x - 5, custodian.y - 30, 4, 4);
+    this.drawCustodian(g, s.fight ?? { ...createCustodian(ARENA), state: 'waiting' });
 
     for (const f of run.foes) {
       const alpha = f.hp <= 0 ? 0.35 : 1;
@@ -127,14 +163,43 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     this.drawHud();
   }
 
+  // His body flashes through a telegraph, the cart rides ahead of him, the mop's reach shows as it swings,
+  // and he goes pale while reeling from a parry.
+  drawCustodian(g, b) {
+    const t = this.boss;
+    const alpha = b.beaten ? 0.35 : 1;
+    const body = b.flash || (b.state === 'tell' && b.timer % 6 < 3) ? 0xffffff : b.state === 'reel' ? 0xb0b0e0 : b.phase === 2 ? 0xa06a8a : 0x8a7aa0;
+    g.fillStyle(body, alpha).fillRect(b.x - b.w / 2, b.y - b.h, b.w, b.h);
+    g.fillStyle(0x18181c, alpha).fillRect(b.facing > 0 ? b.x + 3 : b.x - 7, b.y - b.h + 8, 4, 4);
+    if (b.beaten) return;
+    if (b.attack === 'charge' && ['tell', 'charge'].includes(b.state)) {
+      const c = cartBox(b, t);
+      g.fillStyle(0x6a5a40).fillRect(c.x - c.w / 2, c.y - c.h, c.w, c.h - 3);
+      for (const wx of [c.x - c.w / 2 + 2, c.x + c.w / 2 - 5]) g.fillStyle(0x18181c).fillRect(wx, c.y - 3, 3, 3);
+    }
+    if (b.attack === 'sweep' && ['tell', 'sweep'].includes(b.state)) {
+      const m = sweepBox(b, t);
+      if (b.state === 'sweep') g.fillStyle(0xe0e0c0, 0.6).fillRect(m.x - m.w / 2, m.y - m.h, m.w, m.h);
+      else g.fillStyle(0xc0b090).fillRect(b.x + b.facing * (b.w / 2) - 1, b.y - b.h - 10, 2, b.h + 10);
+    }
+    for (const sheet of b.papers) g.fillStyle(0xf0ecd8).fillRect(sheet.x - sheet.w / 2, sheet.y - sheet.h, sheet.w, sheet.h);
+  }
+
   drawHud() {
     const { s } = this;
     const p = s.run.player;
     const hud = this.hud.clear();
+    if (s.fight) {
+      const b = s.fight;
+      const w = Math.floor((WIDTH - 16) / b.maxHp);
+      hud.fillStyle(0x111114).fillRect(6, HEIGHT - 26, b.maxHp * w + 4, 22);
+      drawString(this.fill, 'THE CUSTODIAN', 8, HEIGHT - 24, WHITE);
+      for (const [i, on] of bossBar(b).entries()) hud.fillStyle(on ? (b.phase === 2 ? 0xd05050 : 0xd8b050) : 0x3a3a3e).fillRect(8 + i * w, HEIGHT - 12, w - 1, 6);
+    }
     hud.fillStyle(0x111114).fillRect(4, 4, 4 + HEALTH * 6, 8);
     for (let i = 0; i < HEALTH; i++) hud.fillStyle(i < p.health ? 0xd8d8d8 : 0x3a3a3e).fillRect(6 + i * 6, 6, 4, 4);
     drawString(this.fill, `LIVES ${s.lives}`, 4, 16, DIM);
-    drawString(this.fill, `LEDGE ${ledgesClimbed(s)}/${LEDGES + 1}`, 4, 28, DIM);
+    drawString(this.fill, `LEDGE ${ledgesClimbed(s)}/${ARENA_LEDGE}`, 4, 28, DIM);
     const gap = Math.max(0, Math.round((s.flood.y - p.y) / TILE));
     drawString(this.fill, `FLOOD ${gap}`, 4, 40, gap < 4 ? RED : DIM);
     drawString(this.fill, 'THE ARCHIVE', WIDTH - 92, 6, WHITE);
@@ -144,7 +209,7 @@ export class SnesArchiveClimbScene extends Phaser.Scene {
     if (!title) return;
     hud.fillStyle(0x000000, 0.6).fillRect(0, HEIGHT / 2 - 20, WIDTH, 40);
     drawString(this.fill, title, WIDTH / 2 - title.length * 4, HEIGHT / 2 - 12, WHITE);
-    const sub = s.over?.kind === 'clear' ? 'THE CUSTODIAN WILL SEE YOU' : s.over ? 'JUMP TO RETRY' : 'BACK TO THE CHECKPOINT';
+    const sub = s.over?.kind === 'clear' ? 'THE CUSTODIAN STANDS ASIDE' : s.over ? 'JUMP TO RETRY' : 'BACK TO THE CHECKPOINT';
     drawString(this.fill, sub, WIDTH / 2 - sub.length * 4, HEIGHT / 2 + 2, DIM);
   }
 }
