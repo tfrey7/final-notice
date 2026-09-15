@@ -7,10 +7,11 @@ import { SnesUiScene } from './uiscene.mjs';
 import { bgArtScene } from './bgartscene.mjs';
 import CLAIMS from './bg/claims.mjs';
 import CLAIMS2 from './bg/claims2.mjs';
+import RECEPTION from './bg/reception.mjs';
 import { AREAS as ARCHIVE } from './bg/archive.mjs';
 import { AREAS as DISPOSAL } from './bg/disposal.mjs';
 
-const BACKGROUNDS = { claims: CLAIMS, claims2: CLAIMS2 };
+const BACKGROUNDS = { claims: CLAIMS, claims2: CLAIMS2, reception: RECEPTION };
 const area = (bg, params) => bg.areas[Math.max(0, Math.min(bg.areas.length - 1, Number(params.get('area') ?? 1) - 1))];
 
 // `value`, when a row has one, must match the flag's value too (?snes&art=ui); `when`, when a row has
@@ -25,7 +26,7 @@ export const DEBUG_ROUTES = [
     flag: 'art',
     when: (params) => params.get('art') in BACKGROUNDS,
     scene: new SnesLayersScene('snes-bg', (params) => area(BACKGROUNDS[params.get('art')], params)),
-    what: "a background module scrolling end to end: art=claims (&area=1 Reception, 2 Service Floor) or art=claims2 (1 Internal Review, 2 Executive Waiting, 3 Vellum's office), &x= pins",
+    what: "a background module scrolling end to end: art=claims (&area=1 Reception, 2 Service Floor) or art=claims2 (1 Internal Review, 2 Executive Waiting, 3 Vellum's office) or art=reception (the kit-built Reception), &x= pins",
   },
   { flag: 'art', value: 'archive', scene: bgArtScene('archive', ARCHIVE), what: 'Stage 2 areas 1-3: keys 1-3, lamp glow by add, wax front by add-half' },
   { flag: 'art', value: 'disposal', scene: bgArtScene('disposal', DISPOSAL), what: 'Stage 2 areas 4-5: keys 1-3 Disposal Line, wax front by add-half, Great Seal arena; animated tiles and palettes, &frame= pins' },

@@ -13,6 +13,7 @@ import { drawString, measure } from '../text.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
+import RECEPTION from '../bg/reception.mjs';
 import { pollPad } from '../../input.mjs';
 import { SONGS, jumpTo, next, showFlow } from '../../flow.mjs';
 import { TUNING, shakeOffset } from '../../stage1/moves.mjs';
@@ -34,7 +35,7 @@ import { VELLUM_IN, skipTo, vellumEntrance } from '../entrance.mjs';
 const RANGES = Object.fromEntries(Object.entries(TUNING).map(([k, [, min, max, stepSize]]) => [k, [min, max, stepSize]]));
 const MS = 1000 / 60;
 const STAGE_START_MS = 2400;
-const BACKGROUNDS = [CLAIMS.areas[0], CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
+const BACKGROUNDS = [RECEPTION, CLAIMS.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]];
 const OFFICE_BG = CLAIMS2.areas[2];
 const SOUND = {
   punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
