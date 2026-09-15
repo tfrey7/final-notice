@@ -6,6 +6,7 @@ import { WIDTH, HEIGHT } from '../screen.mjs';
 import { drawString } from '../text.mjs';
 import { hex, rgb15 } from '../color.mjs';
 import { sfx } from '../audio/player.mjs';
+import { brawlSound } from '../audio/brawl.mjs';
 import { pollPad } from '../../input.mjs';
 import { AUDITORS } from '../../flow.mjs';
 import { DOWNED, fighter, shakeOffset } from '../../stage1/moves.mjs';
@@ -37,7 +38,6 @@ const FLOOR = { left: 16, right: WIDTH - 16, top: 150, bottom: 216 };
 const START_COUNTS = { associate: 2, manager: 1, counsel: 0, supervisor: 0 };
 const RESPAWN_FRAMES = 90;
 const REPEAT = { delay: 14, every: 3 };
-const SOUND = { punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step', redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', injunction: 'injunction', parry: 'stamp' };
 const GREY = { wall: 0x34343a, trim: 0x44444c, floor: 0x5a5a62, line: 0x66666e, shadow: 0x222226 };
 const BODY = { player: 0xdcdcdc, associate: 0x9c9c9c, manager: 0xb4ab8c, counsel: 0xa88c8c, supervisor: 0x8894a8 };
 // The body shifts toward the look's colour, so kind still reads under the state.
@@ -229,7 +229,8 @@ export class SnesLabScene extends Phaser.Scene {
     this.applyDials();
     const w = this.world;
     stepFloor(w, pad, this.tune);
-    for (const e of w.events) if (SOUND[e]) sfx(SOUND[e]);
+    const sound = brawlSound(w.events);
+    if (sound) sfx(sound);
     if (this.posed && w.events.includes('parry')) this.sincePose = 0;
     if (this.sincePose !== undefined && this.sincePose++ >= this.poseHold) this.held = true;
     const foes = w.fighters.some((f) => f.team === 'foe') || w.bench.length;

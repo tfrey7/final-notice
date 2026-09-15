@@ -67,7 +67,7 @@ export function weaponPad(world, pad, tune, events, p = player(world)) {
       pressed.delete('b');
       p.weapon = { kind: w.kind, uses: w.uses };
       w.state = 'gone';
-      events.push('grab');
+      events.push('grab', 'pickup');
     }
   }
   return { ...pad, pressed };
@@ -110,7 +110,7 @@ function stepAuditor(world, p, tune, events) {
       box.state = 'broken';
       world.weapons.push(pickup(box.drop, box.x, box.y + 6, usesOf(box.drop, wt)));
       world.shake = tune.shakeFrames;
-      events.push('heavy', 'smash');
+      events.push('heavy', 'smash', `${box.kind}Smash`);
     } else if (box) events.push('hit');
   }
 
@@ -125,6 +125,7 @@ function stepAuditor(world, p, tune, events) {
       const foe = standingFoes(world).find((o) => inReach(p, o, stamp ? tune.punchReach : wt.binderReach, tune));
       if (foe) {
         p.swingHit = landHit(world, foe, { damage: stamp ? wt.stampDamage : wt.binderDamage, heavy: false, dir: p.facing }, tune);
+        if (p.swingHit) events.push(`${p.weapon.kind}Hit`);
         if (p.swingHit && stamp) foe.marked = wt.stampMarkFrames;
       }
     }
@@ -160,7 +161,7 @@ export function stepWeapons(world, tune, events) {
       w.x += w.vx;
       const foe = standingFoes(world).find((o) => Math.abs(o.x - w.x) < 12 && Math.abs(o.y - w.y) <= tune.depthReach);
       const hit = foe && landHit(world, foe, { damage: wt.staplerDamage, heavy: false, dir: Math.sign(w.vx) }, tune);
-      if (hit) events.push('hit');
+      if (hit) events.push('hit', 'staplerHit');
       if (hit || w.x < world.floor.left || w.x > world.floor.right) {
         w.x = Math.min(world.floor.right, Math.max(world.floor.left, w.x));
         Object.assign(w, { state: w.uses > 0 ? 'floor' : 'gone', z: 0, vx: 0, t: 0 });

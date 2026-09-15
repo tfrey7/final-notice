@@ -188,6 +188,7 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
   world.hitStop = feel.stop;
   world.shake = Math.max(world.shake ?? 0, feel.shake);
   world.events.push(heavy ? 'heavy' : 'hit');
+  if (target.team === 'player') world.events.push('hurt');
   if (target.target) release(world, target);
   target.hitFlash = tune.hitFlashFrames;
   world.sparks = [...(world.sparks ?? []), { x: target.x + dir * 6, y: target.y, z: target.z, weight: heavy ? 'finisher' : weight ?? 'light', t: 0 }].slice(-MAX_SPARKS);

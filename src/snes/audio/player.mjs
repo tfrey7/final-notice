@@ -24,7 +24,7 @@ import { noteToMidi, midiToHz } from '../../audio/apu.mjs';
 import { DSP_HZ, VOICES, createDsp, makeSample } from './spc.mjs';
 import { SAMPLES as BANK, INSTRUMENTS as INSTRUMENTS_V1, demoSong } from './bank.mjs';
 import { SAMPLES as RECORDED, INSTRUMENTS } from './recorded.mjs';
-import { SFX, FX_SAMPLES } from './sfx.mjs';
+import { SFX, FX_SAMPLES, SFX_VOLUME, atVolume } from './sfx.mjs';
 
 export { INSTRUMENTS, INSTRUMENTS_V1, SFX };
 
@@ -519,7 +519,7 @@ export function soloSong(voices) {
 }
 
 export function sfx(name) {
-  if (SFX[name] && seq) seq.sfx(SFX[name]);
+  if (SFX[name] && seq) seq.sfx(atVolume(SFX[name], SFX_VOLUME[name]));
 }
 
 export function channelStatus() {

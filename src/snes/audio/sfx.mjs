@@ -11,6 +11,7 @@
 
 import { DSP_HZ, makeSample } from './spc.mjs';
 import { noise, hit, lowpass, highpass, gate, BUDGET_BYTES, bankBytes, sampleBytes } from './bank.mjs';
+import { registerTuning } from '../../tune.mjs';
 
 const TAU = 2 * Math.PI;
 const decay = (t, k) => Math.exp(-t * k);
@@ -191,6 +192,35 @@ export const FX_SAMPLES = {
       },
     });
   })(),
+  // The brawl's bone and furniture crunch: bit-crushed noise bursts over a dropping thump, at 8 kHz.
+  crunch: (() => {
+    const n = noise(173);
+    const pop = noise(179);
+    let p = 0;
+    let held = 0;
+    return hit({
+      rate: 8000, seconds: 0.18,
+      fn: (t, i) => {
+        p += (TAU * (45 + 120 * decay(t, 30))) / 8000;
+        if (i % 3 === 0) held = n();
+        const grit = (pop() + 1) / 2 < 0.25 ? held * 1.6 : held * 0.5;
+        return 0.9 * Math.sin(p) * decay(t, 16) + grit * decay(t, 18);
+      },
+      post: (w) => drive(3)(norm(w)).map((x) => Math.round(x * 6) / 6),
+    });
+  })(),
+  // Metal struck: an inharmonic cluster looping every 256 samples, after a noisy strike.
+  clang: (() => {
+    const n = noise(181);
+    const attack = 800;
+    const partials = [[13, 1], [29, 0.6], [37, 0.45], [53, 0.3], [71, 0.2]];
+    const wave = Array.from({ length: attack + 256 }, (_, i) => {
+      const strike = i < attack ? (1 - i / attack) ** 2 : 0;
+      const ring = partials.reduce((s, [k, a]) => s + a * Math.sin((TAU * k * i) / 256), 0);
+      return 9000 * ring * (1 + 0.8 * strike) + 8000 * n() * strike ** 3;
+    });
+    return { ...makeSample(wave, attack), rootHz: (DSP_HZ * 13) / 256 };
+  })(),
   // The hold music's phone-line voice: a narrow pulse with its fundamental thinned and its top cut,
   // stepped to 32 levels.
   phone: (() => {
@@ -242,6 +272,8 @@ const I = {
   sax: { sample: 'rec-sax', adsr: [15, 4, 5, 10], vol: 90, echo: true },
   bass: { sample: 'rec-synbass', adsr: [15, 4, 3, 14], vol: 120 },
   voice: { sample: null, adsr: [15, 7, 7, 0], vol: 127, echo: true },
+  crunch: { sample: 'crunch', adsr: [15, 7, 7, 0], vol: 120 },
+  clang: { sample: 'clang', adsr: [15, 4, 2, 20], vol: 96, echo: true },
 };
 
 const fx = (...layers) => ({ layers });
@@ -302,7 +334,38 @@ export const SFX = {
   vellumLine: line('vellumLine'),
   custodianLine: line('custodianLine'),
   sealLine: line('sealLine', 57),
+
+  // The brawl, in the Streets of Rage 2 manner: a light hit snaps, a heavy one crunches, a finisher
+  // lands an orchestra hit on the crunch.
+  swing: fx(layer([[{ ...I.whoosh, vol: 84 }, 67, 10, 74]])),
+  hitLight: fx(layer(run(I.punch, [[62, 8]])), layer(run({ ...I.click, vol: 80 }, [[48, 3]]))),
+  hitHeavy: fx(layer(run(I.hit, [[57, 16]])), layer(run(I.crunch, [[52, 12]]))),
+  finisher: fx(layer(run(I.crunch, [[46, 22]])), layer(run({ ...I.orch, vol: 110 }, [[53, 24]]), 1)),
+  thud: fx(layer(run({ ...I.kick, vol: 127 }, [[45, 14]])), layer(run(I.hit, [[41, 18]]))),
+  hurt: fx(layer(run(I.hit, [[52, 14]])), layer([[{ ...I.bass, vol: 100 }, 55, 12, 40]])),
+  ko: fx(layer(run(I.crunch, [[43, 20]])), layer([[I.bass, 48, 30, 24]], 2)),
+  block: fx(layer(run({ ...I.clang, vol: 64 }, [[60, 6]])), layer(run(I.punch, [[70, 5]]))),
+  guardSmash: fx(layer(run(I.hit, [[50, 18]])), layer([[null, 0, 2], ...run(I.crunch, [[60, 12]])])),
+  objection: fx(layer(run({ ...I.clang, vol: 120 }, [[72, 40]])), layer([...run(I.stamp, [[55, 15]]), [I.bass, 43, 12, 31]])),
+  roomClear: fx(layer([...run(I.crunch, [[45, 6]]), ...run({ ...I.orch, vol: 127 }, [[57, 30]])]), layer([...run(I.brass, [[65, 4], [70, 4]]), [{ ...I.brass, vol: 110 }, 77, 26, 74]])),
+  telegraph: fx(layer([[I.bell, 96, 2], [null, 0, 3], [I.bell, 96, 6]])),
+  staplerHit: fx(layer(run({ ...I.clang, vol: 80 }, [[79, 8]])), layer(run(I.punch, [[67, 6]]))),
+  binderHit: fx(layer(run(I.paper, [[72, 6]])), layer(run(I.punch, [[58, 8]]))),
+  stampHit: fx(layer(run(I.stamp, [[62, 12]])), layer(run(I.punch, [[60, 6]]))),
+  deskSmash: fx(layer([...run(I.kick, [[52, 6]]), ...run(I.crunch, [[46, 16]])]), layer(run(I.paper, [[58, 14]]), 3)),
+  cabinetSmash: fx(layer([...run(I.crunch, [[52, 8]]), ...run({ ...I.clang, vol: 110 }, [[48, 26]])]), layer(run(I.hit, [[55, 14]]))),
+  weaponPickup: fx(layer(run(I.click, [[60, 3]])), layer(run(I.bell, [[91, 2], [98, 8]]))),
 };
+
+// The brawl's effects, each with a volume the ?tune panel can move.
+export const BRAWL_SFX = ['swing', 'hitLight', 'hitHeavy', 'finisher', 'thud', 'hurt', 'ko', 'block', 'guardSmash', 'objection',
+  'roomClear', 'telegraph', 'staplerHit', 'binderHit', 'stampHit', 'deskSmash', 'cabinetSmash', 'weaponPickup', 'throw'];
+export const SFX_VOLUME = registerTuning('snes-sfx-volume', Object.fromEntries(BRAWL_SFX.map((name) => [name, 1])),
+  Object.fromEntries(BRAWL_SFX.map((name) => [name, [0, 2, 0.05]])));
+
+export const atVolume = (def, k = 1) => (k === 1 ? def : {
+  layers: def.layers.map((l) => ({ ...l, steps: l.steps.map(([inst, ...rest]) => [inst && { ...inst, vol: Math.min(127, Math.round(inst.vol * k)) }, ...rest]) })),
+});
 
 export const soundBytes = () => bankBytes() + Object.values(FX_SAMPLES).reduce((sum, s) => sum + sampleBytes(s), 0);
 export { BUDGET_BYTES };

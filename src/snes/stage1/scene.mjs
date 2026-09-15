@@ -11,6 +11,7 @@ import { loadArt, artOr, SpriteLayer } from '../art.mjs';
 import { drainStep, drawHud, hudGroups, hudLayout, postReceipt } from '../hud.mjs';
 import { drawString, measure } from '../text.mjs';
 import { endHold, holdMusic, playSong, sfx } from '../audio/player.mjs';
+import { brawlSound } from '../audio/brawl.mjs';
 import { VELLUM_PINCH, VELLUM_SONG, vellumPinch } from '../audio/cues.mjs';
 import CLAIMS from '../bg/claims.mjs';
 import CLAIMS2 from '../bg/claims2.mjs';
@@ -51,11 +52,6 @@ const OFFICE_BG = CLAIMS2.areas[2];
 const STAGE1_DEF = { number: 1, table: SNES_STAGE1, checkpoints: CHECKPOINTS.stage1, backgrounds: BACKGROUNDS, weapons: true };
 // Stage 3's grey box borrows Stage 1's rooms until the Backrooms art lands; its break room is one screen.
 const STAGE3_DEF = { number: 3, table: SNES_STAGE3, checkpoints: CHECKPOINTS.stage3, backgrounds: [RECEPTION, CLAIMS2.areas[1], CLAIMS2.areas[0], CLAIMS2.areas[1]] };
-const SOUND = {
-  punch: 'punch', hit: 'hit', heavy: 'knockdown', jump: 'jump', land: 'land', grab: 'grab', throw: 'throw', step: 'step',
-  redTape: 'redTape', guardBreak: 'knockdown', blocked: 'land', breakFree: 'throw', injunction: 'injunction', heal: 'heal',
-  fangs: 'alarm', telegraph: 'blip', parry: 'stamp',
-};
 const MENU_SOUNDS = { move: 'pencil', swap: 'stampOk', close: 'paperSlide', thud: 'stamp' };
 const VELLUM_PALETTE = [rgb15(2, 1, 3), rgb15(9, 2, 5), rgb15(26, 22, 20)];
 const MEMO = { paper: rgb15(29, 28, 23), rule: rgb15(18, 16, 12), ink: rgb15(3, 3, 6), stamp: rgb15(26, 3, 3) };
@@ -212,8 +208,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (target) this.startFinisher(target);
     if (!this.office) stepAreas(w, this.tune);
     if (this.fin && finisherFrame(++this.fin.t).done) this.fin = null;
+    const sound = !target && brawlSound(w.events);
+    if (sound) sfx(sound);
     for (const e of w.events) {
-      if (SOUND[e]) sfx(SOUND[e]);
       if (e === 'heal') this.receipt = postReceipt(this.receipt, time);
       if (e.startsWith('checkpoint:')) this.registry.set('flow', next(this.registry.get('flow'), { type: 'checkpoint', id: e.slice(11) }));
       if (e === 'bossDown') { w.shake = this.tune.shakeFrames; playSong('stageClear'); }
@@ -238,7 +235,7 @@ export class SnesStage1Scene extends Phaser.Scene {
     this.fin = { foe, t: 0, x: foe.x - this.world.cameraX, y: foe.y - BODY_H / 2 };
     this.world.hitStop = Math.max(this.world.hitStop, STAGE1.finisherHitStop);
     this.world.shake = this.tune.shakeFrames;
-    sfx('throw');
+    sfx('finisher');
   }
 
   togglePause() {
