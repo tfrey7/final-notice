@@ -12,6 +12,10 @@ export const VELLUM_SONG = 'vellum';
 export const VELLUM_PINCH = 'vellum-pinch';
 export const vellumPinch = (hp, maxHp) => hp > 0 && hp * 3 <= maxHp;
 
+// Bellwether's final boss theme: one song per phase, each harder than the last.
+export const BELLWETHER_SONGS = ['bellwether', 'bellwether-2', 'bellwether-3'];
+export const bellwetherSong = (phase) => BELLWETHER_SONGS[Math.min(Math.max(phase, 1), 3) - 1];
+
 // The escape climb up the Archive ahead of the paper flood.
 export const ARCHIVE_CLIMB_SONG = 'archive-climb';
 

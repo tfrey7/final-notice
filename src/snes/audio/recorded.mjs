@@ -60,6 +60,10 @@ export const INSTRUMENTS = {
     label: 'tubular bell', group: 'Keys', adsr: [15, 5, 2, 19], vol: 100, pan: 30, echo: true,
     demo: ['Bb5 . G5 . Eb5 . F5 . G5 - - - Bb5 - - - - - . .'],
   }),
+  organ: inst('organ', {
+    label: 'church organ', group: 'Keys', adsr: [14, 3, 6, 4], vol: 84, echo: true,
+    demo: ['C5 - - - - - - - - - Bb4 - - - - - - - . .', 'G4 - - - - - - - - - F4 - - - - - - - . .', 'C3 - - - - - - - - - D3 - - - - - - - . .'],
+  }),
   slap: inst('slap', {
     label: 'slap bass', group: 'Bass', adsr: [15, 3, 4, 19], vol: 124,
     demo: ['Eb2 - . Eb3 . Eb2 . . Bb1 - . Bb2 . C#3 C3 . Eb2 - . .'],

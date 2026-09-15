@@ -31,6 +31,7 @@ export const RECIPES = {
   slowstr: { program: 49, key: 60, rate: 12500, attack: 0.3, loop: 0.3, bright: 0 },
   subbass: { program: 35, key: 33, rate: 11000, attack: 0.2, loop: 0.1, bright: 0 },
   timpani: { program: 47, key: 43, rate: 11000, attack: 0.3, loop: 0.1, bright: 0 },
+  organ: { program: 19, key: 60, rate: 8000, attack: 0.02, loop: 0.05, bright: 0 },
   gkick: { bank: 128, program: 16, key: 36, rate: 16000, hit: 0.3, bright: 0.1 },
   gsnare: { bank: 128, program: 16, key: 38, rate: 16000, hit: 0.28, bright: 0.15 },
   chat: { bank: 128, program: 0, key: 42, rate: 22000, hit: 0.08, bright: 0 },

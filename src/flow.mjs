@@ -42,7 +42,7 @@ export const SONGS = {
   archiveclimb: 'stage2',
   stage3: 'backrooms',
   shaft: 'shaft',
-  stage5: 'stage2',
+  stage5: 'stage5',
   scene3: 'scene',
   capstone: 'boss',
   ending: 'ending',

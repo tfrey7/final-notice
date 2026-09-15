@@ -19,6 +19,8 @@ import {
 } from '../../stage6/capstone.mjs';
 import { botButtons, createBot } from '../../stage6/finalebot.mjs';
 import { mountControls } from '../../controls.mjs';
+import { playSong } from '../audio/player.mjs';
+import { bellwetherSong } from '../audio/cues.mjs';
 
 const GREY = { back: 0x24222a, course: 0x2e2b36, tile: 0x6a6872, edge: 0x8a8892, cable: 0x9a9aa2 };
 const SHADE = { body: 0x1a1024, edge: 0x5a3a78, swell: 0x8a5ab0, hand: 0x2a1838, warn: 0xc080ff };
@@ -72,6 +74,7 @@ export class SnesCapstoneScene extends Phaser.Scene {
       if (this.follow(pad)) return;
     } else if (s.over && s.over.t > 60 && (pad.pressed.has('a') || pad.pressed.has('start'))) this.restart();
     else stepCapstone(s, this.autoplay ? this.botPad() : pad);
+    this.music();
     this.draw();
   }
 
@@ -80,6 +83,14 @@ export class SnesCapstoneScene extends Phaser.Scene {
     if (leave) showFlow(this, flow);
     else this.registry.set('flow', flow);
     return leave;
+  }
+
+  // Bellwether's theme from the moment the crown is reached, a harder song at each phase, and the
+  // stage-clear jingle once the Seal is taken.
+  music() {
+    const { s } = this;
+    const song = s.fight?.beaten ? 'stageClear' : s.part === 'climb' || !s.fight ? null : bellwetherSong(s.fight.phase);
+    if (song && song !== this.song) playSong(this.song = song);
   }
 
   draw() {
