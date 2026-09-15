@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final Notice - dialogue</title>
+  <style>
+    html, body { margin: 0; background: #000; color: #bcbcbc; font: 14px monospace; }
+    main { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 16px; }
+    canvas { image-rendering: pixelated; display: block; cursor: pointer; }
+    .bar { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    button { font: inherit; background: #000; color: #fcfcfc; border: 1px solid #747474; padding: 4px 10px; cursor: pointer; }
+    button[aria-pressed="true"] { border-color: #fcfcfc; background: #2038ec; }
+    p { margin: 0; text-align: center; }
+  </style>
+</head>
+<body>
+<main>
+  <canvas id="screen" width="256" height="240"></canvas>
+  <div class="bar" id="auditors"></div>
+  <div class="bar" id="scenes"></div>
+  <p>Z or X (B / A), Enter or click: next page. The text types itself; press to finish it.</p>
+</main>
+<script type="module">
+  import { glyph, wrap, CELL } from './src/text/font.mjs';
+  import { SCENES, SCENE_ORDER, AUDITORS, SELECT, beatsFor } from './src/story/script.mjs';
+  import { nes } from './src/nes/palette.mjs';
+
+  const W = 256, H = 240;
+  const BLACK = nes(0x0f), WHITE = nes(0x30), GREY = nes(0x10), DARK = nes(0x02), NAVY = nes(0x01);
+  const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
+  const BOX = { x: 8, y: 160, w: 240, h: 64 };
+  const FRAMES_PER_CHAR = 2;
+
+  const canvas = document.getElementById('screen');
+  const ctx = canvas.getContext('2d');
+  const params = new URLSearchParams(location.search);
+  const state = {
+    auditor: AUDITORS.includes(params.get('auditor')) ? params.get('auditor') : 'ward',
+    scene: SCENE_ORDER.includes(params.get('scene')) ? params.get('scene') : 'assignment',
+    beat: 0, page: 0, shown: 0, frame: 0,
+  };
+
+  function fit() {
+    const zoom = Math.max(1, Math.floor(Math.min((innerWidth - 32) / W, (innerHeight - 120) / H)));
+    canvas.style.width = `${W * zoom}px`;
+    canvas.style.height = `${H * zoom}px`;
+  }
+
+  function text(str, x, y, color) {
+    ctx.fillStyle = hex(color);
+    [...str].forEach((ch, i) => {
+      const rows = glyph(ch);
+      for (let r = 0; r < CELL; r++) for (let c = 0; c < CELL; c++) {
+        if (rows[r][c] === '#') ctx.fillRect(x + i * CELL + c, y + r, 1, 1);
+      }
+    });
+  }
+
+  const beats = () => beatsFor(state.scene, state.auditor);
+  const pages = () => wrap(beats()[state.beat].line);
+  const pageChars = () => pages()[state.page].join('').length;
+
+  function draw() {
+    const beat = beats()[state.beat];
+    ctx.fillStyle = hex(BLACK);
+    ctx.fillRect(0, 0, W, H);
+
+    // The picture: a placeholder until the cinema art lands.
+    ctx.fillStyle = hex(NAVY);
+    ctx.fillRect(8, 16, 240, 132);
+    ctx.fillStyle = hex(DARK);
+    ctx.fillRect(8, 16, 240, 12);
+    text(SCENES[state.scene].title, 8 + (240 - SCENES[state.scene].title.length * CELL) / 2, 18, WHITE);
+    const label = `[${beat.picture}]`;
+    text(label, 8 + Math.floor((240 - label.length * CELL) / 2), 78, GREY);
+
+    // The box: black with a 1-pixel white border, the speaker's name set into the top edge.
+    ctx.fillStyle = hex(WHITE);
+    ctx.fillRect(BOX.x, BOX.y, BOX.w, BOX.h);
+    ctx.fillStyle = hex(BLACK);
+    ctx.fillRect(BOX.x + 1, BOX.y + 1, BOX.w - 2, BOX.h - 2);
+    ctx.fillRect(BOX.x + 6, BOX.y - 4, beat.speaker.length * CELL + 4, 8);
+    text(beat.speaker, BOX.x + 8, BOX.y - 4, WHITE);
+
+    let left = state.shown;
+    pages()[state.page].forEach((row, i) => {
+      text(row.slice(0, Math.max(0, left)), BOX.x + 8, BOX.y + 8 + i * 16, WHITE);
+      left -= row.length;
+    });
+    const done = state.shown >= pageChars();
+    if (done && Math.floor(state.frame / 16) % 2 === 0) text('▼', BOX.x + BOX.w - 16, BOX.y + BOX.h - 12, WHITE);
+  }
+
+  function tick() {
+    state.frame++;
+    if (state.frame % FRAMES_PER_CHAR === 0 && state.shown < pageChars()) state.shown++;
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  function advance() {
+    if (state.shown < pageChars()) { state.shown = pageChars(); return; }
+    state.shown = 0;
+    if (state.page + 1 < pages().length) state.page++;
+    else if (state.beat + 1 < beats().length) { state.beat++; state.page = 0; }
+    else { state.scene = SCENE_ORDER[(SCENE_ORDER.indexOf(state.scene) + 1) % SCENE_ORDER.length]; restart(); }
+    renderButtons();
+  }
+
+  function restart() {
+    Object.assign(state, { beat: 0, page: 0, shown: 0 });
+    renderButtons();
+  }
+
+  function renderButtons() {
+    const bar = (id, list, key, label) => {
+      const el = document.getElementById(id);
+      el.replaceChildren(...list.map((value) => {
+        const b = document.createElement('button');
+        b.textContent = label(value);
+        b.setAttribute('aria-pressed', String(state[key] === value));
+        b.onclick = () => { state[key] = value; restart(); };
+        return b;
+      }));
+    };
+    bar('auditors', AUDITORS, 'auditor', (a) => SELECT[a].name);
+    bar('scenes', SCENE_ORDER, 'scene', (s) => SCENES[s].title);
+  }
+
+  addEventListener('keydown', (e) => {
+    if (['z', 'x', 'Z', 'X', 'Enter', ' '].includes(e.key)) { e.preventDefault(); advance(); }
+  });
+  canvas.addEventListener('click', advance);
+  addEventListener('resize', fit);
+  if (params.has('instant')) state.shown = Infinity;
+  fit();
+  renderButtons();
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>
