@@ -100,7 +100,9 @@ export class SnesStage1Scene extends Phaser.Scene {
     if (params.has('beat')) forceBeat(this.world, params.get('beat'));
 
     await Promise.all([loadArt('ward').catch(() => null), ...(this.office ? [officeArt()] : [])]);
-    this.ward = artOr(this, 'ward');
+    // Both auditors wear Ward's body: Mercer's own art is still to come, and a still grey box told the
+    // player nothing about what his kit was doing.
+    this.body = artOr(this, 'ward');
     this.baked = this.office ? bakeOffice(OFFICE_BG) : this.def.backgrounds.map(bakeScene);
     this.buf15 = screen();
     this.tex = this.textures.exists('snes-stage1-bg') ? this.textures.get('snes-stage1-bg') : this.textures.createCanvas('snes-stage1-bg', WIDTH, HEIGHT);

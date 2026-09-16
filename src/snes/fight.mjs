@@ -21,6 +21,11 @@ export const FIGHTERS = {
     foeSpeed: 0.325,
   },
   mercer: {
+    // He works closer in than Ward, but "closer" cannot mean inside the other man's swing: at the NES
+    // reach of 18 he only reached 27 px scaled, while an associate hits from 30 and a manager from 36,
+    // so no light of his ever landed first (item 2348). 23 puts him past the associate and still a
+    // clear step short of Ward's 26.
+    punchReach: 23,
     walkX: 0.6, walkY: 0.40625, runX: 1.4, knockback: 1.25, launchX: 2.5, landFrames: 6,
     punchStartup: 5, punchActive: 3, punchRecovery: 9,
     finisherStartup: 6, finisherActive: 4, finisherRecovery: 26,

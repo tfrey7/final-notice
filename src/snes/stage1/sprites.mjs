@@ -36,6 +36,18 @@ const WEAPON_BOX = {
   stamp: { w: 12, h: 10, palette: [WHITE, rgb15(24, 3, 5), rgb15(31, 31, 31)] },
 };
 const WARD_ANIM = { idle: 'idle', walk: 'walk', run: 'walk', hurt: 'hit', held: 'hit', knockdown: 'hit', bound: 'hit', down: 'recoil', ko: 'recoil', jump: 'wind', carry: 'idle', throw: 'punch2', grab: 'punch1', step: 'walk', heavy: 'uppercut', special: 'uppercut' };
+// Mercer has no art of his own yet, so he wears Ward's body and his extra states borrow the nearest
+// swing it has: the kick tree and the takedown read as the uppercut, getting up as the recoil.
+const MERCER_ANIM = { ...WARD_ANIM, kick: 'uppercut', land: 'idle', getup: 'recoil' };
+const ANIMS = { ward: WARD_ANIM, mercer: MERCER_ANIM };
+
+// The body animation an auditor's state draws. A light chain climbs to the uppercut on its finisher,
+// and a dive kick is a swing in the air rather than the plain jump pose.
+export function playerAnim(who, p) {
+  if (p.state === 'punch') return p.combo >= 3 ? 'uppercut' : 'jab';
+  if (p.state === 'jump' && p.dive) return 'uppercut';
+  return (ANIMS[who] ?? WARD_ANIM)[p.state] ?? 'idle';
+}
 
 export function foeSprites(scene, f, sx, ms) {
   if (f.kind === 'vellum') return vellumSprites(scene, f, sx, ms, fangFlash(f, scene.game.loop.frame));
@@ -58,10 +70,7 @@ export function weaponSprites(scene, kind, sx, bottom) {
 export function playerSprites(scene, p, sx, ms) {
   if (p.invuln > 0 && p.invuln % 4 < 2 && p.state !== 'step') return [];
   const flip = p.facing < 0;
-  if (scene.who === 'ward' && !scene.ward.standIn) {
-    const anim = p.state === 'punch' ? (p.combo >= 3 ? 'uppercut' : 'jab') : WARD_ANIM[p.state] ?? 'idle';
-    return scene.ward.frame(anim, ms, Math.round(sx), Math.round(p.y - p.z), flip);
-  }
+  if (scene.body && !scene.body.standIn) return scene.body.frame(playerAnim(scene.who, p), ms, Math.round(sx), Math.round(p.y - p.z), flip);
   const stand = artOr(scene, `auditor:${scene.who}`, { w: 32, h: BODY_H + 2, palette: [rgb15(2, 2, 4), rgb15(6, 8, 18), rgb15(28, 22, 16)] });
   return stand.frame('stand', ms, Math.round(sx - 16), Math.round(p.y - BODY_H - 2 - p.z), flip);
 }
