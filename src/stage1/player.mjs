@@ -3,6 +3,7 @@
 // Pure like moves.mjs: stepFloor(world, pad, tune) advances one frame around moves.mjs's step.
 import { breakBlock, defaultTune, fighter, landHit, player, set, step } from './moves.mjs';
 import { stepStaff, struggle } from './staff.mjs';
+import { shoveAll } from './gimmick.mjs';
 import { stepWeapons, weaponPad } from './weapons.mjs';
 import { CLEAR_FRAMES } from '../input.mjs';
 import { HITS_PER_SEGMENT, RING, SEGMENTS, addHits, cooldownSegments, fireCooldown, pushDir, restoreAtCheckpoint, ringVictims, segments, startRing, stepRing, tickCooldown, wantsFreeInjunction, wantsInjunction, withoutAB } from '../injunction.mjs';
@@ -210,6 +211,9 @@ function injunction(world, pad, tune, events) {
     Object.assign(f, { vx: dir * tune.launchX * 1.5, vz: tune.launchUp, z: Math.max(f.z, 1), taken: 0, facing: -dir });
   }
   world.tapes = [];
+  // The clear reaches the room's furniture too: every wheeled copier goes rolling away from him at
+  // once, which is Ward's own way into a gimmick boss (gimmick.mjs).
+  if (shoveAll(world, p.x, events)) events.push('ram:clear');
   if (p.state === 'bound') set(p, 'idle');
   p.invuln = Math.max(p.invuln, RING.freeze + 20);
   world.ring = startRing(p.x, p.y - 20);

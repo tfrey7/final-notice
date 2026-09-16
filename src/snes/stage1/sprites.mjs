@@ -19,6 +19,7 @@ const WHITE = rgb15(31, 31, 31);
 const FOE_PALETTES = {
   associate: [rgb15(2, 2, 4), rgb15(12, 12, 14), rgb15(22, 22, 24)],
   manager: [rgb15(2, 2, 4), rgb15(24, 16, 4), rgb15(30, 28, 18)],
+  pruitt: [rgb15(2, 2, 4), rgb15(20, 10, 2), rgb15(31, 22, 10)],
   counsel: [rgb15(2, 2, 4), rgb15(20, 6, 6), rgb15(28, 18, 16)],
   supervisor: [rgb15(2, 2, 4), rgb15(6, 10, 22), rgb15(18, 22, 30)],
 };
@@ -75,10 +76,16 @@ export function drawThings(scene, cam, shake) {
     ...(w.tapes ?? []).map((tape) => ({ y: tape.y + 1, tape })),
     ...(w.firstAid ?? []).filter((b) => !b.taken).map((box) => ({ y: box.y - 1, box })),
     ...(w.smash ?? []).map((s) => ({ y: s.y - 2, s })),
+    ...(w.rams ?? []).filter((r) => r.state !== 'spent').map((r) => ({ y: r.y - 1, ram: r })),
     ...(w.weapons ?? []).filter((wp) => !(wp.state === 'floor' && wp.t > w.weaponTune.weaponLife - 90 && wp.t % 8 < 4)).map((wp) => ({ y: wp.y, wp })),
   ].sort((a, b) => a.y - b.y);
   const at = (x) => x - cam - shake.x;
-  const spritesOf = ({ f, o, tape, box, s, wp }) => {
+  const spritesOf = ({ f, o, tape, box, s, wp, ram }) => {
+    // The wheeled copier: a grey box on castors, leaning into its roll.
+    if (ram) {
+      const art = artOr(scene, `prop:${ram.kind}`, { w: 30, h: 34, palette: [rgb15(2, 2, 4), rgb15(11, 13, 15), rgb15(23, 25, 27)] });
+      return art.frame('stand', 0, Math.round(at(ram.x) - 15), ram.y - 34 + (ram.state === 'rolling' ? 1 : 0));
+    }
     if (s) {
       const { w: sw, h, palette } = FURNITURE[s.kind];
       const sh = s.state === 'broken' ? 10 : h;

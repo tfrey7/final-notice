@@ -198,7 +198,9 @@ function countCombo(world, target, tune) {
 // A guard (or a boss's armoured wind-up) stops every blow but a body thrown into it (`body`),
 // which breaks the guard instead. A foe's blow (`from`) met inside the auditor's parry window is deflected.
 // `heavy` knocks down; `weight: 'heavy'` is a heavy blow that only staggers.
-export function landHit(world, target, { damage, heavy, weight, dir, body, from }, tune) {
+export function landHit(world, target, hit, tune) {
+  let { damage, heavy } = hit;
+  const { weight, dir, body, from } = hit;
   // A slumped boss is beaten: a punch that knocked him down again would restart his slump forever.
   if (target.invuln > 0 || DOWNED.includes(target.state) || target.state === 'slumped') return false;
   if (from && target.parry > 0 && !body) {
@@ -219,6 +221,19 @@ export function landHit(world, target, { damage, heavy, weight, dir, body, from 
     target.armoured = false;
     target.guardDown = target.guardBreakFrames;
     world.events.push('guardBreak');
+  }
+  // A gimmick boss (gimmick.mjs) is too heavy to stagger by hand: until his own gimmick dazes him
+  // every blow is chip, it never staggers him, and chip never takes him past his floor.
+  const gim = target.gimmick;
+  if (gim && !(gim.dazed > 0) && !body) {
+    const chip = Math.max(0, Math.min(damage, gim.chip, target.hp - gim.floor));
+    target.hp -= chip;
+    world.hitStop = tune.hitStop;
+    world.events.push(chip > 0 ? 'chip' : 'clang');
+    target.hitFlash = tune.hitFlashFrames;
+    spark(world, target, dir, 'light');
+    countCombo(world, target, tune);
+    return true;
   }
   // A red APPROVED stamp (weapons.mjs) marks a foe to take extra from every blow.
   const bonus = target.marked > 0 ? world.weaponTune?.stampBonus ?? 0 : 0;

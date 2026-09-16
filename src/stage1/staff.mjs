@@ -31,6 +31,14 @@ export const KINDS = {
       charge: { windup: 32, punch: 24, rush: 3.5, from: 48, to: 140, heavy: true, weight: 1 },
     },
     crowd: { circle: 1.3, feint: 0.4, taunt: 0.7, jitter: 0.7, gesture: 'tie' } },
+  // Pruitt, the Floor Manager: Stage 1's copy-room miniboss, a Manager with more hide and no
+  // stagger. His gimmick is gimmick.mjs's; his clipboard charge is what a parry answers.
+  pruitt: { hp: 14, speed: 0.5, windup: 30, punch: 18, cooldown: 90, reach: 26, stand: 24, hitsToFall: 0, damage: 1,
+    moves: {
+      haymaker: { heavy: true, weight: 2 },
+      charge: { windup: 32, punch: 24, rush: 3.5, from: 48, to: 140, heavy: true, weight: 2 },
+    },
+    crowd: { circle: 1.3, feint: 0.4, taunt: 0.7, jitter: 0.7, gesture: 'tie' } },
   counsel: { hp: 5, speed: 0.75, windup: 18, punch: 16, cooldown: 90, reach: 100, hitsToFall: 3, keep: 64, near: 32,
     moves: {
       paper: { shot: 'paper', speed: 3, weight: 3 },

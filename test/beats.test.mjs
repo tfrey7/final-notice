@@ -104,7 +104,10 @@ test('an ambush is one more pack before the lock lets go, and a miniboss comes a
   assert.ok(!world.events.includes('go'), 'and the lock should hold for it');
   assert.equal(world.run.locked, true);
   const mini = beatOf('copierGuard');
-  assert.ok(mini.foes.length <= 2 && mini.hpScale > 1, 'the miniboss is one hard foe, with something to throw at him');
+  // Pruitt carries his own hide and his own gimmick now (item 2344), so the room brings copiers
+  // instead of an hpScale.
+  assert.ok(mini.foes.length <= 2 && mini.gimmick === 'pruitt' && mini.rams.length >= 1,
+    'the miniboss is one hard foe, with something to throw at him');
 });
 
 test('the photocopier fire burns whoever stands in it, and burns out', () => {

@@ -15,6 +15,8 @@ import { armWorld, defaultWeapons, scaledWeapons, stageSmash } from '../src/stag
 import { STAGE1_BEATS, armBeats, stepBeats } from '../src/stage1/beats.mjs';
 
 const OPEN = ['recover', 'hurt', 'idle', 'walk', 'knockdown', 'guard'];
+// A gimmick boss with a blow on its way: no time to line a copier up.
+const ATTACKING_BOSS = ['windup', 'charge', 'punch', 'hold'];
 
 // The floor exactly as the SNES scene builds it for the flow's checkpoint.
 function build(flow, tune) {
@@ -69,6 +71,29 @@ function bot(i, world, tune) {
     && ((o.state === 'windup' && o.t >= o.attack.windup - 4 && Math.abs(o.x - p.x) < (o.attack.reach ?? tune.kinds[o.kind].reach) + 24)
       || (o.state === 'charge' && Math.abs(o.x - p.x) - 12 <= o.attack.rush * 4)));
   if (heavy) return { held: [], b: false, parry: false, step: -1 };
+  // Pruitt cannot be punched down (gimmick.mjs), so the bot works his gimmick: it lines itself up
+  // behind a parked copier with him on the far side of it and drives it into him — Ward with his
+  // heavy, Mercer with a dive kick — then combos him while the daze lasts.
+  const heavyBoss = foes.find((o) => o.gimmick && !(o.gimmick.dazed > 0));
+  const ram = heavyBoss && (world.rams ?? []).filter((r) => r.state === 'parked')
+    .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+  if (ram) {
+    const side = Math.sign(heavyBoss.x - ram.x) || 1;
+    const spot = ram.x - side * (blocks ? tune.heavyReach - 8 : tune.punchReach + 4);
+    const go = [];
+    if (Math.abs(p.x - spot) > 3) go.push(p.x < spot ? 'right' : 'left');
+    if (Math.abs(p.y - ram.y) > 2) go.push(p.y < ram.y ? 'down' : 'up');
+    if (go.length || p.facing !== side) return { held: go.length ? go : [side > 0 ? 'right' : 'left'], parry };
+    // The shove roots him for as long as a heavy does, so he waits out a blow that is already on
+    // its way: Ward behind his block, Mercer on the parry.
+    const tell = heavyBoss.attack?.windup ?? tune.kinds[heavyBoss.kind]?.windup ?? 40;
+    const due = (heavyBoss.state === 'windup' && tell - heavyBoss.t <= 12 && Math.abs(heavyBoss.x - p.x) < 70)
+      || (heavyBoss.state === 'charge' && Math.abs(heavyBoss.x - p.x) < 90);
+    if (due) return { held: [], parry: true };
+    if (blocks) return { held: [], heavy: true };
+    if (p.state === 'jump') return { held: [side > 0 ? 'right' : 'left', 'down'], b: true };
+    return { held: [], a: ['idle', 'walk'].includes(p.state) };
+  }
   // Ward blocks rather than parries, so his opening is a foe recovering from a blow he blocked.
   const open = (OPEN.includes(f.state) || (blocks && f.state === 'punch')) && !f.armoured && !(f.kind === 'vellum' && f.state === 'guard');
   const threat = v && ['windup', 'rush', 'sweep'].includes(v.state);
@@ -152,8 +177,9 @@ for (const who of ['ward', 'mercer']) {
     // Seven minutes, not five, since the beats went in (item 2336): the stage carries two more packs
     // and the room-changing beats between them, which is Final Fight's own Slum-stage length.
     assert.ok(log.frames >= 60 * 60 * 2 && log.frames <= 60 * 60 * 7, 'a clean run takes minutes, not seconds; a human takes longer');
-    // Ward's block still takes chip and opens a foe for less time than a parry, so he may need both boxes.
-    const boxes = AUDITORS[who].guard === 'block' ? 2 : 1;
+    // Ward's block still takes chip and opens a foe for less time than a parry, so he may need every
+    // box: the two on the floor and the kit the copy room keeps on the wall (item 2344).
+    const boxes = AUDITORS[who].guard === 'block' ? 3 : 1;
     assert.ok(log.heals <= boxes, `the bot needs at most ${boxes} of the two first-aid boxes, took ${log.heals}`);
     assert.equal(log.lives, 0, 'a bot that reads tells loses no life');
     assert.ok(log.locks >= 5 && log.locks <= 7 + log.continues * 7, `${log.locks} locks`);

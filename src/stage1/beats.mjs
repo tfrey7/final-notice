@@ -12,6 +12,8 @@
 import { DOWNED, player, set } from './moves.mjs';
 import { PIPS, SCREEN_W } from './player.mjs';
 import { FLOOR_TALK } from '../story/script.mjs';
+import { armGimmick, placeRams, stepGimmicks } from './gimmick.mjs';
+import { spawnStaff } from './staff.mjs';
 
 export const TALK_FRAMES = 150;   // 2.5 s a line, played over the fight, never pausing it
 export const FIRE_FRAMES = 720;   // the photocopier burns for 12 s
@@ -33,7 +35,9 @@ export const STAGE1_BEATS = [
   { id: 'lift', lock: 2, packs: 2, kind: 'pace', sort: 'ambush',
     what: 'the service lift opens behind you and two more walk out', foes: ['associate', 'associate'] },
   { id: 'copierGuard', lock: 3, packs: 2, kind: 'boss', sort: 'miniboss',
-    what: 'the Account Manager who runs the copy room, half again the hide, with one associate to throw at him', foes: ['manager', 'associate'], hpScale: 1.5 },
+    what: 'Pruitt, the Floor Manager, too heavy to stagger by hand: a copier rammed into him is the way in',
+    foes: ['pruitt', 'associate'], gimmick: 'pruitt',
+    rams: [{ dx: 88, y: 172 }, { dx: 190, y: 198 }], firstAid: { dx: 140, y: 208 } },
   { id: 'copierFire', lock: 5, packs: 3, kind: 'pace', sort: 'scenery', scenery: 'fire',
     what: 'the photocopier catches fire and splits the room in two', dx: 120, frames: FIRE_FRAMES },
   { id: 'waitingDoor', lock: 6, packs: 2, kind: 'story', talk: 'waitingDoor',
@@ -103,6 +107,11 @@ export function extraWave(world, lock) {
   world.beats.fired.push(beat.id);
   world.events.push(`beat:${beat.kind}:${beat.id}`, beat.sort === 'ambush' ? 'ambush' : 'miniboss');
   world.beats.boost = beat.hpScale ? { scale: beat.hpScale, kind: beat.foes[0] } : null;
+  // A gimmick boss brings his room with him: the copiers he is beaten with are parked as he walks on.
+  world.beats.gimmick = beat.gimmick ? { id: beat.gimmick, kind: beat.foes[0] } : null;
+  if (beat.rams) placeRams(world, beat.rams, lockX(world, beat.lock));
+  // A miniboss room can pay for itself: the copy room keeps a kit on the wall.
+  if (beat.firstAid) world.firstAid.push({ x: lockX(world, beat.lock) + beat.firstAid.dx, y: beat.firstAid.y, taken: false });
   return { foes: beat.foes };
 }
 
@@ -188,11 +197,20 @@ function boostPack(world) {
   world.beats.boost = null;
 }
 
+// The gimmick is stamped on the boss the frame after his pack walks on, the way the extra hide is.
+function armPack(world) {
+  const want = world.beats.gimmick;
+  if (!want) return;
+  for (const f of world.fighters) if (f.kind === want.kind && !f.gimmick) armGimmick(f, want.id);
+  if (world.fighters.some((f) => f.gimmick)) world.beats.gimmick = null;
+}
+
 // After stepAreas each frame: fire any beat whose lock has just been cleared, then run what is running.
 export function stepBeats(world, tune) {
   if (!world.beats) return world;
   const run = world.run;
   boostPack(world);
+  armPack(world);
   for (const beat of world.beats.list) {
     if (world.beats.fired.includes(beat.id) || run.lock <= beat.lock || run.locked) continue;
     world.beats.fired.push(beat.id);
@@ -201,6 +219,7 @@ export function stepBeats(world, tune) {
     else if (beat.sort === 'scenery') fireScenery(world, beat);
   }
   collectDrops(world);
+  stepGimmicks(world, tune);
   stepScenery(world, tune);
   stepTalk(world);
   const p = player(world);
@@ -216,6 +235,14 @@ export function forceBeat(world, id) {
   const here = Math.round(world.cameraX ?? 0) - lockX(world, found.lock);
   const beat = { ...found, dx: here + SCREEN_W / 2, boxes: found.boxes?.map((b) => ({ ...b, dx: b.dx + here })) };
   if (!world.beats.fired.includes(id)) world.beats.fired.push(id);
+  // A miniboss or an ambush walks on where the camera is, with the room it brings.
+  if (beat.sort === 'miniboss' || beat.sort === 'ambush') {
+    spawnStaff(world, beat.foes, world.tune ?? {});
+    world.beats.gimmick = beat.gimmick ? { id: beat.gimmick, kind: beat.foes[0] } : null;
+    if (beat.rams) placeRams(world, beat.rams.map((r) => ({ ...r, dx: r.dx + here })), lockX(world, beat.lock));
+    world.events.push(`beat:${beat.kind}:${beat.id}`, beat.sort);
+    return beat;
+  }
   if (beat.kind === 'story') fireStory(world, beat);
   else if (beat.sort === 'smash') fireSmash(world, beat);
   else if (beat.sort === 'scenery') fireScenery(world, beat);
